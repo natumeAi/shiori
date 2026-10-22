@@ -1,0 +1,11 @@
+{"file": ".trellis/spec/flutter/index.md", "reason": "Existing scaffold and approved stack."}
+{"file": ".trellis/spec/flutter/directory-structure.md", "reason": "Probe/core ownership and package import conventions."}
+{"file": ".trellis/spec/flutter/widget-guidelines.md", "reason": "Probe localization, theme and lifecycle conventions."}
+{"file": ".trellis/spec/flutter/state-management.md", "reason": "Local animation state and injected long-lived dependencies."}
+{"file": ".trellis/spec/flutter/data-layer.md", "reason": "Compile-time Env/config convention for the new Env.buildId."}
+{"file": ".trellis/spec/flutter/error-handling.md", "reason": "Typed errors and nonduplicated logging."}
+{"file": ".trellis/spec/flutter/quality-guidelines.md", "reason": "Dependency justification, pins and required checks."}
+{"file": ".trellis/spec/flutter/testing.md", "reason": "Injected clocks/directories, fixture tests and no live network; step 5 writes the tests."}
+{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/ios-device-workflow.md", "reason": "GitHub Actions primary/Codemagic fallback, AltStore signing route, free-account limits and USB export retrieval."}
+{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/performance-acceptance.md", "reason": "Recorder evidence limits and the parent performance target."}
+{"file": ".trellis/tasks/10-22-ios-free-device-bootstrap/research/bootstrap-evidence.md", "reason": "Verified local SDK floor, candidate storage API and probe evidence boundaries."}

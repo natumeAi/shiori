@@ -1,0 +1,9 @@
+{"file": ".trellis/spec/flutter/index.md", "reason": "Project Flutter stack and layer contracts."}
+{"file": ".trellis/spec/flutter/directory-structure.md", "reason": "Feature ownership and import boundaries."}
+{"file": ".trellis/spec/flutter/state-management.md", "reason": "Generated Riverpod and local ephemeral motion state."}
+{"file": ".trellis/spec/flutter/data-layer.md", "reason": "Typed Dio repositories and approved runtime/storage changes in the design."}
+{"file": ".trellis/spec/flutter/quality-guidelines.md", "reason": "Dependency pins, codegen and required quality gates."}
+{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/reference-audit.md", "reason": "Reference architecture, API inventory and known compatibility constraints."}
+{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/ui-parity-plan.md", "reason": "UI01-UI14 behavior, source timing and evidence inventory."}
+{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/performance-acceptance.md", "reason": "Device performance gates and separation of evidence levels."}
+{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/ios-device-workflow.md", "reason": "Accepted free Windows/iPhone installation route and build constraints."}

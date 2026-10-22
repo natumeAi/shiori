@@ -145,6 +145,10 @@ extension PumpApp on WidgetTester {
   real controller logic runs.
 - For the loading state, return a `Completer().future` that never completes;
   for data/error, `await tester.pumpAndSettle()`.
+- To flush a `Timer(Duration.zero)` in a widget test, use
+  `await tester.pump(Duration.zero)` before awaiting its completion. A bare
+  `pump()` flushes microtasks without explicitly advancing the fake clock and
+  can leave a recorder's zero-duration drain pending indefinitely.
 
 ---
 
