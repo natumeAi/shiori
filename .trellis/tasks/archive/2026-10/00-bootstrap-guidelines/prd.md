@@ -21,36 +21,45 @@ the rest conversationally.
 
 ## Status (update the checkboxes as you complete each item)
 
-- [ ] Fill backend guidelines
-- [ ] Fill frontend guidelines
-- [ ] Add code examples
+- [x] Restructure spec for Flutter (backend/frontend layers replaced by `flutter/`)
+- [x] Decide conventions with the developer (state, layout, routing, data, testing)
+- [x] Fill flutter guidelines
+- [x] Add code examples (prescriptive examples; no feature code exists yet)
+- [ ] Developer review of the filled spec
+
+Decisions (2026-10-22): feature-first layout, Riverpod 3 + codegen, go_router +
+go_router_builder, remote API via dio, freezed + json_serializable, unit +
+key-screen widget tests with mocktail, ARB + gen-l10n.
+Defaults chosen by the AI, open to change: sealed `AppException` + `guardDio`
+error mapping, `package:logging`, `zh` as template locale, generated files
+committed, package imports only, global Riverpod retry for network errors only.
+Still open: auth, API field casing, pagination/error-body format.
 
 ---
 
 ## Spec files to populate
 
+The project is a single Flutter app, so `trellis init`'s fullstack
+backend/frontend layers were replaced by one `flutter/` layer. Each file
+carries `paths:` frontmatter so it is injected when matching files are touched.
 
-### Backend guidelines
-
-| File | What to document |
-|------|------------------|
-| `.trellis/spec/backend/directory-structure.md` | Where different file types go (routes, services, utils) |
-| `.trellis/spec/backend/database-guidelines.md` | ORM, migrations, query patterns, naming conventions |
-| `.trellis/spec/backend/error-handling.md` | How errors are caught, logged, and returned |
-| `.trellis/spec/backend/logging-guidelines.md` | Log levels, format, what to log |
-| `.trellis/spec/backend/quality-guidelines.md` | Code review standards, testing requirements |
-
-
-### Frontend guidelines
+### Flutter guidelines
 
 | File | What to document |
 |------|------------------|
-| `.trellis/spec/frontend/directory-structure.md` | Component/page/hook organization |
-| `.trellis/spec/frontend/component-guidelines.md` | Component patterns, props conventions |
-| `.trellis/spec/frontend/hook-guidelines.md` | Custom hook naming, patterns |
-| `.trellis/spec/frontend/state-management.md` | State library, patterns, what goes where |
-| `.trellis/spec/frontend/type-safety.md` | TypeScript conventions, type organization |
-| `.trellis/spec/frontend/quality-guidelines.md` | Linting, testing, accessibility |
+| `.trellis/spec/flutter/index.md` | Scope, pre-dev checklist, quality check commands, index |
+| `.trellis/spec/flutter/directory-structure.md` | `lib/` layout, file naming, where things go |
+| `.trellis/spec/flutter/widget-guidelines.md` | Widget composition, theming, localization, accessibility |
+| `.trellis/spec/flutter/state-management.md` | State library, providers, what state lives where |
+| `.trellis/spec/flutter/routing.md` | Router setup, route definitions, navigation |
+| `.trellis/spec/flutter/data-layer.md` | Models, serialization, repositories, storage, networking |
+| `.trellis/spec/flutter/error-handling.md` | Error types, propagation, user-facing errors, logging |
+| `.trellis/spec/flutter/testing.md` | Unit / widget / integration tests, mocks, fixtures |
+| `.trellis/spec/flutter/quality-guidelines.md` | Lints, formatting, language features, codegen, forbidden patterns |
+
+The codebase is still the `flutter create` template, so these record agreed
+decisions rather than extracted patterns. Examples must use the real
+`lib/` paths the directory-structure spec defines.
 
 
 ### Thinking guides (already populated)
