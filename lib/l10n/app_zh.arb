@@ -1,0 +1,35 @@
+{
+  "@@locale": "zh",
+  "appTitle": "Shiori",
+  "@appTitle": {
+    "description": "Application name shown by the OS task switcher and window title."
+  },
+  "homeTitle": "首页",
+  "@homeTitle": {
+    "description": "App bar title of the home screen."
+  },
+  "homeWelcome": "欢迎使用 Shiori",
+  "@homeWelcome": {
+    "description": "Welcome text shown in the body of the placeholder home screen."
+  },
+  "commonRetry": "重试",
+  "@commonRetry": {
+    "description": "Button label for retrying a failed action or load."
+  },
+  "errorNetwork": "网络连接失败，请检查网络后重试",
+  "@errorNetwork": {
+    "description": "Shown when a request fails because of no connection or a timeout."
+  },
+  "errorUnauthorized": "登录已失效，请重新登录",
+  "@errorUnauthorized": {
+    "description": "Shown when the server rejects the request as unauthorized (401/403)."
+  },
+  "errorServer": "服务器出错了，请稍后再试",
+  "@errorServer": {
+    "description": "Shown when the server returns an error or an unexpected response."
+  },
+  "errorUnexpected": "发生未知错误",
+  "@errorUnexpected": {
+    "description": "Fallback message for errors that have no specific mapping."
+  }
+}
