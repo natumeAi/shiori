@@ -7,11 +7,4 @@ abstract final class Env {
     defaultValue: 'local',
   );
   static const buildNumber = String.fromEnvironment('BUILD_NUMBER');
-  static const flutterVersion = String.fromEnvironment('FLUTTER_VERSION');
-  static const flutterFrameworkRevision = String.fromEnvironment(
-    'FLUTTER_FRAMEWORK_REVISION',
-  );
-  static const flutterEngineRevision = String.fromEnvironment(
-    'FLUTTER_ENGINE_REVISION',
-  );
 }

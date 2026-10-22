@@ -71,8 +71,11 @@ file/parse failures appear immediately instead of entering Riverpod retries.
 - Application Support contains `probe-marker.txt` and `last-diagnostic.json`.
   Documents contains `shiori-diag-<BUILD_ID>-<runId>.json` exports only; safe
   components prevent traversal. Clipboard carries a bounded summary.
-- Build identity uses `Env.buildId`; CI also injects `BUILD_NUMBER`,
-  `FLUTTER_VERSION`, `FLUTTER_FRAMEWORK_REVISION`, `FLUTTER_ENGINE_REVISION`.
+- Build identity uses `Env.buildId`; CI also injects `BUILD_NUMBER`. Flutter
+  version and framework/engine revisions come from `FlutterVersion`
+  (`package:flutter/services.dart`): the Flutter tool injects
+  `FLUTTER_VERSION`, `FLUTTER_FRAMEWORK_REVISION` and
+  `FLUTTER_ENGINE_REVISION` itself and rejects them in `--dart-define`.
   Artifact provenance and the app's compile-time metadata must match.
 
 ## 4. Validation & Error Matrix

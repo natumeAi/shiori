@@ -54,11 +54,11 @@ BUILD_ID="${SOURCE_COMMIT:0:12}-$BUILD_HOST-$BUILD_NUMBER"
 export BUILD_ID
 
 flutter --version --machine > "$OUTPUT_DIR/flutter-version.json"
-FLUTTER_VERSION="$(jq -r '.frameworkVersion' "$OUTPUT_DIR/flutter-version.json")"
+FRAMEWORK_VERSION="$(jq -r '.frameworkVersion' "$OUTPUT_DIR/flutter-version.json")"
 FRAMEWORK="$(jq -r '.frameworkRevision' "$OUTPUT_DIR/flutter-version.json")"
 ENGINE="$(jq -r '.engineRevision' "$OUTPUT_DIR/flutter-version.json")"
 CHANNEL="$(jq -r '.channel' "$OUTPUT_DIR/flutter-version.json")"
-[[ "$FLUTTER_VERSION" == 3.47.7 && "$CHANNEL" == stable && "$FRAMEWORK" == "$EXPECTED_FRAMEWORK" ]] || {
+[[ "$FRAMEWORK_VERSION" == 3.47.7 && "$CHANNEL" == stable && "$FRAMEWORK" == "$EXPECTED_FRAMEWORK" ]] || {
   echo 'Flutter version/channel/framework pin mismatch.' >&2; exit 1;
 }
 [[ "$ENGINE" == "$EXPECTED_ENGINE" ]] || { echo 'Flutter engine pin mismatch.' >&2; exit 1; }
@@ -76,7 +76,7 @@ jq -n --arg buildId "$BUILD_ID" --arg buildNumber "$BUILD_NUMBER" \
   --arg commit "$SOURCE_COMMIT" --arg runner "${RUNNER_LABEL:-unavailable}" \
   --arg image "${ImageVersion:-unavailable}" --arg macos "$(sw_vers -productVersion)" \
   --arg xcode "$(xcodebuild -version)" --arg sdk "$(xcrun --sdk iphoneos --show-sdk-version)" \
-  --arg flutter "$FLUTTER_VERSION" --arg framework "$FRAMEWORK" --arg engine "$ENGINE" \
+  --arg flutter "$FRAMEWORK_VERSION" --arg framework "$FRAMEWORK" --arg engine "$ENGINE" \
   '{buildId:$buildId,buildNumber:$buildNumber,commit:$commit,runner:$runner,image:$image,macos:$macos,xcode:$xcode,iosSdk:$sdk,flutter:$flutter,framework:$framework,engine:$engine,unsigned:true}' \
   > "$OUTPUT_DIR/provenance.json"
 
@@ -86,10 +86,9 @@ flutter build ios --release --no-codesign --no-pub \
   --target lib/main_probe.dart \
   --build-number "$BUILD_NUMBER" \
   --dart-define="BUILD_ID=$BUILD_ID" \
-  --dart-define="BUILD_NUMBER=$BUILD_NUMBER" \
-  --dart-define="FLUTTER_VERSION=$FLUTTER_VERSION" \
-  --dart-define="FLUTTER_FRAMEWORK_REVISION=$FRAMEWORK" \
-  --dart-define="FLUTTER_ENGINE_REVISION=$ENGINE"
+  --dart-define="BUILD_NUMBER=$BUILD_NUMBER"
+# FLUTTER_VERSION and the revision defines are reserved: the Flutter tool
+# injects them itself and the app reads them through FlutterVersion.
 
 readonly APP="$PWD/build/ios/iphoneos/Runner.app"
 readonly PLIST="$APP/Info.plist"

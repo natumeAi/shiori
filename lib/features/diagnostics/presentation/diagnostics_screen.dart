@@ -115,6 +115,13 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen>
           ? 'unavailable_compile_time_define'
           : 'compile_time_CI_define',
     };
+    // The Flutter tool injects these itself; `--dart-define` cannot set them.
+    Map<String, Object?> toolVersion(String? value) => {
+      'value': value,
+      'source': value == null
+          ? 'unavailable_flutter_tool_define'
+          : 'flutter_tool_FlutterVersion',
+    };
     return {
       'os': Platform.operatingSystemVersion,
       'osSource': 'dart_io_Platform',
@@ -127,9 +134,9 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen>
       'buildNumber': define(Env.buildNumber),
       'buildNumberInterpretation':
           'CI passes same value to --build-number; no native runtime read',
-      'flutterVersion': define(Env.flutterVersion),
-      'frameworkRevision': define(Env.flutterFrameworkRevision),
-      'engineRevision': define(Env.flutterEngineRevision),
+      'flutterVersion': toolVersion(FlutterVersion.version),
+      'frameworkRevision': toolVersion(FlutterVersion.frameworkRevision),
+      'engineRevision': toolVersion(FlutterVersion.engineRevision),
       'logicalWidth': logical.width,
       'logicalHeight': logical.height,
       'physicalWidth': view.physicalSize.width,
