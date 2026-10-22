@@ -1,0 +1,28 @@
+{
+  "id": "flutter-lan-reader-parity",
+  "name": "flutter-lan-reader-parity",
+  "title": "Flutter parity with lan-reader",
+  "description": "Plan an iPhone-first native Flutter client matching lan-reader UI/interactions, using a user-configured NAS, free Windows/cloud sideloading, reflowable novel EPUB support and a verified 120 FPS target. Deliver a separate backend handoff.",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "shiroha",
+  "assignee": "shiroha",
+  "createdAt": "2026-10-22",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "master",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "10-22-ios-free-device-bootstrap"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "Parent planning artifacts and first-child plan prepared; revised 2026-10-22 after plan review (GitHub Actions primary build host, fixed app identifier, file-based diagnostic export, refresh-limit evidence). Await explicit approval of the latest final planning summary; no implementation has started.",
+  "meta": {}
+}

@@ -1,0 +1,7 @@
+{"file": ".trellis/spec/flutter/quality-guidelines.md", "reason": "Quality gate and generated-file/dependency checks."}
+{"file": ".trellis/spec/flutter/testing.md", "reason": "Injected clocks/resources and meaningful failure tests."}
+{"file": ".trellis/spec/flutter/widget-guidelines.md", "reason": "Strings, semantics, hit targets and disposal."}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Build artifact, device, recording and export boundary review."}
+{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/ios-device-workflow.md", "reason": "Free build route, fixed app identity, update/refresh constraints and export retrieval."}
+{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/performance-acceptance.md", "reason": "Correct evidence labels and incomplete-data handling."}
+{"file": ".trellis/tasks/10-22-ios-free-device-bootstrap/research/bootstrap-evidence.md", "reason": "Verified local SDK floor, candidate storage API and probe evidence boundaries."}

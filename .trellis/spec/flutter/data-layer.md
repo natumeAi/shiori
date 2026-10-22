@@ -120,6 +120,7 @@ Rules:
 // lib/core/config/env.dart
 abstract final class Env {
   static const apiBaseUrl = String.fromEnvironment('API_BASE_URL');
+  static const buildId = String.fromEnvironment('BUILD_ID', defaultValue: 'local');
 }
 ```
 
@@ -162,6 +163,24 @@ Dio dio(Ref ref) {
   compiled into the app can be extracted from the binary.
 - All interceptors (auth header, logging) are added in `dioProvider`.
   Repositories never create their own `Dio`.
+
+### Local diagnostic storage
+
+The S1 probe explicitly authorizes local persistence through injectable
+`core/storage` directories and diagnostics-feature repositories. These local
+repositories handle file/parse errors at their own boundary; `guardDio` applies
+to HTTP repositories, not local I/O.
+
+- **Application Support:** marker and last completed/partial diagnostic record.
+  Private settings, checkpoints, outbox and caches never belong in Documents.
+- **Documents:** intentional user exports only,
+  `shiori-diag-<BUILD_ID>-<runId>.json`. iOS File Sharing exposes this directory
+  because `UIFileSharingEnabled` and `LSSupportsOpeningDocumentsInPlace` are true.
+- `Env.buildId` defaults to `local` and is shown in the probe and every export.
+  CI injects it through `--dart-define=BUILD_ID=...`; see quality-guidelines.md.
+- Resolve directories with `path_provider`; inject directories in repository
+  tests so tests use no platform plugin or user directories. Marker retention
+  is a feasibility check, not a transactional reading outbox guarantee.
 
 ---
 

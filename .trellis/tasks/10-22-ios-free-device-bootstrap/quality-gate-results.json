@@ -1,0 +1,82 @@
+[
+  {
+    "command": "dart run build_runner build",
+    "exitCode": 0,
+    "timeoutMs": 900000,
+    "timedOut": false,
+    "seconds": 4.62,
+    "tail": [
+      "  0s riverpod_generator on 53 inputs; lib/app/app.dart",
+      "  0s riverpod_generator on 53 inputs: 46 skipped, 1 same, 6 no-op",
+      "  0s freezed on 53 inputs; lib/app/app.dart",
+      "  0s freezed on 53 inputs: 46 skipped, 7 no-op",
+      "  0s json_serializable on 106 inputs; lib/app/app.dart",
+      "  2s json_serializable on 106 inputs: 2 skipped, 1 no-op; spent 2s analyzing; lib/app/probe_app.freezed.dart",
+      "  2s json_serializable on 106 inputs: 96 skipped, 10 no-op; spent 2s analyzing",
+      "  0s go_router_builder on 106 inputs; lib/app/app.dart",
+      "  0s go_router_builder on 106 inputs: 96 skipped, 10 no-op",
+      "  0s source_gen:combining_builder on 106 inputs; lib/app/app.dart",
+      "  0s source_gen:combining_builder on 106 inputs: 105 skipped, 1 same",
+      "  Built with build_runner/aot in 3s; wrote 2 outputs."
+    ],
+    "generatedChanges": []
+  },
+  {
+    "command": "dart format --set-exit-if-changed lib test",
+    "exitCode": 0,
+    "timeoutMs": 180000,
+    "timedOut": false,
+    "seconds": 0.58,
+    "tail": [
+      "Formatted 70 files (0 changed) in 0.11 seconds."
+    ]
+  },
+  {
+    "command": "flutter analyze",
+    "exitCode": 0,
+    "timeoutMs": 180000,
+    "timedOut": false,
+    "seconds": 5.41,
+    "tail": [
+      "Analyzing shiori...                                             ",
+      "No issues found! (ran in 4.3s)"
+    ]
+  },
+  {
+    "command": "flutter test",
+    "exitCode": 0,
+    "timeoutMs": 900000,
+    "timedOut": false,
+    "seconds": 5.43,
+    "tail": [
+      "00:00 +72: D:/Projects/shiori/test/core/widgets/error_view_test.dart: shows the mapped message and a working retry button",
+      "00:00 +73: D:/Projects/shiori/test/core/widgets/error_view_test.dart: shows the mapped message and a working retry button",
+      "00:00 +74: D:/Projects/shiori/test/core/widgets/error_view_test.dart: shows the mapped message and a working retry button",
+      "00:00 +75: D:/Projects/shiori/test/core/widgets/error_view_test.dart: shows the mapped message and a working retry button",
+      "00:00 +76: D:/Projects/shiori/test/core/widgets/error_view_test.dart: shows the mapped message and a working retry button",
+      "00:01 +77: D:/Projects/shiori/test/features/diagnostics/presentation/diagnostics_screen_test.dart: shows loading then retained marker and saves edits",
+      "00:01 +78: D:/Projects/shiori/test/features/diagnostics/presentation/diagnostics_screen_test.dart: shows loading then retained marker and saves edits",
+      "00:01 +79: D:/Projects/shiori/test/features/diagnostics/presentation/diagnostics_screen_test.dart: shows loading then retained marker and saves edits",
+      "00:01 +80: D:/Projects/shiori/test/features/diagnostics/presentation/diagnostics_screen_test.dart: storage error has localized retry and recovery",
+      "00:01 +81: D:/Projects/shiori/test/features/diagnostics/presentation/diagnostics_screen_test.dart: capture stops, drains, exports and copies matching summary",
+      "00:01 +82: D:/Projects/shiori/test/features/diagnostics/presentation/diagnostics_screen_test.dart: motion reads current engine identity only after ticker callbacks",
+      "00:02 +83: D:/Projects/shiori/test/features/diagnostics/presentation/diagnostics_screen_test.dart: queued motion is ignored after same-frame lifecycle stop",
+      "00:02 +84: D:/Projects/shiori/test/features/diagnostics/presentation/diagnostics_screen_test.dart: dispose before queued post-frame motion never reads identity",
+      "00:02 +85: D:/Projects/shiori/test/features/diagnostics/presentation/diagnostics_screen_test.dart: auto duration stops animation and background never restarts capture",
+      "00:02 +86: D:/Projects/shiori/test/features/diagnostics/presentation/diagnostics_screen_test.dart: failed export preserves partial record and can retry",
+      "00:02 +87: D:/Projects/shiori/test/features/diagnostics/presentation/diagnostics_screen_test.dart: declaration edits are frozen into the captured record",
+      "00:02 +88: D:/Projects/shiori/test/features/diagnostics/presentation/diagnostics_screen_test.dart: dispose during async export does not publish stale UI",
+      "00:02 +89: D:/Projects/shiori/test/features/diagnostics/presentation/diagnostics_screen_test.dart: marker save error remains editable at 200 percent text scale",
+      "00:02 +90: D:/Projects/shiori/test/features/diagnostics/presentation/diagnostics_screen_test.dart: (tearDownAll)",
+      "00:02 +90: All tests passed!"
+    ]
+  },
+  {
+    "command": "bash -n tool/ci/build_ios_unsigned.sh (Git Bash)",
+    "exitCode": 0,
+    "timeoutMs": 180000,
+    "timedOut": false,
+    "seconds": 0.01,
+    "tail": []
+  }
+]
