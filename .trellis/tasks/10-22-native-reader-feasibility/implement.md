@@ -9,6 +9,13 @@ Context order: `implement.jsonl` entries → `prd.md` → `design.md` → this f
 Before writing code in a layer, load the matching `.trellis/spec/flutter/`
 guide (the `trellis-before-dev` skill does this).
 
+## Current checkpoint — stopped after Phase B
+
+Phases 0, A and B passed and are committed locally (`4e15862`, `74932bb`, then
+the Phase B commit). The user asked to stop after Phase B (2026-10-22).
+Phase C starts only on the user's explicit instruction; continuous mode does
+not resume by itself. Do not archive the task or restart earlier phases.
+
 ## Phase 0 — branch and baseline
 
 - [x] Confirm `git status` shows only planning changes under `.trellis/tasks/`
@@ -43,19 +50,22 @@ guide (the `trellis-before-dev` skill does this).
 
 ## Phase B — source model, CFI, canonical (design §3–§4)
 
-- [ ] Evaluate and add the ZIP/XML/HTML/CSS packages; record versions,
+- [x] Evaluate and add the ZIP/XML/HTML/CSS packages; record versions,
   licences and reasons in `prd.md` (dependency section) and the approved
   dependency table in `.trellis/spec/flutter/quality-guidelines.md`.
-- [ ] Implement `data/epub`, `data/source` (parser selection, inert
+- [x] Implement `data/epub`, `data/source` (parser selection, inert
   projection), `data/cfi`, `data/canonical` with the generated Unicode table.
-- [ ] Golden tests over every committed vector; a local-only test (skipped
+- [x] Golden tests over every committed vector; a local-only test (skipped
   when `build/oracle-local/` is absent) for the four books.
-- [ ] Interop loop: export native CFIs for sampled points, run
+- [x] Interop loop: export native CFIs for sampled points, run
   `npm run resolve`, compare.
 - **Gate B:** 100% agreement on all committed vectors and the local book
   vectors. A mismatch you cannot fix by matching reference behavior stops the
   run (report the vector, both outputs and your analysis).
-- [ ] Commit: `feat(reader): EPUB source model, CFI and canonical text v1`.
+- [x] Commit: `feat(reader): EPUB source model, CFI and canonical text v1`.
+  Phase B was finished by Sonnet 5.5 implement agents in the Claude session
+  after the Codex pause; the user then asked to stop here. Phase C starts only
+  on the user's explicit instruction.
 
 ## Phase C — layout, page map, anchors, detection (design §5–§6)
 
@@ -97,6 +107,9 @@ guide (the `trellis-before-dev` skill does this).
   pinned engine sources named in `research/s2-entry-evidence.md`.
 - [ ] Build script: two-variant packaging and the fixture/privacy guards;
   update the workflow only if needed. Run `bash -n` on the script.
+  The "no `*.epub` outside `assets/reader_fixtures/`" guard must also accept
+  `test/fixtures/reader/source_edge/edge-{html,xhtml}.epub` (Phase B edge
+  fixtures) through a hashed manifest, not a blanket folder exemption.
 - **Gate E:** full local gate passes; `flutter run -t lib/main.dart` behavior
   is unchanged (existing app tests green); analyzer tests pass; a scan of a
   generated export finds no fixture text.
@@ -117,8 +130,27 @@ guide (the `trellis-before-dev` skill does this).
   levels), `testing.md` (oracle vectors, local-only tests) and the spec index.
 - [ ] Fill `feasibility-report.md` with every local row and placeholders
   marked "pending device run" for NC7–NC9.
+- [ ] Consolidate the per-command evidence files in this task directory
+  (`oracle-*.json`, `quality-gate-*.json`, `reader-dependency-install.json`)
+  into one evidence folder or index, keeping their content.
+- [ ] Copy the "Carry-forward to later stages" items below into the report.
 - [ ] Commit: `docs(task): S2 device runbook, spec updates and local results`.
 - [ ] STOP. Do not push. Reply with the report format in the handoff prompt.
+
+## Carry-forward to later stages (from Phase A/B review)
+
+- **S3:** `lib/features/reader/data/epub/epub_archive.dart` checks ZIP sizes
+  declared in headers; `archive` inflates a whole entry before the length
+  check, so a hostile EPUB can briefly allocate past the limit. Add bounded or
+  streamed inflation and parse in a worker isolate before opening downloaded
+  books.
+- **S4:** `assets/reader_fixtures/` is registered in the shared `pubspec.yaml`,
+  so product builds also carry ~1.2 MB of synthetic fixtures. Move them behind
+  the diagnostic entry point (or out of product assets) before a product build.
+- **S4:** known HTML-mode parser gaps (head-level `<template>`, `<noscript>`
+  content that closes an open `<p>`, attribute URLs in script-enabled
+  `<noscript>` raw text) are listed in `local-validation.md`; add fixtures if
+  the NAS library contains such books.
 
 ## After the user confirms a push (outside Codex's continuous run)
 

@@ -26,6 +26,7 @@ paths:
 | Localization | `flutter_localizations` (sdk), `intl` |
 | Logging | `logging` |
 | App directories | `path_provider` (Application Support for private probe state; Documents for user exports) |
+| EPUB source (reader `data/` layer, pure Dart) | `archive` 4.5.2 (ZIP container, MIT); `html` 0.15.7 (HTML5 tree builder for the reference HTML fallback, MIT); `xml` 7.1.0 (HTML4/XHTML entity table only, MIT; the strict XML parser is project code) |
 | Codegen | dev: `build_runner` |
 | Testing | dev: `flutter_test` (sdk), `mocktail` |
 

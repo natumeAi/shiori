@@ -12,7 +12,7 @@
   "assignee": "shiroha",
   "createdAt": "2026-10-22",
   "completedAt": null,
-  "branch": null,
+  "branch": "ios-build/s2-reader-probe",
   "base_branch": "master",
   "worktree_path": null,
   "commit": null,
@@ -21,6 +21,15 @@
   "children": [],
   "parent": "10-22-flutter-lan-reader-parity",
   "relatedFiles": [],
-  "notes": "Planned 2026-10-22. User decisions: diagnostic-only native presentation hook allowed (time-boxed); executor (Codex gpt-6.1-sol, high) runs phases 0-F continuously, commits per phase locally on ios-build/s2-reader-probe, stops on gate failure or at the device step. No push without user confirmation.",
-  "meta": {}
+  "notes": "Planned 2026-10-22. User decisions: diagnostic-only native presentation hook allowed (time-boxed); local phases commit once each on ios-build/s2-reader-probe; no push without user confirmation. Codex (gpt-6.1-sol, high) did Phase 0 and A, then was paused during Phase B. Sonnet 5.5 (medium) implement/check agents in the Claude session finished Phase B. The user asked to stop after Phase B: Phase C starts only on the user's explicit instruction.",
+  "meta": {
+    "execution_state": "stopped_after_phase_b_awaiting_user",
+    "stop_after_phase": "B",
+    "next_phase": "C",
+    "codex_paused_at": "2026-10-22T17:05:00+08:00",
+    "phase_b_resumed_at": "2026-10-22T17:40:00+08:00",
+    "phase_b_completed_at": "2026-10-22T19:00:00+08:00",
+    "resume_handoff": "resume-handoff.md",
+    "last_completed_phase": "B"
+  }
 }

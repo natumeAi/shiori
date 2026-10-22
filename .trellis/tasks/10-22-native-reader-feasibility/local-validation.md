@@ -951,3 +951,58 @@ The complete quality gate was rerun for the corrected bundled assets: codegen ex
 ## Phase A post-stage determinism review
 
 Trellis checker: PASS after correction. Compared raw bytes of all 86 tracked oracle files with both HEAD and index blobs: 86/86 identical, zero raw/filter mismatches. Independently checked all 45 generated file hashes and their raw/filter agreement; self EOL attributes are correct. Decompressed asset changes are only CRLF-to-LF in one-page XHTML (-1 byte) and font NOTICE (-2 bytes); vector changes are fixture digests only. All four vendored payloads still match. Corrected full gate: all exit 0, codegen 0 outputs, 91 tests. The initial Phase A commit is amended to include this correction before starting Phase B.
+
+## User pause — Phase B incomplete
+
+Paused on 2026-10-22 at the user's explicit request. Dependency installation exited 0 (`reader-dependency-install.json`); no Phase B codegen, format, analysis, tests or review completed. Partial source/parser and CFI model drafts remain uncommitted. Both implementers report no remaining subprocesses. See `resume-handoff.md` and the source/CFI resume research notes. No further implementation, phase commit, push or task archive was performed during pause recording.
+
+## Phase B evidence — 2026-10-22
+
+Windows host only; WebKit 27.2 is the authority (Chromium 156.0.8078.4 cross-check). No device run.
+
+### Results
+
+| Area | Result |
+| --- | --- |
+| Synthetic fixtures (13 EPUBs, 39 sections) | Package/spine/section bases/TOC, parser selection and error class, projected nodes, canonical version/length/signature/starts/maps: 0 mismatches against `test/fixtures/reader/oracle/*.webkit.json`. |
+| Native CFI on native documents | All 4,807 sampled vector CFIs: `Cfi.resolve` equals the vector's resolved node/offset and `Cfi.export` reproduces the CFI, 0 failures. |
+| Local books (4 EPUBs, 60 sections) | Same comparisons: 0 mismatches; 168,677 sampled CFIs resolved and exported with 0 failures. Output carries indices only. |
+| Source edge fixtures (`test/fixtures/reader/source_edge`, 43 sections) | Hand-written malformed XML, fallbacks, inert content, CSS rewriting, namespaces, HTML tree-builder cases: equal to WebKit vectors including all CFI samples, except one pinned difference (see gaps). |
+| Native to oracle interop | `dart run tool/reader/native_cfi_interop.dart export build/interop`; `cd tool/oracle && npm run resolve -- ../../build/interop/cfi-list.json`; `dart run tool/reader/native_cfi_interop.dart compare build/interop`. 13 fixtures, 4,807 native-exported CFIs: Foliate node/offset/section equal the native resolution on WebKit 4,807/4,807 and Chromium 4,807/4,807, 0 mismatches. |
+
+### Test counts and gate
+
+`flutter test test/features/reader`: 256 passed (cfi 203, epub 49, canonical 4). Full gate, run sequentially: `dart run build_runner build` exit 0; `dart format --set-exit-if-changed lib test tool/reader` exit 0 (112 files, 0 changed; tool/diag does not exist); `flutter analyze` exit 0, no issues; `flutter test` exit 0, 347 passed. `csslib` was removed from pubspec (unused).
+
+### Known gaps and caveats
+
+- HTML-mode only: a head-level `<template>` is not isolated; `<noscript>` content that closes an open `<p>` builds a different tree; attribute URLs are not tokenized, so the raw text of a script-enabled `<noscript>` keeps the package href (the single pinned difference in `h2-noscript-head.html`, whose sampled positions are skipped). None occur in the fixtures or the four books. Pure-SVG spine items are not exercised by the oracle.
+- Head `<style>` text carries length-neutral resource tokens whose length equals the reference blob URL length for the oracle origin (64); head-text offsets are origin-length dependent. Body positions are unaffected.
+- ZIP limits check declared sizes and the size after expansion; `archive` inflates a whole entry in memory, so a lying header can briefly allocate more than the limit before it is rejected.
+- Verified on Windows only; iPhone parsing behaviour is unverified.
+
+## Post-Phase-B review: oracle vector slimming
+
+Requested by the user in review before any push, because the public history
+would otherwise keep ~27 MB of vectors. Folded into the Phase A commit.
+
+- Change: `npm run vectors` still runs WebKit and Chromium and still writes
+  `cross-engine-differences.json`, but commits only `<id>.webkit.json`. Full
+  Chromium vectors go to gitignored `build/oracle-chromium/`. Vector files use
+  `compactJSON` (same sorted JSON; values that fit 120 columns on one line,
+  long primitive arrays wrapped). `verify-vectors` rejects committed Chromium
+  files and checks Chromium output when present.
+- First attempt: `compactJSON` printed `undefined` object members, which
+  `JSON.stringify` drops; `verify-vectors` failed with a JSON syntax error
+  (`"properties": undefined`). The rerun overwrote that evidence file, so the
+  `oracle-final-clean-*.json` files show the final run only. Fixed by
+  normalizing through `JSON.parse(JSON.stringify(...))` before layout.
+- Reproducibility: two clean generations (UTC, Asia/Hong_Kong) — 32
+  generated/attribute files, 0 SHA-256 differences, exit 0
+  (`oracle-final-reproducibility.json`). 45 → 32 files: the 13 Chromium vectors.
+- Lossless check: all 29 previously committed vector files (13 WebKit, 13
+  Chromium, summary, Unicode table, differences) parse to deep-equal content
+  in their new locations. Assets and fixture sources are byte-unchanged.
+- Size: `test/fixtures/reader/oracle/` 27 MB → 6.7 MB; ~1.14 M → ~99.5 k lines.
+- `flutter test`: exit 0, 347 passed (local books: 4, 60 sections, 168,677
+  CFI samples). No Dart reader changed.

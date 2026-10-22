@@ -67,6 +67,21 @@ styles), and a Flutter SVG renderer (non-wrapper static SVG). Node tooling
 under `tool/oracle/` (foliate-js at the pinned tarball, fflate 0.8.2, a
 bundler and Playwright) is development-only and never ships in the app.
 
+### Phase B runtime dependencies (outcome)
+
+Verified in the pub cache on 2026-10-22; all pure Dart, usable in isolates:
+
+| Package | Version | Licence | Reason |
+| --- | --- | --- | --- |
+| `archive` | 4.5.2 | MIT | ZIP container reading with declared size and entry limits (`EpubArchive`). |
+| `html` | 0.15.7 | MIT | HTML5 tree builder for the reference's HTML fallback and `text/html` sections. |
+| `xml` | 7.1.0 | MIT | Only `XmlDefaultEntityMapping.html().entities` (HTML4/XHTML named entities for XHTML doctypes). The XML parser itself is project code because browser-strict well-formedness and fallback selection could not be matched with a permissive parser. |
+
+Transitive additions: `petitparser` 7.1.0, `posix` 6.5.2 (both MIT); `meta`
+moved 1.18.3 to 1.19.0. `csslib` was evaluated and removed again: Phase B
+does not parse CSS; Phase C may add it with its own justification. The SVG
+renderer decision stays with Phase C.
+
 ### Phase A tooling selected
 
 Exact development-only dependencies verified from the npm registry and installed
@@ -148,4 +163,7 @@ Planning artifacts prepared on 2026-10-22: this PRD, `design.md`,
 Phase 0 baseline and Phase A oracle tooling/fixtures are implemented locally.
 Phase A gates pass: reproducible vectors, reference drift check, both-engine
 synthetic/local-book comparisons and the full Flutter quality gate. Reader
-runtime implementation has not started; no device run has happened.
+runtime implementation started in Phase B, then the user paused on 2026-10-22
+to resume in a new chat. Shared source/parser and CFI model drafts and installed
+parser dependencies are uncommitted and unverified; no Phase B checks or
+device runs have happened. See `resume-handoff.md` for the exact checkpoint.

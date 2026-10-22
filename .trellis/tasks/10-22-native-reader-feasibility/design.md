@@ -154,12 +154,16 @@ The same EPUBs are bundled as Flutter assets for the device probe.
 ## 4. CFI and canonical index (`data/cfi`, `data/canonical`)
 
 CFI: a grammar-aware parser and serializer for the pinned `epubcfi.js`
-behavior (steps, `!` indirection, `^` escapes, id assertions and retained
-unsupported assertions, ranges with parent/start/end), structural comparison,
+behavior (steps, `!` indirection, `^` escapes, id and `;s=` assertions,
+ranges with parent/start/end), structural comparison,
 and resolution against the projected tree with even/odd slot rules, merged
 Text/CDATA chunks, virtual edge slots and UTF-16 offsets. Section bases come
 from actual OPF itemrefs (`epub.js:677`, `:688`), never `/6/<arithmetic>`.
-Unsupported assertion kinds are preserved verbatim, not dropped. The exact
+Like the pinned parser, parsing drops unknown assertion parameters and keeps
+only `;s=`, so `[id;unknown=value]` serializes as `[id]` (corrected in Phase B
+from an earlier "preserve verbatim" wording; `research/oracle-notes.md` #5).
+A caller that needs the raw string keeps it separately. Boundary points can
+resolve to the preceding text node's end (oracle-notes #4). The exact
 behavior table is parent `research/native-reader-contracts.md` §2.
 
 Canonical v1: walk eligible Text nodes as `canonicalText.ts` does; filter with
@@ -183,8 +187,11 @@ they cannot be mixed up.
    exactly where the reference does).
 2. Block/inline model: block boxes with margins/padding/indent/alignment;
    inline runs with style; `br` and whitespace handling recorded as explicit
-   mapping entries; images as block or inline placeholders; list markers and
-   ruby annotations as synthetic runs with no CFI/canonical slot.
+   mapping entries; images as block or inline placeholders; list markers as
+   synthetic runs with no CFI/canonical slot. Author ruby text (`rt`, `rp`) is
+   source text with CFI and canonical coordinates and must stay mapped to its
+   source nodes; only generated presentation is synthetic (corrected in
+   Phase B; `research/oracle-notes.md` #9).
 3. Paragraph building on the root isolate with `ui.ParagraphBuilder`, keeping
    a paragraph-offset ↔ (source node, UTF-16 offset) map per run. First-line
    indentation placeholders are synthetic.
