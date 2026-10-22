@@ -150,10 +150,15 @@ Dio dio(Ref ref) {
 }
 ```
 
-- Config values come from `--dart-define-from-file=config/<env>.json`
-  (`flutter run --dart-define-from-file=config/dev.json`). Without that flag
-  `Env.apiBaseUrl` is `''` and every request fails; tests never depend on it.
-- `config/*.json` holds non-secret values only (base URLs, flags). Anything
+- Config values come from `--dart-define-from-file=config/<env>.json`.
+  Without that flag `Env.apiBaseUrl` is `''` and every request fails; tests
+  never depend on it.
+- The repository is public. Committed `config/dev.json` holds placeholders
+  only (`https://api.example.com`). Real server addresses live in
+  `config/local.json`, which is git-ignored: copy `dev.json`, fill in real
+  values, and run `flutter run --dart-define-from-file=config/local.json`.
+  Never commit a real host, IP, or port.
+- Config files hold non-secret values only (base URLs, flags). Anything
   compiled into the app can be extracted from the binary.
 - All interceptors (auth header, logging) are added in `dioProvider`.
   Repositories never create their own `Dio`.
@@ -165,7 +170,7 @@ Dio dio(Ref ref) {
 - Authentication (token storage, refresh interceptor, router redirect):
   document here when the first auth task lands.
 - API field casing (`field_rename`), pagination shape, error response body format.
-- Cleartext HTTP: the dev API (`config/dev.json`) is plain `http://`. Before the
+- Cleartext HTTP: the dev API (`config/local.json`) is plain `http://`. Before the
   first real request, allow it per platform (Android `usesCleartextTraffic` for
   debug, iOS ATS exception, macOS `com.apple.security.network.client`
   entitlement) and record the chosen setup here.
