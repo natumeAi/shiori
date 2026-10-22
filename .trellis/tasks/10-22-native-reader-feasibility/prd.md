@@ -67,6 +67,17 @@ styles), and a Flutter SVG renderer (non-wrapper static SVG). Node tooling
 under `tool/oracle/` (foliate-js at the pinned tarball, fflate 0.8.2, a
 bundler and Playwright) is development-only and never ships in the app.
 
+### Phase A tooling selected
+
+Exact development-only dependencies verified from the npm registry and installed
+package metadata on 2026-10-22: `fflate 0.8.2` (MIT, matches the reference ZIP and
+UTF-8 implementation), `foliate-js` commit
+`78914aef4466eb960965702401634c2cb348e9b1` (MIT), `esbuild 0.28.2` (MIT, browser
+bundle), and `playwright 1.64.1` (Apache-2.0, WebKit primary and Chromium
+cross-check). The committed npm lockfile pins their integrity. No Dart runtime
+dependency is added in Phase A. Full versions, provenance and transitive package
+licences are in `tool/oracle/README.md`.
+
 ## Acceptance Criteria
 
 - **NC1 (N1):** Running the oracle twice on a clean checkout yields
@@ -134,4 +145,7 @@ device runs after a confirmed push.
 
 Planning artifacts prepared on 2026-10-22: this PRD, `design.md`,
 `implement.md`, `research/s2-entry-evidence.md` and the context manifests.
-No S2 code has been written and no device run has happened.
+Phase 0 baseline and Phase A oracle tooling/fixtures are implemented locally.
+Phase A gates pass: reproducible vectors, reference drift check, both-engine
+synthetic/local-book comparisons and the full Flutter quality gate. Reader
+runtime implementation has not started; no device run has happened.

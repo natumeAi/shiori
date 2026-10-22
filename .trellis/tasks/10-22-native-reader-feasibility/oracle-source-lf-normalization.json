@@ -1,0 +1,45 @@
+{
+  "commit": "6304095c215ca4ad95634f51699a63b5f2330595",
+  "checkedOrdinaryTextFiles": 83,
+  "normalized": [
+    {
+      "path": "tool/oracle/fixtures/one-page/EPUB/only.xhtml",
+      "beforeSHA256": "64962261df5c3271ad85c57ebcd9669f67c262c5dd1f99ee846d41615fc2a64e",
+      "afterSHA256": "40c2fae9b0b805790eef6ce500aa067db821af3bb9f4c5e9db3d2ced8a1ad65a"
+    },
+    {
+      "path": "tool/oracle/fixtures/one-page/README.md",
+      "beforeSHA256": "7ab6eb5d2d03b0a9bb8449918dfc7c2287cdb6b938b3c84eda83ab133613c6a0",
+      "afterSHA256": "633485c1580cfbce78adabe1c771fd55a0d704a33a7eed736906448054fd6c31"
+    },
+    {
+      "path": "tool/oracle/fixtures/one-page/fixture.json",
+      "beforeSHA256": "267dfea7ad2bf1d19cf358e7ce95fa1aeca0d196bf1a936f4ad7c91b66b16eb9",
+      "afterSHA256": "f9944a03c11eda18d67e7a561e83ab4a4688f16649c737659f9ed40cb86323d2"
+    },
+    {
+      "path": "tool/oracle/fixtures/styles/EPUB/fonts/NOTICE",
+      "beforeSHA256": "685e4c70b1bfef52af130a87de187ea41d2d04a8748d2ad70b383823e0cc8146",
+      "afterSHA256": "1907f588916320405804205340eb27982f2eca8eb486d048f93de152b15cd65b"
+    },
+    {
+      "path": "tool/oracle/fixtures/styles/README.md",
+      "beforeSHA256": "8d1f8749f13cbc6d0d9cd05e413d4651d90d8402f138076d522d8678da64281c",
+      "afterSHA256": "21c7e7a3cdbf817613e14b8b4421328bd864c48d8541cbba0212fd153024eb22"
+    },
+    {
+      "path": "tool/oracle/fixtures/styles/fixture.json",
+      "beforeSHA256": "2edf6776c9b15adb9644c7a6d54ab9528ec1df6f7e7a9d5fa094682bb7c15b53",
+      "afterSHA256": "e0b7bbf44c6c74b1fa3a19fffc070f0e543e8cbc519219359ff5f5bd18d4485c"
+    },
+    {
+      "path": "tool/oracle/reference/lan-reader-a4bda23/provenance.json",
+      "beforeSHA256": "3d7a3568de04eb08e5ea20f0993bba0324373717f74e77b1acf4a676cb141859",
+      "afterSHA256": "d158a172f3c3a116727066d6cb86a611beeb517709708380aacb423ccbe0de27"
+    }
+  ],
+  "headBlobMismatchesAfterNormalization": [],
+  "preservedRawUnicodeSHA256": "216449c97ea9cd680358a78bb94401666a8fc35d157d7b0fab94c700fda9dd69",
+  "allTrackedOracleFilesChecked": 86,
+  "allTrackedOracleFilesHEADMismatches": []
+}

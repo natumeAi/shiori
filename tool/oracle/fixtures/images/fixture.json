@@ -1,0 +1,25 @@
+{
+  "sections": [
+    {
+      "id": "mixed",
+      "href": "mixed.xhtml"
+    },
+    {
+      "id": "image-only",
+      "href": "image-only.xhtml"
+    },
+    {
+      "id": "cover",
+      "href": "cover.xhtml"
+    }
+  ],
+  "raster": true,
+  "resources": [
+    {
+      "id": "raster",
+      "href": "images/generated.png",
+      "mediaType": "image/png",
+      "properties": "cover-image"
+    }
+  ]
+}

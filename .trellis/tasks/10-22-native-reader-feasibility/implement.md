@@ -22,24 +22,24 @@ guide (the `trellis-before-dev` skill does this).
 
 ## Phase A — oracle tooling and fixtures (design §2)
 
-- [ ] Scaffold `tool/oracle/` with exact-version `package.json` and committed
+- [x] Scaffold `tool/oracle/` with exact-version `package.json` and committed
   lockfile; add the `.gitignore` entries from design §10.
-- [ ] Vendor the reference files with provenance headers; implement
+- [x] Vendor the reference files with provenance headers; implement
   `check-reference` against `a4bda23`.
-- [ ] Build the page bundle that reproduces the `foliateEngine.ts` load path
+- [x] Build the page bundle that reproduces the `foliateEngine.ts` load path
   and the inert projection; drive it with Playwright WebKit and Chromium.
-- [ ] Author fixture sources for every row of design §2.3 and the
+- [x] Author fixture sources for every row of design §2.3 and the
   deterministic builder writing `assets/reader_fixtures/` + `manifest.json`.
   Register the assets in `pubspec.yaml`.
-- [ ] Generate committed vectors into `test/fixtures/reader/oracle/` and the
+- [x] Generate committed vectors into `test/fixtures/reader/oracle/` and the
   Unicode range table source for Phase B. Write `tool/oracle/README.md`
   (commands, versions, what is committed and what stays local).
-- [ ] Run `vectors-local` on the four books in `D:/Projects/lan-reader/docs/`
+- [x] Run `vectors-local` on the four books in `D:/Projects/lan-reader/docs/`
   into `build/oracle-local/` (gitignored). Do not copy the books anywhere.
 - **Gate A:** two clean `build-fixtures` + `vectors` runs are byte-identical;
   `check-reference` passes; WebKit/Chromium differences are listed in
   `research/oracle-notes.md` with the authoritative engine per case.
-- [ ] Commit: `feat(oracle): reference vector tooling and synthetic EPUB corpus`.
+- [x] Commit: `feat(oracle): reference vector tooling and synthetic EPUB corpus`.
 
 ## Phase B — source model, CFI, canonical (design §3–§4)
 

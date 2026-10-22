@@ -54,7 +54,7 @@ def main() -> int:
             "exitCode": 124 if timed_out else process.returncode,
             "timedOut": timed_out,
             "durationSeconds": round(time.monotonic() - started, 3),
-            "outputTail": "\n".join(decoded.splitlines()[-24:]),
+            "outputTail": "\n".join(line.rstrip() for line in decoded.splitlines()[-24:]),
         }
         records.append(record)
         print(json.dumps(record, ensure_ascii=False), flush=True)

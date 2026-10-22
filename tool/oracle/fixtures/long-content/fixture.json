@@ -1,0 +1,16 @@
+{
+  "sections": [
+    {
+      "id": "long-chapter",
+      "href": "long-chapter.xhtml"
+    },
+    {
+      "id": "long-cjk",
+      "href": "long-cjk.xhtml"
+    },
+    {
+      "id": "long-latin",
+      "href": "long-latin.xhtml"
+    }
+  ]
+}

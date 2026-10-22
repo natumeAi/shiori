@@ -1,0 +1,25 @@
+{
+  "sections": [
+    {
+      "id": "malformed",
+      "href": "malformed.xhtml"
+    },
+    {
+      "id": "no-doctype",
+      "href": "entities-no-doctype.xhtml"
+    },
+    {
+      "id": "doctype",
+      "href": "entities-doctype.xhtml"
+    },
+    {
+      "id": "no-namespace",
+      "href": "no-namespace.xhtml"
+    },
+    {
+      "id": "html-media",
+      "href": "html-media.html",
+      "mediaType": "text/html"
+    }
+  ]
+}

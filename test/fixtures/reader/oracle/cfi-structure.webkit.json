@@ -1,0 +1,2047 @@
+{
+  "fixtureId": "cfi-structure",
+  "grammar": [
+    {
+      "collapsedEnd": "epubcfi(/6/2[ref^,one]!/4/2[a^]b^^c]/1:1)",
+      "collapsedStart": "epubcfi(/6/2[ref^,one]!/4/2[a^]b^^c]/1:1)",
+      "input": "epubcfi(/6/2[ref^,one]!/4/2[a^]b^^c]/1:1)",
+      "parsed": [[{"index":6},{"id":"ref,one","index":2}],[{"index":4},{"id":"a]b^c","index":2},{"index":1,"offset":1}]]
+    },
+    {
+      "collapsedEnd": "epubcfi(/8/4!/4/2/1:8)",
+      "collapsedStart": "epubcfi(/8/4!/4/2/1:0)",
+      "input": "epubcfi(/8/4!/4/2,/1:0,/1:8)",
+      "parsed": {
+        "end": [[{"index":1,"offset":8}]],
+        "parent": [[{"index":8},{"index":4}],[{"index":4},{"index":2}]],
+        "start": [[{"index":1,"offset":0}]]
+      }
+    },
+    {
+      "collapsedEnd": "epubcfi(/6/2!/4/2/1:0[before,after;s=b])",
+      "collapsedStart": "epubcfi(/6/2!/4/2/1:0[before,after;s=b])",
+      "input": "epubcfi(/6/2!/4/2/1:0[before,after;s=b])",
+      "parsed": [
+        [{"index":6},{"index":2}],
+        [{"index":4},{"index":2},{"index":1,"offset":0,"side":"b","text":["before","after"]}]
+      ]
+    },
+    {
+      "collapsedEnd": "epubcfi(/6/2!/4/2~1.25@2.5:3.5)",
+      "collapsedStart": "epubcfi(/6/2!/4/2~1.25@2.5:3.5)",
+      "input": "epubcfi(/6/2!/4/2~1.25@2.5:3.5)",
+      "parsed": [[{"index":6},{"index":2}],[{"index":4},{"index":2,"spatial":[2.5,3.5],"temporal":1.25}]]
+    },
+    {
+      "collapsedEnd": "epubcfi(/6/2!/4/2[id])",
+      "collapsedStart": "epubcfi(/6/2!/4/2[id])",
+      "input": "epubcfi(/6/2!/4/2[id;unknown=value])",
+      "parsed": [[{"index":6},{"index":2}],[{"index":4},{"id":"id","index":2}]]
+    },
+    {
+      "collapsedEnd": "epubcfi(/6/2!/4/2[id;s=a])",
+      "collapsedStart": "epubcfi(/6/2!/4/2[id;s=a])",
+      "input": "epubcfi(/6/2!/4/2[id;s=a])",
+      "parsed": [[{"index":6},{"index":2}],[{"index":4},{"id":"id","index":2,"side":"a"}]]
+    },
+    {
+      "collapsedEnd": "epubcfi(/6/2!/4/0)",
+      "collapsedStart": "epubcfi(/6/2!/4/0)",
+      "input": "epubcfi(/6/2!/4/0)",
+      "parsed": [[{"index":6},{"index":2}],[{"index":4},{"index":0}]]
+    },
+    {
+      "collapsedEnd": "epubcfi(/6/2!/4/1:0)",
+      "collapsedStart": "epubcfi(/6/2!/4/1:0)",
+      "input": "epubcfi(/6/2!/4/1:0)",
+      "parsed": [[{"index":6},{"index":2}],[{"index":4},{"index":1,"offset":0}]]
+    },
+    {"collapsedEnd":"epubcfi()","collapsedStart":"epubcfi()","input":"","parsed":[[]]},
+    {"collapsedEnd":"epubcfi()","collapsedStart":"epubcfi()","input":"not-a-cfi","parsed":[[]]},
+    {"collapsedEnd":"epubcfi()","collapsedStart":"epubcfi()","input":"epubcfi()","parsed":[[]]},
+    {"collapsedEnd":"epubcfi(/NaN)","collapsedStart":"epubcfi(/NaN)","input":"epubcfi(/)","parsed":[[{"index":null}]]},
+    {"error":{"name":"TypeError"},"input":"epubcfi(:2)"},
+    {"error":{"name":"TypeError"},"input":"epubcfi(/6/2,/4/2)"},
+    {
+      "collapsedEnd": "epubcfi(/6/2!/4/2)",
+      "collapsedStart": "epubcfi(/6/2!/4/2)",
+      "input": "epubcfi(/6/2!/4/2[unterminated)",
+      "parsed": [[{"index":6},{"index":2}],[{"index":4},{"index":2}]]
+    }
+  ],
+  "oracleSchemaVersion": 1,
+  "package": {
+    "direction": null,
+    "opfPath": "EPUB/package.opf",
+    "rendition": {},
+    "spine": [
+      {
+        "cfiBase": "epubcfi(/6/2[ref-structure])",
+        "href": "EPUB/structure.xhtml",
+        "id": "ref-structure",
+        "idref": "structure",
+        "linear": null,
+        "sectionIndex": 0
+      }
+    ],
+    "toc": [{"href":"EPUB/structure.xhtml","label":"structure","subitems":null}]
+  },
+  "provenance": {
+    "engineName": "webkit",
+    "engineVersion": "27.2",
+    "fixtureSHA256": "a4449275677588bef610e2a4b520441b3136d04f069bd5cb5dba1e2157a828e9",
+    "foliateCommit": "78914aef4466eb960965702401634c2cb348e9b1",
+    "nodeVersion": "v24.19.0",
+    "referenceCommit": "a4bda23fd3e82e285a22566d88576e67d3e8756b",
+    "toolVersions": {
+      "esbuild": "0.28.2",
+      "fflate": "0.8.2",
+      "foliate-js": "https://codeload.github.com/johnfactotum/foliate-js/tar.gz/78914aef4466eb960965702401634c2cb348e9b1",
+      "playwright": "1.64.1"
+    }
+  },
+  "resourceURLs": [],
+  "sections": [
+    {
+      "canonical": {
+        "entries": [
+          {"canonicalToUtf16":[0,1,2,3,4,5,7,8,9,10,11,12,13,14],"length":14,"node":7,"start":0,"utf16Length":15},
+          {"canonicalToUtf16":[0],"length":1,"node":9,"start":14,"utf16Length":1},
+          {"canonicalToUtf16":[0],"length":1,"node":11,"start":15,"utf16Length":1},
+          {"canonicalToUtf16":[0,1],"length":2,"node":13,"start":16,"utf16Length":2},
+          {"canonicalToUtf16":[0,1,2],"length":3,"node":17,"start":18,"utf16Length":3},
+          {"canonicalToUtf16":[0],"length":1,"node":18,"start":21,"utf16Length":1},
+          {"canonicalToUtf16":[0,1,5,8,10,12,14,15],"length":8,"node":23,"start":22,"utf16Length":16},
+          {"canonicalToUtf16":[0,1],"length":2,"node":25,"start":30,"utf16Length":2},
+          {"canonicalToUtf16":[0,1],"length":2,"node":27,"start":32,"utf16Length":2},
+          {"canonicalToUtf16":[0,1],"length":2,"node":28,"start":34,"utf16Length":2},
+          {"canonicalToUtf16":[0,1,2,3,4,5,6,7,8,9,10,11],"length":12,"node":30,"start":36,"utf16Length":13}
+        ],
+        "length": 48,
+        "signature": "fnv1a64:9fc900b3c71552db",
+        "version": 1
+      },
+      "cfiBase": "epubcfi(/6/2[ref-structure])",
+      "comparison": {
+        "input": [
+          "epubcfi(/6/2[ref-structure]!/4,/2[heading]/1:0,/12/1:13)", "epubcfi(/6/2[ref-structure]!/4/12,/1:13,/1:31)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:31)", "epubcfi(/6/2[ref-structure]!/4/12/1:30)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:29)", "epubcfi(/6/2[ref-structure]!/4/12/1:28)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:27)", "epubcfi(/6/2[ref-structure]!/4/12/1:26)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:25)", "epubcfi(/6/2[ref-structure]!/4/12/1:24)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:23)", "epubcfi(/6/2[ref-structure]!/4/12/1:22)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:21)", "epubcfi(/6/2[ref-structure]!/4/12/1:20)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:19)", "epubcfi(/6/2[ref-structure]!/4/12/1:18)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:17)", "epubcfi(/6/2[ref-structure]!/4/12/1:16)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:15)", "epubcfi(/6/2[ref-structure]!/4/12/1:14)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:13)", "epubcfi(/6/2[ref-structure]!/4/12,/1:0,/1:13)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:13)", "epubcfi(/6/2[ref-structure]!/4/12/1:12)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:11)", "epubcfi(/6/2[ref-structure]!/4/12/1:10)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:9)", "epubcfi(/6/2[ref-structure]!/4/12/1:8)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:7)", "epubcfi(/6/2[ref-structure]!/4/12/1:6)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:5)", "epubcfi(/6/2[ref-structure]!/4/12/1:4)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:3)", "epubcfi(/6/2[ref-structure]!/4/12/1:2)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:1)", "epubcfi(/6/2[ref-structure]!/4/12/1:0)",
+          "epubcfi(/6/2[ref-structure]!/4/10/2,/3:0,/3:2)", "epubcfi(/6/2[ref-structure]!/4/10/2/3:2)",
+          "epubcfi(/6/2[ref-structure]!/4/10/2/3:1)", "epubcfi(/6/2[ref-structure]!/4/10/2/3:0)",
+          "epubcfi(/6/2[ref-structure]!/4/10/2/2,/1:0,/1:2)", "epubcfi(/6/2[ref-structure]!/4/10/2/2/1:2)",
+          "epubcfi(/6/2[ref-structure]!/4/10/2/2/1:1)", "epubcfi(/6/2[ref-structure]!/4/10/2/2/1:0)",
+          "epubcfi(/6/2[ref-structure]!/4/10/2,/1:0,/1:2)", "epubcfi(/6/2[ref-structure]!/4/10/2/1:2)",
+          "epubcfi(/6/2[ref-structure]!/4/10/2/1:1)", "epubcfi(/6/2[ref-structure]!/4/10/2/1:0)",
+          "epubcfi(/6/2[ref-structure]!/4/10,/1:0,/1:16)", "epubcfi(/6/2[ref-structure]!/4/10/1:16)",
+          "epubcfi(/6/2[ref-structure]!/4/10/1:15)", "epubcfi(/6/2[ref-structure]!/4/10/1:14)",
+          "epubcfi(/6/2[ref-structure]!/4/10/1:13)", "epubcfi(/6/2[ref-structure]!/4/10/1:12)",
+          "epubcfi(/6/2[ref-structure]!/4/10/1:11)", "epubcfi(/6/2[ref-structure]!/4/10/1:10)",
+          "epubcfi(/6/2[ref-structure]!/4/10/1:9)", "epubcfi(/6/2[ref-structure]!/4/10/1:8)",
+          "epubcfi(/6/2[ref-structure]!/4/10/1:7)", "epubcfi(/6/2[ref-structure]!/4/10/1:6)",
+          "epubcfi(/6/2[ref-structure]!/4/10/1:5)", "epubcfi(/6/2[ref-structure]!/4/10/1:4)",
+          "epubcfi(/6/2[ref-structure]!/4/10/1:3)", "epubcfi(/6/2[ref-structure]!/4/10/1:2)",
+          "epubcfi(/6/2[ref-structure]!/4/10/1:1)", "epubcfi(/6/2[ref-structure]!/4/10/1:0)",
+          "epubcfi(/6/2[ref-structure]!/4/6,/1:0,/1:3)", "epubcfi(/6/2[ref-structure]!/4/6/1:3)",
+          "epubcfi(/6/2[ref-structure]!/4/6/1:2)", "epubcfi(/6/2[ref-structure]!/4/6/1:1)",
+          "epubcfi(/6/2[ref-structure]!/4/6/1:0)", "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;],/5:0,/5:1)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/5:1)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/5:0)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4,/1:0,/1:3)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:3)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:2)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:1)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:0)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;],/3:0,/3:2)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/3:2)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/3:1)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/3:0)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;],/1:5,/1:7)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:7)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:6)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:5)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;],/1:2,/1:5)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:5)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:4)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:3)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:2)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;],/1:1,/1:2)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:2)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:1)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;],/1:0,/1:1)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:1)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:0)",
+          "epubcfi(/6/2[ref-structure]!/4/2[heading],/1:0,/1:15)", "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:15)",
+          "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:14)", "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:13)",
+          "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:12)", "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:11)",
+          "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:10)", "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:9)",
+          "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:8)", "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:7)",
+          "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:6)", "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:5)",
+          "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:4)", "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:3)",
+          "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:2)", "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:1)",
+          "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:0)", "epubcfi(/6/2[ref-structure]!/4/2[heading])",
+          "epubcfi(/6/2[ref-structure]!/2/4,/1:0,/1:13)", "epubcfi(/6/2[ref-structure]!/2/4/1:13)",
+          "epubcfi(/6/2[ref-structure]!/2/4/1:12)", "epubcfi(/6/2[ref-structure]!/2/4/1:11)",
+          "epubcfi(/6/2[ref-structure]!/2/4/1:10)", "epubcfi(/6/2[ref-structure]!/2/4/1:9)",
+          "epubcfi(/6/2[ref-structure]!/2/4/1:8)", "epubcfi(/6/2[ref-structure]!/2/4/1:7)",
+          "epubcfi(/6/2[ref-structure]!/2/4/1:6)", "epubcfi(/6/2[ref-structure]!/2/4/1:5)",
+          "epubcfi(/6/2[ref-structure]!/2/4/1:4)", "epubcfi(/6/2[ref-structure]!/2/4/1:3)",
+          "epubcfi(/6/2[ref-structure]!/2/4/1:2)", "epubcfi(/6/2[ref-structure]!/2/4/1:1)",
+          "epubcfi(/6/2[ref-structure]!/2/4/1:0)"
+        ],
+        "sorted": [
+          "epubcfi(/6/2[ref-structure]!/2/4/1:0)", "epubcfi(/6/2[ref-structure]!/2/4,/1:0,/1:13)",
+          "epubcfi(/6/2[ref-structure]!/2/4/1:1)", "epubcfi(/6/2[ref-structure]!/2/4/1:2)",
+          "epubcfi(/6/2[ref-structure]!/2/4/1:3)", "epubcfi(/6/2[ref-structure]!/2/4/1:4)",
+          "epubcfi(/6/2[ref-structure]!/2/4/1:5)", "epubcfi(/6/2[ref-structure]!/2/4/1:6)",
+          "epubcfi(/6/2[ref-structure]!/2/4/1:7)", "epubcfi(/6/2[ref-structure]!/2/4/1:8)",
+          "epubcfi(/6/2[ref-structure]!/2/4/1:9)", "epubcfi(/6/2[ref-structure]!/2/4/1:10)",
+          "epubcfi(/6/2[ref-structure]!/2/4/1:11)", "epubcfi(/6/2[ref-structure]!/2/4/1:12)",
+          "epubcfi(/6/2[ref-structure]!/2/4/1:13)", "epubcfi(/6/2[ref-structure]!/4/2[heading])",
+          "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:0)", "epubcfi(/6/2[ref-structure]!/4/2[heading],/1:0,/1:15)",
+          "epubcfi(/6/2[ref-structure]!/4,/2[heading]/1:0,/12/1:13)", "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:1)",
+          "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:2)", "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:3)",
+          "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:4)", "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:5)",
+          "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:6)", "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:7)",
+          "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:8)", "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:9)",
+          "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:10)", "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:11)",
+          "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:12)", "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:13)",
+          "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:14)", "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:15)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:0)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;],/1:0,/1:1)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:1)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:1)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;],/1:1,/1:2)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:2)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:2)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;],/1:2,/1:5)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:3)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:4)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:5)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:5)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;],/1:5,/1:7)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:6)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:7)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/3:0)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;],/3:0,/3:2)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/3:1)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/3:2)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:0)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4,/1:0,/1:3)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:1)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:2)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:3)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/5:0)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;],/5:0,/5:1)",
+          "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/5:1)", "epubcfi(/6/2[ref-structure]!/4/6/1:0)",
+          "epubcfi(/6/2[ref-structure]!/4/6,/1:0,/1:3)", "epubcfi(/6/2[ref-structure]!/4/6/1:1)",
+          "epubcfi(/6/2[ref-structure]!/4/6/1:2)", "epubcfi(/6/2[ref-structure]!/4/6/1:3)",
+          "epubcfi(/6/2[ref-structure]!/4/10/1:0)", "epubcfi(/6/2[ref-structure]!/4/10,/1:0,/1:16)",
+          "epubcfi(/6/2[ref-structure]!/4/10/1:1)", "epubcfi(/6/2[ref-structure]!/4/10/1:2)",
+          "epubcfi(/6/2[ref-structure]!/4/10/1:3)", "epubcfi(/6/2[ref-structure]!/4/10/1:4)",
+          "epubcfi(/6/2[ref-structure]!/4/10/1:5)", "epubcfi(/6/2[ref-structure]!/4/10/1:6)",
+          "epubcfi(/6/2[ref-structure]!/4/10/1:7)", "epubcfi(/6/2[ref-structure]!/4/10/1:8)",
+          "epubcfi(/6/2[ref-structure]!/4/10/1:9)", "epubcfi(/6/2[ref-structure]!/4/10/1:10)",
+          "epubcfi(/6/2[ref-structure]!/4/10/1:11)", "epubcfi(/6/2[ref-structure]!/4/10/1:12)",
+          "epubcfi(/6/2[ref-structure]!/4/10/1:13)", "epubcfi(/6/2[ref-structure]!/4/10/1:14)",
+          "epubcfi(/6/2[ref-structure]!/4/10/1:15)", "epubcfi(/6/2[ref-structure]!/4/10/1:16)",
+          "epubcfi(/6/2[ref-structure]!/4/10/2/1:0)", "epubcfi(/6/2[ref-structure]!/4/10/2,/1:0,/1:2)",
+          "epubcfi(/6/2[ref-structure]!/4/10/2/1:1)", "epubcfi(/6/2[ref-structure]!/4/10/2/1:2)",
+          "epubcfi(/6/2[ref-structure]!/4/10/2/2/1:0)", "epubcfi(/6/2[ref-structure]!/4/10/2/2,/1:0,/1:2)",
+          "epubcfi(/6/2[ref-structure]!/4/10/2/2/1:1)", "epubcfi(/6/2[ref-structure]!/4/10/2/2/1:2)",
+          "epubcfi(/6/2[ref-structure]!/4/10/2/3:0)", "epubcfi(/6/2[ref-structure]!/4/10/2,/3:0,/3:2)",
+          "epubcfi(/6/2[ref-structure]!/4/10/2/3:1)", "epubcfi(/6/2[ref-structure]!/4/10/2/3:2)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:0)", "epubcfi(/6/2[ref-structure]!/4/12,/1:0,/1:13)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:1)", "epubcfi(/6/2[ref-structure]!/4/12/1:2)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:3)", "epubcfi(/6/2[ref-structure]!/4/12/1:4)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:5)", "epubcfi(/6/2[ref-structure]!/4/12/1:6)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:7)", "epubcfi(/6/2[ref-structure]!/4/12/1:8)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:9)", "epubcfi(/6/2[ref-structure]!/4/12/1:10)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:11)", "epubcfi(/6/2[ref-structure]!/4/12/1:12)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:13)", "epubcfi(/6/2[ref-structure]!/4/12/1:13)",
+          "epubcfi(/6/2[ref-structure]!/4/12,/1:13,/1:31)", "epubcfi(/6/2[ref-structure]!/4/12/1:14)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:15)", "epubcfi(/6/2[ref-structure]!/4/12/1:16)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:17)", "epubcfi(/6/2[ref-structure]!/4/12/1:18)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:19)", "epubcfi(/6/2[ref-structure]!/4/12/1:20)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:21)", "epubcfi(/6/2[ref-structure]!/4/12/1:22)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:23)", "epubcfi(/6/2[ref-structure]!/4/12/1:24)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:25)", "epubcfi(/6/2[ref-structure]!/4/12/1:26)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:27)", "epubcfi(/6/2[ref-structure]!/4/12/1:28)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:29)", "epubcfi(/6/2[ref-structure]!/4/12/1:30)",
+          "epubcfi(/6/2[ref-structure]!/4/12/1:31)"
+        ]
+      },
+      "href": "EPUB/structure.xhtml",
+      "parser": {"errorClass":null,"originalType":"application/xhtml+xml","used":"xhtml"},
+      "projection": [
+        {
+          "id": "",
+          "index": 0,
+          "kind": "element",
+          "localName": "html",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": null,
+          "slot": 0,
+          "text": null
+        },
+        {
+          "id": "",
+          "index": 1,
+          "kind": "element",
+          "localName": "head",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 0,
+          "slot": 0,
+          "text": null
+        },
+        {
+          "id": "",
+          "index": 2,
+          "kind": "element",
+          "localName": "meta",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 1,
+          "slot": 0,
+          "text": null
+        },
+        {
+          "id": "",
+          "index": 3,
+          "kind": "element",
+          "localName": "title",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 1,
+          "slot": 1,
+          "text": null
+        },
+        {
+          "id": null,
+          "index": 4,
+          "kind": "text",
+          "localName": null,
+          "namespaceURI": null,
+          "parent": 3,
+          "slot": 0,
+          "text": "CFI structure"
+        },
+        {
+          "id": "",
+          "index": 5,
+          "kind": "element",
+          "localName": "body",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 0,
+          "slot": 1,
+          "text": null
+        },
+        {
+          "id": "heading",
+          "index": 6,
+          "kind": "element",
+          "localName": "h1",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 5,
+          "slot": 0,
+          "text": null
+        },
+        {
+          "id": null,
+          "index": 7,
+          "kind": "text",
+          "localName": null,
+          "namespaceURI": null,
+          "parent": 6,
+          "slot": 0,
+          "text": "Source identity"
+        },
+        {
+          "id": "a^b[,]()=;",
+          "index": 8,
+          "kind": "element",
+          "localName": "p",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 5,
+          "slot": 1,
+          "text": null
+        },
+        {"id":null,"index":9,"kind":"text","localName":null,"namespaceURI":null,"parent":8,"slot":0,"text":"甲"},
+        {
+          "id": null,
+          "index": 10,
+          "kind": "comment",
+          "localName": null,
+          "namespaceURI": null,
+          "parent": 8,
+          "slot": 1,
+          "text": " ignored CFI comment "
+        },
+        {"id":null,"index":11,"kind":"text","localName":null,"namespaceURI":null,"parent":8,"slot":2,"text":"乙"},
+        {"id":null,"index":12,"kind":"cdata","localName":null,"namespaceURI":null,"parent":8,"slot":3,"text":"丙😀"},
+        {"id":null,"index":13,"kind":"text","localName":null,"namespaceURI":null,"parent":8,"slot":4,"text":"丁戊"},
+        {
+          "id": "empty",
+          "index": 14,
+          "kind": "element",
+          "localName": "span",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 8,
+          "slot": 5,
+          "text": null
+        },
+        {"id":null,"index":15,"kind":"text","localName":null,"namespaceURI":null,"parent":8,"slot":6,"text":"  "},
+        {
+          "id": "",
+          "index": 16,
+          "kind": "element",
+          "localName": "b",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 8,
+          "slot": 7,
+          "text": null
+        },
+        {"id":null,"index":17,"kind":"text","localName":null,"namespaceURI":null,"parent":16,"slot":0,"text":"己&庚"},
+        {"id":null,"index":18,"kind":"text","localName":null,"namespaceURI":null,"parent":8,"slot":8,"text":"尾"},
+        {
+          "id": "",
+          "index": 19,
+          "kind": "element",
+          "localName": "p",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 5,
+          "slot": 2,
+          "text": null
+        },
+        {"id":null,"index":20,"kind":"text","localName":null,"namespaceURI":null,"parent":19,"slot":0,"text":"   "},
+        {
+          "id": "empty-block",
+          "index": 21,
+          "kind": "element",
+          "localName": "div",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 5,
+          "slot": 3,
+          "text": null
+        },
+        {
+          "id": "",
+          "index": 22,
+          "kind": "element",
+          "localName": "p",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 5,
+          "slot": 4,
+          "text": null
+        },
+        {
+          "id": null,
+          "index": 23,
+          "kind": "text",
+          "localName": null,
+          "namespaceURI": null,
+          "parent": 22,
+          "slot": 0,
+          "text": "实体   😀 < > \" '。"
+        },
+        {
+          "id": "",
+          "index": 24,
+          "kind": "element",
+          "localName": "span",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 22,
+          "slot": 1,
+          "text": null
+        },
+        {"id":null,"index":25,"kind":"text","localName":null,"namespaceURI":null,"parent":24,"slot":0,"text":"嵌套"},
+        {
+          "id": "",
+          "index": 26,
+          "kind": "element",
+          "localName": "em",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 24,
+          "slot": 1,
+          "text": null
+        },
+        {"id":null,"index":27,"kind":"text","localName":null,"namespaceURI":null,"parent":26,"slot":0,"text":"强调"},
+        {"id":null,"index":28,"kind":"text","localName":null,"namespaceURI":null,"parent":24,"slot":2,"text":"终点"},
+        {
+          "id": "",
+          "index": 29,
+          "kind": "element",
+          "localName": "p",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 5,
+          "slot": 5,
+          "text": null
+        },
+        {
+          "id": null,
+          "index": 30,
+          "kind": "text",
+          "localName": null,
+          "namespaceURI": null,
+          "parent": 29,
+          "slot": 0,
+          "text": "blob:example "
+        },
+        {
+          "id": null,
+          "index": 31,
+          "kind": "cdata",
+          "localName": null,
+          "namespaceURI": null,
+          "parent": 29,
+          "slot": 1,
+          "text": "blob:cdata-example"
+        },
+        {
+          "id": null,
+          "index": 32,
+          "kind": "comment",
+          "localName": null,
+          "namespaceURI": null,
+          "parent": 29,
+          "slot": 2,
+          "text": " blob:comment-example "
+        }
+      ],
+      "samples": [
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/2/4/1:0)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/2/4/1:0)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/2/4/1:0)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":0},"start":{"node":4,"offset":0}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":2},{"index":4},{"index":1,"offset":0}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":0},"start":{"node":4,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/2/4/1:1)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/2/4/1:1)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/2/4/1:1)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":1},"start":{"node":4,"offset":1}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":2},{"index":4},{"index":1,"offset":1}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":1},"start":{"node":4,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/2/4/1:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/2/4/1:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/2/4/1:2)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":2},"start":{"node":4,"offset":2}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":2},{"index":4},{"index":1,"offset":2}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":2},"start":{"node":4,"offset":2}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/2/4/1:3)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/2/4/1:3)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/2/4/1:3)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":3},"start":{"node":4,"offset":3}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":2},{"index":4},{"index":1,"offset":3}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":3},"start":{"node":4,"offset":3}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/2/4/1:4)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/2/4/1:4)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/2/4/1:4)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":4},"start":{"node":4,"offset":4}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":2},{"index":4},{"index":1,"offset":4}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":4},"start":{"node":4,"offset":4}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/2/4/1:5)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/2/4/1:5)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/2/4/1:5)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":5},"start":{"node":4,"offset":5}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":2},{"index":4},{"index":1,"offset":5}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":5},"start":{"node":4,"offset":5}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/2/4/1:6)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/2/4/1:6)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/2/4/1:6)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":6},"start":{"node":4,"offset":6}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":2},{"index":4},{"index":1,"offset":6}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":6},"start":{"node":4,"offset":6}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/2/4/1:7)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/2/4/1:7)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/2/4/1:7)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":7},"start":{"node":4,"offset":7}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":2},{"index":4},{"index":1,"offset":7}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":7},"start":{"node":4,"offset":7}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/2/4/1:8)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/2/4/1:8)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/2/4/1:8)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":8},"start":{"node":4,"offset":8}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":2},{"index":4},{"index":1,"offset":8}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":8},"start":{"node":4,"offset":8}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/2/4/1:9)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/2/4/1:9)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/2/4/1:9)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":9},"start":{"node":4,"offset":9}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":2},{"index":4},{"index":1,"offset":9}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":9},"start":{"node":4,"offset":9}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/2/4/1:10)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/2/4/1:10)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/2/4/1:10)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":10},"start":{"node":4,"offset":10}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":2},{"index":4},{"index":1,"offset":10}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":10},"start":{"node":4,"offset":10}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/2/4/1:11)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/2/4/1:11)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/2/4/1:11)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":11},"start":{"node":4,"offset":11}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":2},{"index":4},{"index":1,"offset":11}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":11},"start":{"node":4,"offset":11}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/2/4/1:12)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/2/4/1:12)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/2/4/1:12)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":12},"start":{"node":4,"offset":12}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":2},{"index":4},{"index":1,"offset":12}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":12},"start":{"node":4,"offset":12}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/2/4/1:13)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/2/4/1:13)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/2/4/1:13)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":13},"start":{"node":4,"offset":13}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":2},{"index":4},{"index":1,"offset":13}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":13},"start":{"node":4,"offset":13}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/2/4,/1:0,/1:13)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/2/4/1:13)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/2/4/1:0)",
+          "input": {"collapsed":false,"end":{"node":4,"offset":13},"start":{"node":4,"offset":0}},
+          "kind": "node-range",
+          "parsed": {
+            "end": [[{"index":1,"offset":13}]],
+            "parent": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":2},{"index":4}]],
+            "start": [[{"index":1,"offset":0}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":4,"offset":13},"start":{"node":4,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/2[heading])",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/2[heading])",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading])",
+          "input": {"collapsed":true,"end":{"node":6,"offset":0},"start":{"node":6,"offset":0}},
+          "kind": "element",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"id":"heading","index":2}]],
+          "resolved": {"collapsed":true,"end":{"node":6,"offset":0},"start":{"node":6,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:0)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:0)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:0)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":0},"start":{"node":7,"offset":0}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"heading","index":2},{"index":1,"offset":0}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":0},"start":{"node":7,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:1)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:1)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:1)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":1},"start":{"node":7,"offset":1}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"heading","index":2},{"index":1,"offset":1}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":1},"start":{"node":7,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:2)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":2},"start":{"node":7,"offset":2}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"heading","index":2},{"index":1,"offset":2}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":2},"start":{"node":7,"offset":2}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:3)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:3)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:3)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":3},"start":{"node":7,"offset":3}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"heading","index":2},{"index":1,"offset":3}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":3},"start":{"node":7,"offset":3}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:4)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:4)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:4)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":4},"start":{"node":7,"offset":4}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"heading","index":2},{"index":1,"offset":4}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":4},"start":{"node":7,"offset":4}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:5)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:5)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:5)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":5},"start":{"node":7,"offset":5}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"heading","index":2},{"index":1,"offset":5}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":5},"start":{"node":7,"offset":5}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:6)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:6)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:6)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":6},"start":{"node":7,"offset":6}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"heading","index":2},{"index":1,"offset":6}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":6},"start":{"node":7,"offset":6}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:7)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:7)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:7)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":7},"start":{"node":7,"offset":7}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"heading","index":2},{"index":1,"offset":7}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":7},"start":{"node":7,"offset":7}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:8)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:8)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:8)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":8},"start":{"node":7,"offset":8}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"heading","index":2},{"index":1,"offset":8}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":8},"start":{"node":7,"offset":8}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:9)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:9)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:9)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":9},"start":{"node":7,"offset":9}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"heading","index":2},{"index":1,"offset":9}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":9},"start":{"node":7,"offset":9}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:10)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:10)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:10)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":10},"start":{"node":7,"offset":10}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"heading","index":2},{"index":1,"offset":10}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":10},"start":{"node":7,"offset":10}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:11)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:11)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:11)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":11},"start":{"node":7,"offset":11}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"heading","index":2},{"index":1,"offset":11}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":11},"start":{"node":7,"offset":11}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:12)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:12)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:12)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":12},"start":{"node":7,"offset":12}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"heading","index":2},{"index":1,"offset":12}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":12},"start":{"node":7,"offset":12}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:13)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:13)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:13)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":13},"start":{"node":7,"offset":13}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"heading","index":2},{"index":1,"offset":13}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":13},"start":{"node":7,"offset":13}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:14)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:14)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:14)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":14},"start":{"node":7,"offset":14}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"heading","index":2},{"index":1,"offset":14}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":14},"start":{"node":7,"offset":14}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:15)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:15)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:15)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":15},"start":{"node":7,"offset":15}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"heading","index":2},{"index":1,"offset":15}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":15},"start":{"node":7,"offset":15}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/2[heading],/1:0,/1:15)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:15)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:0)",
+          "input": {"collapsed":false,"end":{"node":7,"offset":15},"start":{"node":7,"offset":0}},
+          "kind": "node-range",
+          "parsed": {
+            "end": [[{"index":1,"offset":15}]],
+            "parent": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"id":"heading","index":2}]],
+            "start": [[{"index":1,"offset":0}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":7,"offset":15},"start":{"node":7,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:0)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:0)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:0)",
+          "input": {"collapsed":true,"end":{"node":9,"offset":0},"start":{"node":9,"offset":0}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":1,"offset":0}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":9,"offset":0},"start":{"node":9,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:1)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:1)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:1)",
+          "input": {"collapsed":true,"end":{"node":9,"offset":1},"start":{"node":9,"offset":1}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":1,"offset":1}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":9,"offset":1},"start":{"node":9,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;],/1:0,/1:1)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:1)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:0)",
+          "input": {"collapsed":false,"end":{"node":9,"offset":1},"start":{"node":9,"offset":0}},
+          "kind": "node-range",
+          "parsed": {
+            "end": [[{"index":1,"offset":1}]],
+            "parent": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"id":"a^b[,]()=;","index":4}]],
+            "start": [[{"index":1,"offset":0}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":9,"offset":1},"start":{"node":9,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:1)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:1)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:1)",
+          "input": {"collapsed":true,"end":{"node":11,"offset":0},"start":{"node":11,"offset":0}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":1,"offset":1}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":9,"offset":1},"start":{"node":9,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:2)",
+          "input": {"collapsed":true,"end":{"node":11,"offset":1},"start":{"node":11,"offset":1}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":1,"offset":2}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":11,"offset":1},"start":{"node":11,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;],/1:1,/1:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:1)",
+          "input": {"collapsed":false,"end":{"node":11,"offset":1},"start":{"node":11,"offset":0}},
+          "kind": "node-range",
+          "parsed": {
+            "end": [[{"index":1,"offset":2}]],
+            "parent": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"id":"a^b[,]()=;","index":4}]],
+            "start": [[{"index":1,"offset":1}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":11,"offset":1},"start":{"node":9,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:2)",
+          "input": {"collapsed":true,"end":{"node":12,"offset":0},"start":{"node":12,"offset":0}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":1,"offset":2}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":11,"offset":1},"start":{"node":11,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:3)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:3)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:3)",
+          "input": {"collapsed":true,"end":{"node":12,"offset":1},"start":{"node":12,"offset":1}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":1,"offset":3}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":12,"offset":1},"start":{"node":12,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:4)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:4)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:4)",
+          "input": {"collapsed":true,"end":{"node":12,"offset":2},"start":{"node":12,"offset":2}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":1,"offset":4}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":12,"offset":2},"start":{"node":12,"offset":2}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:5)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:5)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:5)",
+          "input": {"collapsed":true,"end":{"node":12,"offset":3},"start":{"node":12,"offset":3}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":1,"offset":5}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":12,"offset":3},"start":{"node":12,"offset":3}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;],/1:2,/1:5)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:5)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:2)",
+          "input": {"collapsed":false,"end":{"node":12,"offset":3},"start":{"node":12,"offset":0}},
+          "kind": "node-range",
+          "parsed": {
+            "end": [[{"index":1,"offset":5}]],
+            "parent": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"id":"a^b[,]()=;","index":4}]],
+            "start": [[{"index":1,"offset":2}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":12,"offset":3},"start":{"node":11,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:5)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:5)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:5)",
+          "input": {"collapsed":true,"end":{"node":13,"offset":0},"start":{"node":13,"offset":0}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":1,"offset":5}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":12,"offset":3},"start":{"node":12,"offset":3}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:6)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:6)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:6)",
+          "input": {"collapsed":true,"end":{"node":13,"offset":1},"start":{"node":13,"offset":1}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":1,"offset":6}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":13,"offset":1},"start":{"node":13,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:7)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:7)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:7)",
+          "input": {"collapsed":true,"end":{"node":13,"offset":2},"start":{"node":13,"offset":2}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":1,"offset":7}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":13,"offset":2},"start":{"node":13,"offset":2}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;],/1:5,/1:7)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:7)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/1:5)",
+          "input": {"collapsed":false,"end":{"node":13,"offset":2},"start":{"node":13,"offset":0}},
+          "kind": "node-range",
+          "parsed": {
+            "end": [[{"index":1,"offset":7}]],
+            "parent": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"id":"a^b[,]()=;","index":4}]],
+            "start": [[{"index":1,"offset":5}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":13,"offset":2},"start":{"node":12,"offset":3}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/3:0)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/3:0)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/3:0)",
+          "input": {"collapsed":true,"end":{"node":15,"offset":0},"start":{"node":15,"offset":0}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":3,"offset":0}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":15,"offset":0},"start":{"node":15,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/3:1)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/3:1)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/3:1)",
+          "input": {"collapsed":true,"end":{"node":15,"offset":1},"start":{"node":15,"offset":1}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":3,"offset":1}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":15,"offset":1},"start":{"node":15,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/3:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/3:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/3:2)",
+          "input": {"collapsed":true,"end":{"node":15,"offset":2},"start":{"node":15,"offset":2}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":3,"offset":2}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":15,"offset":2},"start":{"node":15,"offset":2}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;],/3:0,/3:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/3:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/3:0)",
+          "input": {"collapsed":false,"end":{"node":15,"offset":2},"start":{"node":15,"offset":0}},
+          "kind": "node-range",
+          "parsed": {
+            "end": [[{"index":3,"offset":2}]],
+            "parent": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"id":"a^b[,]()=;","index":4}]],
+            "start": [[{"index":3,"offset":0}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":15,"offset":2},"start":{"node":15,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:0)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:0)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:0)",
+          "input": {"collapsed":true,"end":{"node":17,"offset":0},"start":{"node":17,"offset":0}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":4},{"index":1,"offset":0}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":17,"offset":0},"start":{"node":17,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:1)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:1)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:1)",
+          "input": {"collapsed":true,"end":{"node":17,"offset":1},"start":{"node":17,"offset":1}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":4},{"index":1,"offset":1}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":17,"offset":1},"start":{"node":17,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:2)",
+          "input": {"collapsed":true,"end":{"node":17,"offset":2},"start":{"node":17,"offset":2}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":4},{"index":1,"offset":2}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":17,"offset":2},"start":{"node":17,"offset":2}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:3)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:3)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:3)",
+          "input": {"collapsed":true,"end":{"node":17,"offset":3},"start":{"node":17,"offset":3}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":4},{"index":1,"offset":3}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":17,"offset":3},"start":{"node":17,"offset":3}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4,/1:0,/1:3)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:3)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/4/1:0)",
+          "input": {"collapsed":false,"end":{"node":17,"offset":3},"start":{"node":17,"offset":0}},
+          "kind": "node-range",
+          "parsed": {
+            "end": [[{"index":1,"offset":3}]],
+            "parent": [
+              [{"index":6},{"id":"ref-structure","index":2}],
+              [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":4}]
+            ],
+            "start": [[{"index":1,"offset":0}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":17,"offset":3},"start":{"node":17,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/5:0)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/5:0)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/5:0)",
+          "input": {"collapsed":true,"end":{"node":18,"offset":0},"start":{"node":18,"offset":0}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":5,"offset":0}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":18,"offset":0},"start":{"node":18,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/5:1)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/5:1)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/5:1)",
+          "input": {"collapsed":true,"end":{"node":18,"offset":1},"start":{"node":18,"offset":1}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"id":"a^b[,]()=;","index":4},{"index":5,"offset":1}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":18,"offset":1},"start":{"node":18,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;],/5:0,/5:1)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/5:1)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/4[a^^b^[^,^]^(^)^=^;]/5:0)",
+          "input": {"collapsed":false,"end":{"node":18,"offset":1},"start":{"node":18,"offset":0}},
+          "kind": "node-range",
+          "parsed": {
+            "end": [[{"index":5,"offset":1}]],
+            "parent": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"id":"a^b[,]()=;","index":4}]],
+            "start": [[{"index":5,"offset":0}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":18,"offset":1},"start":{"node":18,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/6/1:0)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/6/1:0)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/6/1:0)",
+          "input": {"collapsed":true,"end":{"node":20,"offset":0},"start":{"node":20,"offset":0}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":6},{"index":1,"offset":0}]],
+          "resolved": {"collapsed":true,"end":{"node":20,"offset":0},"start":{"node":20,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/6/1:1)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/6/1:1)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/6/1:1)",
+          "input": {"collapsed":true,"end":{"node":20,"offset":1},"start":{"node":20,"offset":1}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":6},{"index":1,"offset":1}]],
+          "resolved": {"collapsed":true,"end":{"node":20,"offset":1},"start":{"node":20,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/6/1:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/6/1:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/6/1:2)",
+          "input": {"collapsed":true,"end":{"node":20,"offset":2},"start":{"node":20,"offset":2}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":6},{"index":1,"offset":2}]],
+          "resolved": {"collapsed":true,"end":{"node":20,"offset":2},"start":{"node":20,"offset":2}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/6/1:3)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/6/1:3)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/6/1:3)",
+          "input": {"collapsed":true,"end":{"node":20,"offset":3},"start":{"node":20,"offset":3}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":6},{"index":1,"offset":3}]],
+          "resolved": {"collapsed":true,"end":{"node":20,"offset":3},"start":{"node":20,"offset":3}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/6,/1:0,/1:3)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/6/1:3)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/6/1:0)",
+          "input": {"collapsed":false,"end":{"node":20,"offset":3},"start":{"node":20,"offset":0}},
+          "kind": "node-range",
+          "parsed": {
+            "end": [[{"index":1,"offset":3}]],
+            "parent": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":6}]],
+            "start": [[{"index":1,"offset":0}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":20,"offset":3},"start":{"node":20,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/1:0)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/1:0)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/1:0)",
+          "input": {"collapsed":true,"end":{"node":23,"offset":0},"start":{"node":23,"offset":0}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":1,"offset":0}]],
+          "resolved": {"collapsed":true,"end":{"node":23,"offset":0},"start":{"node":23,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/1:1)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/1:1)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/1:1)",
+          "input": {"collapsed":true,"end":{"node":23,"offset":1},"start":{"node":23,"offset":1}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":1,"offset":1}]],
+          "resolved": {"collapsed":true,"end":{"node":23,"offset":1},"start":{"node":23,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/1:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/1:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/1:2)",
+          "input": {"collapsed":true,"end":{"node":23,"offset":2},"start":{"node":23,"offset":2}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":1,"offset":2}]],
+          "resolved": {"collapsed":true,"end":{"node":23,"offset":2},"start":{"node":23,"offset":2}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/1:3)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/1:3)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/1:3)",
+          "input": {"collapsed":true,"end":{"node":23,"offset":3},"start":{"node":23,"offset":3}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":1,"offset":3}]],
+          "resolved": {"collapsed":true,"end":{"node":23,"offset":3},"start":{"node":23,"offset":3}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/1:4)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/1:4)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/1:4)",
+          "input": {"collapsed":true,"end":{"node":23,"offset":4},"start":{"node":23,"offset":4}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":1,"offset":4}]],
+          "resolved": {"collapsed":true,"end":{"node":23,"offset":4},"start":{"node":23,"offset":4}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/1:5)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/1:5)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/1:5)",
+          "input": {"collapsed":true,"end":{"node":23,"offset":5},"start":{"node":23,"offset":5}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":1,"offset":5}]],
+          "resolved": {"collapsed":true,"end":{"node":23,"offset":5},"start":{"node":23,"offset":5}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/1:6)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/1:6)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/1:6)",
+          "input": {"collapsed":true,"end":{"node":23,"offset":6},"start":{"node":23,"offset":6}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":1,"offset":6}]],
+          "resolved": {"collapsed":true,"end":{"node":23,"offset":6},"start":{"node":23,"offset":6}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/1:7)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/1:7)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/1:7)",
+          "input": {"collapsed":true,"end":{"node":23,"offset":7},"start":{"node":23,"offset":7}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":1,"offset":7}]],
+          "resolved": {"collapsed":true,"end":{"node":23,"offset":7},"start":{"node":23,"offset":7}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/1:8)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/1:8)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/1:8)",
+          "input": {"collapsed":true,"end":{"node":23,"offset":8},"start":{"node":23,"offset":8}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":1,"offset":8}]],
+          "resolved": {"collapsed":true,"end":{"node":23,"offset":8},"start":{"node":23,"offset":8}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/1:9)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/1:9)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/1:9)",
+          "input": {"collapsed":true,"end":{"node":23,"offset":9},"start":{"node":23,"offset":9}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":1,"offset":9}]],
+          "resolved": {"collapsed":true,"end":{"node":23,"offset":9},"start":{"node":23,"offset":9}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/1:10)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/1:10)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/1:10)",
+          "input": {"collapsed":true,"end":{"node":23,"offset":10},"start":{"node":23,"offset":10}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":1,"offset":10}]],
+          "resolved": {"collapsed":true,"end":{"node":23,"offset":10},"start":{"node":23,"offset":10}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/1:11)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/1:11)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/1:11)",
+          "input": {"collapsed":true,"end":{"node":23,"offset":11},"start":{"node":23,"offset":11}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":1,"offset":11}]],
+          "resolved": {"collapsed":true,"end":{"node":23,"offset":11},"start":{"node":23,"offset":11}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/1:12)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/1:12)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/1:12)",
+          "input": {"collapsed":true,"end":{"node":23,"offset":12},"start":{"node":23,"offset":12}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":1,"offset":12}]],
+          "resolved": {"collapsed":true,"end":{"node":23,"offset":12},"start":{"node":23,"offset":12}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/1:13)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/1:13)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/1:13)",
+          "input": {"collapsed":true,"end":{"node":23,"offset":13},"start":{"node":23,"offset":13}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":1,"offset":13}]],
+          "resolved": {"collapsed":true,"end":{"node":23,"offset":13},"start":{"node":23,"offset":13}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/1:14)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/1:14)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/1:14)",
+          "input": {"collapsed":true,"end":{"node":23,"offset":14},"start":{"node":23,"offset":14}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":1,"offset":14}]],
+          "resolved": {"collapsed":true,"end":{"node":23,"offset":14},"start":{"node":23,"offset":14}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/1:15)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/1:15)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/1:15)",
+          "input": {"collapsed":true,"end":{"node":23,"offset":15},"start":{"node":23,"offset":15}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":1,"offset":15}]],
+          "resolved": {"collapsed":true,"end":{"node":23,"offset":15},"start":{"node":23,"offset":15}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/1:16)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/1:16)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/1:16)",
+          "input": {"collapsed":true,"end":{"node":23,"offset":16},"start":{"node":23,"offset":16}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":1,"offset":16}]],
+          "resolved": {"collapsed":true,"end":{"node":23,"offset":16},"start":{"node":23,"offset":16}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10,/1:0,/1:16)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/1:16)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/1:0)",
+          "input": {"collapsed":false,"end":{"node":23,"offset":16},"start":{"node":23,"offset":0}},
+          "kind": "node-range",
+          "parsed": {
+            "end": [[{"index":1,"offset":16}]],
+            "parent": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10}]],
+            "start": [[{"index":1,"offset":0}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":23,"offset":16},"start":{"node":23,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/2/1:0)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/2/1:0)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/2/1:0)",
+          "input": {"collapsed":true,"end":{"node":25,"offset":0},"start":{"node":25,"offset":0}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"index":10},{"index":2},{"index":1,"offset":0}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":25,"offset":0},"start":{"node":25,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/2/1:1)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/2/1:1)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/2/1:1)",
+          "input": {"collapsed":true,"end":{"node":25,"offset":1},"start":{"node":25,"offset":1}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"index":10},{"index":2},{"index":1,"offset":1}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":25,"offset":1},"start":{"node":25,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/2/1:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/2/1:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/2/1:2)",
+          "input": {"collapsed":true,"end":{"node":25,"offset":2},"start":{"node":25,"offset":2}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"index":10},{"index":2},{"index":1,"offset":2}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":25,"offset":2},"start":{"node":25,"offset":2}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/2,/1:0,/1:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/2/1:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/2/1:0)",
+          "input": {"collapsed":false,"end":{"node":25,"offset":2},"start":{"node":25,"offset":0}},
+          "kind": "node-range",
+          "parsed": {
+            "end": [[{"index":1,"offset":2}]],
+            "parent": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":2}]],
+            "start": [[{"index":1,"offset":0}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":25,"offset":2},"start":{"node":25,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/2/2/1:0)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/2/2/1:0)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/2/2/1:0)",
+          "input": {"collapsed":true,"end":{"node":27,"offset":0},"start":{"node":27,"offset":0}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"index":10},{"index":2},{"index":2},{"index":1,"offset":0}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":27,"offset":0},"start":{"node":27,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/2/2/1:1)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/2/2/1:1)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/2/2/1:1)",
+          "input": {"collapsed":true,"end":{"node":27,"offset":1},"start":{"node":27,"offset":1}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"index":10},{"index":2},{"index":2},{"index":1,"offset":1}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":27,"offset":1},"start":{"node":27,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/2/2/1:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/2/2/1:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/2/2/1:2)",
+          "input": {"collapsed":true,"end":{"node":27,"offset":2},"start":{"node":27,"offset":2}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"index":10},{"index":2},{"index":2},{"index":1,"offset":2}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":27,"offset":2},"start":{"node":27,"offset":2}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/2/2,/1:0,/1:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/2/2/1:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/2/2/1:0)",
+          "input": {"collapsed":false,"end":{"node":27,"offset":2},"start":{"node":27,"offset":0}},
+          "kind": "node-range",
+          "parsed": {
+            "end": [[{"index":1,"offset":2}]],
+            "parent": [
+              [{"index":6},{"id":"ref-structure","index":2}],
+              [{"index":4},{"index":10},{"index":2},{"index":2}]
+            ],
+            "start": [[{"index":1,"offset":0}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":27,"offset":2},"start":{"node":27,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/2/3:0)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/2/3:0)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/2/3:0)",
+          "input": {"collapsed":true,"end":{"node":28,"offset":0},"start":{"node":28,"offset":0}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"index":10},{"index":2},{"index":3,"offset":0}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":28,"offset":0},"start":{"node":28,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/2/3:1)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/2/3:1)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/2/3:1)",
+          "input": {"collapsed":true,"end":{"node":28,"offset":1},"start":{"node":28,"offset":1}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"index":10},{"index":2},{"index":3,"offset":1}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":28,"offset":1},"start":{"node":28,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/2/3:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/2/3:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/2/3:2)",
+          "input": {"collapsed":true,"end":{"node":28,"offset":2},"start":{"node":28,"offset":2}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-structure","index":2}],
+            [{"index":4},{"index":10},{"index":2},{"index":3,"offset":2}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":28,"offset":2},"start":{"node":28,"offset":2}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/10/2,/3:0,/3:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/10/2/3:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/10/2/3:0)",
+          "input": {"collapsed":false,"end":{"node":28,"offset":2},"start":{"node":28,"offset":0}},
+          "kind": "node-range",
+          "parsed": {
+            "end": [[{"index":3,"offset":2}]],
+            "parent": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":10},{"index":2}]],
+            "start": [[{"index":3,"offset":0}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":28,"offset":2},"start":{"node":28,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:0)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:0)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:0)",
+          "input": {"collapsed":true,"end":{"node":30,"offset":0},"start":{"node":30,"offset":0}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":0}]],
+          "resolved": {"collapsed":true,"end":{"node":30,"offset":0},"start":{"node":30,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:1)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:1)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:1)",
+          "input": {"collapsed":true,"end":{"node":30,"offset":1},"start":{"node":30,"offset":1}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":1}]],
+          "resolved": {"collapsed":true,"end":{"node":30,"offset":1},"start":{"node":30,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:2)",
+          "input": {"collapsed":true,"end":{"node":30,"offset":2},"start":{"node":30,"offset":2}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":2}]],
+          "resolved": {"collapsed":true,"end":{"node":30,"offset":2},"start":{"node":30,"offset":2}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:3)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:3)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:3)",
+          "input": {"collapsed":true,"end":{"node":30,"offset":3},"start":{"node":30,"offset":3}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":3}]],
+          "resolved": {"collapsed":true,"end":{"node":30,"offset":3},"start":{"node":30,"offset":3}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:4)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:4)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:4)",
+          "input": {"collapsed":true,"end":{"node":30,"offset":4},"start":{"node":30,"offset":4}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":4}]],
+          "resolved": {"collapsed":true,"end":{"node":30,"offset":4},"start":{"node":30,"offset":4}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:5)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:5)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:5)",
+          "input": {"collapsed":true,"end":{"node":30,"offset":5},"start":{"node":30,"offset":5}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":5}]],
+          "resolved": {"collapsed":true,"end":{"node":30,"offset":5},"start":{"node":30,"offset":5}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:6)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:6)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:6)",
+          "input": {"collapsed":true,"end":{"node":30,"offset":6},"start":{"node":30,"offset":6}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":6}]],
+          "resolved": {"collapsed":true,"end":{"node":30,"offset":6},"start":{"node":30,"offset":6}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:7)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:7)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:7)",
+          "input": {"collapsed":true,"end":{"node":30,"offset":7},"start":{"node":30,"offset":7}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":7}]],
+          "resolved": {"collapsed":true,"end":{"node":30,"offset":7},"start":{"node":30,"offset":7}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:8)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:8)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:8)",
+          "input": {"collapsed":true,"end":{"node":30,"offset":8},"start":{"node":30,"offset":8}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":8}]],
+          "resolved": {"collapsed":true,"end":{"node":30,"offset":8},"start":{"node":30,"offset":8}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:9)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:9)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:9)",
+          "input": {"collapsed":true,"end":{"node":30,"offset":9},"start":{"node":30,"offset":9}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":9}]],
+          "resolved": {"collapsed":true,"end":{"node":30,"offset":9},"start":{"node":30,"offset":9}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:10)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:10)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:10)",
+          "input": {"collapsed":true,"end":{"node":30,"offset":10},"start":{"node":30,"offset":10}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":10}]],
+          "resolved": {"collapsed":true,"end":{"node":30,"offset":10},"start":{"node":30,"offset":10}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:11)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:11)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:11)",
+          "input": {"collapsed":true,"end":{"node":30,"offset":11},"start":{"node":30,"offset":11}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":11}]],
+          "resolved": {"collapsed":true,"end":{"node":30,"offset":11},"start":{"node":30,"offset":11}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:12)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:12)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:12)",
+          "input": {"collapsed":true,"end":{"node":30,"offset":12},"start":{"node":30,"offset":12}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":12}]],
+          "resolved": {"collapsed":true,"end":{"node":30,"offset":12},"start":{"node":30,"offset":12}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:13)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:13)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:13)",
+          "input": {"collapsed":true,"end":{"node":30,"offset":13},"start":{"node":30,"offset":13}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":13}]],
+          "resolved": {"collapsed":true,"end":{"node":30,"offset":13},"start":{"node":30,"offset":13}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12,/1:0,/1:13)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:13)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:0)",
+          "input": {"collapsed":false,"end":{"node":30,"offset":13},"start":{"node":30,"offset":0}},
+          "kind": "node-range",
+          "parsed": {
+            "end": [[{"index":1,"offset":13}]],
+            "parent": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12}]],
+            "start": [[{"index":1,"offset":0}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":30,"offset":13},"start":{"node":30,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:13)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:13)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:13)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":0},"start":{"node":31,"offset":0}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":13}]],
+          "resolved": {"collapsed":true,"end":{"node":30,"offset":13},"start":{"node":30,"offset":13}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:14)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:14)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:14)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":1},"start":{"node":31,"offset":1}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":14}]],
+          "resolved": {"collapsed":true,"end":{"node":31,"offset":1},"start":{"node":31,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:15)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:15)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:15)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":2},"start":{"node":31,"offset":2}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":15}]],
+          "resolved": {"collapsed":true,"end":{"node":31,"offset":2},"start":{"node":31,"offset":2}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:16)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:16)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:16)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":3},"start":{"node":31,"offset":3}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":16}]],
+          "resolved": {"collapsed":true,"end":{"node":31,"offset":3},"start":{"node":31,"offset":3}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:17)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:17)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:17)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":4},"start":{"node":31,"offset":4}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":17}]],
+          "resolved": {"collapsed":true,"end":{"node":31,"offset":4},"start":{"node":31,"offset":4}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:18)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:18)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:18)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":5},"start":{"node":31,"offset":5}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":18}]],
+          "resolved": {"collapsed":true,"end":{"node":31,"offset":5},"start":{"node":31,"offset":5}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:19)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:19)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:19)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":6},"start":{"node":31,"offset":6}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":19}]],
+          "resolved": {"collapsed":true,"end":{"node":31,"offset":6},"start":{"node":31,"offset":6}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:20)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:20)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:20)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":7},"start":{"node":31,"offset":7}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":20}]],
+          "resolved": {"collapsed":true,"end":{"node":31,"offset":7},"start":{"node":31,"offset":7}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:21)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:21)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:21)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":8},"start":{"node":31,"offset":8}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":21}]],
+          "resolved": {"collapsed":true,"end":{"node":31,"offset":8},"start":{"node":31,"offset":8}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:22)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:22)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:22)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":9},"start":{"node":31,"offset":9}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":22}]],
+          "resolved": {"collapsed":true,"end":{"node":31,"offset":9},"start":{"node":31,"offset":9}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:23)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:23)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:23)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":10},"start":{"node":31,"offset":10}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":23}]],
+          "resolved": {"collapsed":true,"end":{"node":31,"offset":10},"start":{"node":31,"offset":10}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:24)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:24)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:24)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":11},"start":{"node":31,"offset":11}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":24}]],
+          "resolved": {"collapsed":true,"end":{"node":31,"offset":11},"start":{"node":31,"offset":11}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:25)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:25)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:25)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":12},"start":{"node":31,"offset":12}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":25}]],
+          "resolved": {"collapsed":true,"end":{"node":31,"offset":12},"start":{"node":31,"offset":12}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:26)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:26)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:26)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":13},"start":{"node":31,"offset":13}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":26}]],
+          "resolved": {"collapsed":true,"end":{"node":31,"offset":13},"start":{"node":31,"offset":13}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:27)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:27)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:27)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":14},"start":{"node":31,"offset":14}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":27}]],
+          "resolved": {"collapsed":true,"end":{"node":31,"offset":14},"start":{"node":31,"offset":14}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:28)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:28)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:28)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":15},"start":{"node":31,"offset":15}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":28}]],
+          "resolved": {"collapsed":true,"end":{"node":31,"offset":15},"start":{"node":31,"offset":15}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:29)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:29)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:29)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":16},"start":{"node":31,"offset":16}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":29}]],
+          "resolved": {"collapsed":true,"end":{"node":31,"offset":16},"start":{"node":31,"offset":16}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:30)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:30)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:30)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":17},"start":{"node":31,"offset":17}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":30}]],
+          "resolved": {"collapsed":true,"end":{"node":31,"offset":17},"start":{"node":31,"offset":17}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12/1:31)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:31)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:31)",
+          "input": {"collapsed":true,"end":{"node":31,"offset":18},"start":{"node":31,"offset":18}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12},{"index":1,"offset":31}]],
+          "resolved": {"collapsed":true,"end":{"node":31,"offset":18},"start":{"node":31,"offset":18}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4/12,/1:13,/1:31)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:31)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/12/1:13)",
+          "input": {"collapsed":false,"end":{"node":31,"offset":18},"start":{"node":31,"offset":0}},
+          "kind": "node-range",
+          "parsed": {
+            "end": [[{"index":1,"offset":31}]],
+            "parent": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4},{"index":12}]],
+            "start": [[{"index":1,"offset":13}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":31,"offset":18},"start":{"node":30,"offset":13}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-structure]!/4,/2[heading]/1:0,/12/1:13)",
+          "collapsedEnd": "epubcfi(/6/2[ref-structure]!/4/12/1:13)",
+          "collapsedStart": "epubcfi(/6/2[ref-structure]!/4/2[heading]/1:0)",
+          "input": {"collapsed":false,"end":{"node":30,"offset":13},"start":{"node":7,"offset":0}},
+          "kind": "cross-node-range",
+          "parsed": {
+            "end": [[{"index":12},{"index":1,"offset":13}]],
+            "parent": [[{"index":6},{"id":"ref-structure","index":2}],[{"index":4}]],
+            "start": [[{"id":"heading","index":2},{"index":1,"offset":0}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":30,"offset":13},"start":{"node":7,"offset":0}},
+          "resolvedSection": 0
+        }
+      ]
+    }
+  ]
+}

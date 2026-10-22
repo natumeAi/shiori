@@ -1,0 +1,16 @@
+{
+  "sections": [
+    {
+      "id": "inert",
+      "href": "inert.xhtml"
+    }
+  ],
+  "raster": true,
+  "resources": [
+    {
+      "id": "raster",
+      "href": "images/generated.png",
+      "mediaType": "image/png"
+    }
+  ]
+}

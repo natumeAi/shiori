@@ -1,0 +1,9 @@
+{
+  "command": "npm.cmd run build-fixtures",
+  "cwd": "tool/oracle",
+  "timeoutSeconds": 180,
+  "exitCode": 0,
+  "timedOut": false,
+  "durationSeconds": 0.263,
+  "outputTail": "\n> shiori-reader-oracle@1.0.0 build-fixtures\n> node src/build-fixtures.mjs\n\ncfi-structure: 2524 bytes\nchapters: 27798 bytes\nhtml-fallback: 4489 bytes\nimages: 11877 bytes\ninert-content: 10682 bytes\nlong-content: 778175 bytes\none-page: 2131 bytes\nopf-variants: 4271 bytes\nstyles: 188561 bytes\nunicode: 2368 bytes\nunsupported-fixed: 2327 bytes\nunsupported-rtl: 2239 bytes\nunsupported-vertical: 2338 bytes"
+}

@@ -1,0 +1,9 @@
+{
+  "sections": [
+    {
+      "id": "fixed",
+      "href": "fixed.xhtml"
+    }
+  ],
+  "fixed": true
+}

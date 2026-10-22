@@ -1,0 +1,9 @@
+{
+  "command": "npm.cmd run resolve -- ../../build/oracle-local/synthetic-resolve-input.json",
+  "cwd": "tool/oracle",
+  "timeoutSeconds": 180,
+  "exitCode": 0,
+  "timedOut": false,
+  "durationSeconds": 6.743,
+  "outputTail": "\n> shiori-reader-oracle@1.0.0 resolve\n> node src/run-oracle.mjs resolve ../../build/oracle-local/synthetic-resolve-input.json\n\nwebkit 27.2\nchromium 156.0.8078.4\nResolved 13 request groups into build/oracle-local/resolve-results.json"
+}

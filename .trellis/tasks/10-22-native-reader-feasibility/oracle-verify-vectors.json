@@ -1,0 +1,9 @@
+{
+  "command": "npm.cmd run verify-vectors",
+  "cwd": "tool/oracle",
+  "timeoutSeconds": 180,
+  "exitCode": 0,
+  "timedOut": false,
+  "durationSeconds": 0.346,
+  "outputTail": "\n> shiori-reader-oracle@1.0.0 verify-vectors\n> node src/verify-vectors.mjs\n\nPASS 13 EPUBs; 39 sections; 4807 CFI samples per engine; nested nav/NCX, literal Blob prose and resource aliases verified."
+}

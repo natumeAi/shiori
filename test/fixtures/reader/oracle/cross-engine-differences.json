@@ -1,0 +1,59 @@
+{
+  "authoritativeEngine": "webkit",
+  "fixtures": [
+    {
+      "differences": [],
+      "fixtureId": "cfi-structure"
+    },
+    {
+      "differences": [],
+      "fixtureId": "chapters"
+    },
+    {
+      "differences": [],
+      "fixtureId": "html-fallback"
+    },
+    {
+      "differences": [],
+      "fixtureId": "images"
+    },
+    {
+      "differences": [],
+      "fixtureId": "inert-content"
+    },
+    {
+      "differences": [],
+      "fixtureId": "long-content"
+    },
+    {
+      "differences": [],
+      "fixtureId": "one-page"
+    },
+    {
+      "differences": [],
+      "fixtureId": "opf-variants"
+    },
+    {
+      "differences": [],
+      "fixtureId": "styles"
+    },
+    {
+      "differences": [],
+      "fixtureId": "unicode"
+    },
+    {
+      "differences": [],
+      "fixtureId": "unsupported-fixed"
+    },
+    {
+      "differences": [],
+      "fixtureId": "unsupported-rtl"
+    },
+    {
+      "differences": [],
+      "fixtureId": "unsupported-vertical"
+    }
+  ],
+  "oracleSchemaVersion": 1,
+  "unicodeTableDifferences": []
+}

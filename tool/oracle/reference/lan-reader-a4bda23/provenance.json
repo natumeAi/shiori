@@ -1,0 +1,30 @@
+[
+  {
+    "file": "canonicalText.ts",
+    "source": "client/src/utils/canonicalText.ts",
+    "commit": "a4bda23fd3e82e285a22566d88576e67d3e8756b",
+    "headerBytes": 170,
+    "sha256": "6eb746b7fe90914094f08fe6ac3616e9f8ba3321547285ea483f317e6e72eeff"
+  },
+  {
+    "file": "contentSecurity.ts",
+    "source": "client/src/reader/contentSecurity.ts",
+    "commit": "a4bda23fd3e82e285a22566d88576e67d3e8756b",
+    "headerBytes": 173,
+    "sha256": "9e49bd543b4261dd689ca0efb8fd61981624fe3c6d7d11d28cfca0b33fcd43ca"
+  },
+  {
+    "file": "visiblePageAnchor.ts",
+    "source": "client/src/reader/visiblePageAnchor.ts",
+    "commit": "a4bda23fd3e82e285a22566d88576e67d3e8756b",
+    "headerBytes": 175,
+    "sha256": "14870e5b4848bf85d9c085cf2c1b6486e41b998d09487d2957c6a97cad5f7bc8"
+  },
+  {
+    "file": "readingStats.ts",
+    "source": "shared/src/readingStats.ts",
+    "commit": "a4bda23fd3e82e285a22566d88576e67d3e8756b",
+    "headerBytes": 163,
+    "sha256": "c48fad4df03ec20d96f3caf40650c558fe49218afc8dcd0021ee68e87b75325d"
+  }
+]

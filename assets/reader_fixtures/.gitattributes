@@ -1,0 +1,3 @@
+manifest.json text eol=lf
+*.epub -text
+.gitattributes text eol=lf
