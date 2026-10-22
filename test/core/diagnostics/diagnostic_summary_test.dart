@@ -33,6 +33,25 @@ void main() {
     },
   );
 
+  test('interval distribution counts missed vsyncs, not period jitter', () {
+    // Device run: P50 8339 µs, P99 8457 µs, max 25060 µs.
+    final result = DiagnosticSummary.intervalDistribution([
+      8339,
+      8403,
+      8457,
+      12499,
+      12500,
+      25060,
+    ]);
+    expect(result, containsPair('atLeast12500Us', 2));
+    expect(result, containsPair('maxUs', 25060));
+    expect(result.containsKey('over8333Us'), isFalse);
+    expect(DiagnosticSummary.intervalDistribution([]), {
+      'count': 0,
+      'source': 'unavailable_no_samples',
+    });
+  });
+
   test(
     'near 120 Hz comes from engine intervals despite long pipeline latency',
     () {
@@ -48,6 +67,7 @@ void main() {
       expect(result['cadencePattern'], 'observed_near_120hz');
       expect(result['vsyncIntervals'], containsPair('p50Us', 8333));
       expect(result['vsyncIntervals'], containsPair('count', 7));
+      expect(result['vsyncIntervals'], containsPair('atLeast12500Us', 0));
       expect(result['ui'], containsPair('maxUs', 1000));
       expect(result['raster'], containsPair('maxUs', 2000));
       expect(
@@ -65,6 +85,8 @@ void main() {
     ]);
     expect(result['cadencePattern'], 'consistent_with_60hz_system_cap');
     expect(result['vsyncIntervals'], containsPair('p99Us', 16667));
+    // Every 60 Hz interval misses a 120 Hz vsync; the pattern explains why.
+    expect(result['vsyncIntervals'], containsPair('atLeast12500Us', 7));
     expect(result['ui'], containsPair('over8333Us', 0));
     expect(result['raster'], containsPair('over8333Us', 0));
   });
@@ -82,6 +104,7 @@ void main() {
           ),
       ]);
       expect(result['cadencePattern'], 'mixed_cadence_with_over_budget_stages');
+      expect(result['vsyncIntervals'], containsPair('atLeast12500Us', 2));
       expect(
         result[expensiveRaster ? 'raster' : 'ui'],
         containsPair('over8333Us', 1),
@@ -238,6 +261,7 @@ void main() {
             'p99Us',
             'maxUs',
             'over8333Us',
+            'atLeast12500Us',
           ])
             key: 9223372036854775807,
           'untrusted': longText,
@@ -275,6 +299,10 @@ void main() {
           ]),
         );
         expect(json['ui'], containsPair('p99Us', 9223372036854775807));
+        expect(
+          json['vsyncIntervals'],
+          containsPair('atLeast12500Us', 9223372036854775807),
+        );
 
         final allTextLong = DiagnosticSummary.clipboard(
           record.copyWith(buildId: longText, runId: longText),

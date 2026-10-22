@@ -65,7 +65,11 @@ file/parse failures appear immediately instead of entering Riverpod retries.
   Stopwatch and UTC epochs are not equated. A frame-number match is engine
   identity evidence, not evidence of physical presentation.
 - UI/raster distributions and consecutive correlated engine `vsyncStart`
-  intervals are separate. Near 120 Hz, low-cost near 60 Hz and mixed expensive
+  intervals are separate. Stage distributions count `over8333Us`; interval
+  distributions count `atLeast12500Us` (1.5 nominal periods, a missed vsync),
+  because normal 120 Hz jitter sits just above 8333 µs and the first device
+  run showed 1143 of 1794 intervals over 8333 µs with a P99 of 8457 µs.
+  Near 120 Hz, low-cost near 60 Hz and mixed expensive
   stages have distinct classifications. They never establish physical display
   presentation. `totalSpan` is pipeline latency, never an FPS reciprocal.
 - Application Support contains `probe-marker.txt` and `last-diagnostic.json`.

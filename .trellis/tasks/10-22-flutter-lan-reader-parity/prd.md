@@ -37,6 +37,12 @@ are indexed by the implementation/check context manifests.
 - Use free personal sideloading with the explained seven-day signing refresh.
   Use available free hosted macOS build allowance. Paid Apple membership,
   subscriptions and billable overages are not authorized.
+- Signing route changed by the user on 2026-10-22: on-device signing with
+  全能签 and a certificate a third party supplied to the user; AltStore Classic
+  remains the documented alternative. App data survives updates only while
+  the same certificate team signs the same identifier, and a shared
+  certificate can be revoked at any time. Later stages must not rely on data
+  that exists only on the phone across a certificate change.
 - Hosted iOS builds run on GitHub Actions standard macOS runners, which are
   free for the already-public `natumeAi/shiori` repository. Codemagic's
   personal free allowance is the fallback if that route is blocked or the

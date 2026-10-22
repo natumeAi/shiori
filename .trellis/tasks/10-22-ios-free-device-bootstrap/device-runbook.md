@@ -84,7 +84,41 @@ unverified. Runner labels identify a rolling image; `provenance.json` and
    paths that the artifact uploader otherwise excludes. Commit approved native changes only in a
    later authorized phase. Do not silently accept recurrent migrations.
 
-## Windows signing and first launch
+## Signing and first launch
+
+**Chosen route (user decision, 2026-10-22):** sign on the iPhone with 全能签
+using a certificate (`.p12` + `.mobileprovision`) that a third party supplied
+to the user. The user performs all signing; the certificate, its password and
+the provisioning profile never enter this repository, CI, chat or agent
+tooling (`.gitignore` blocks `*.p12`, `*.mobileprovision`, `*.cer`).
+
+1. Note the certificate type shown by 全能签 or the profile: enterprise /
+   distribution (ad hoc) or development, its team name/ID and expiry date.
+   A development profile needs Settings → Privacy & Security → Developer Mode;
+   an enterprise profile needs Settings → General → VPN & Device Management →
+   trust the developer. An ad hoc or development profile must contain this
+   iPhone's UDID.
+2. Import the verified IPA into 全能签 through any import route it offers
+   (Files app share sheet, cloud drive and so on). Keep the bundle identifier
+   `io.github.natumeai.shiori` unless the profile is not a wildcard and forces
+   its own App ID; record the identifier actually installed. Do not change the
+   app name or version, and leave every dylib/plugin injection or patch option
+   off: injected code would change both behavior and timing evidence.
+3. Install, then launch Shiori from the home screen with no debugger. Match the
+   visible build ID/build number to provenance, then close/reopen once.
+   Release AOT needs no JIT setup. Record success or the exact failure
+   separately from CI success.
+
+Updates keep app data only while the **same certificate team** signs the same
+identifier: iOS refuses to upgrade an app whose `application-identifier`
+entitlement (team prefix + bundle ID) differs from the installed one, so a
+different team's certificate means deleting the app and its data. Shared
+third-party certificates can also be revoked at any time, which stops the app
+from launching until it is re-signed. Before switching certificates in later
+stages, make sure nothing pending (for example unsent reading activity) lives
+only on the phone.
+
+### Alternative: AltStore Classic
 
 Use **AltStore Classic**, not AltStore PAL. Follow the official
 [Windows installation guide](https://faq.altstore.io/altstore-classic/how-to-install-altstore-windows)
@@ -141,6 +175,11 @@ flags and filename. Missing samples remain an explicit limitation.
 
 ## Retrieve evidence over USB
 
+Without a USB route, open the iOS Files app → On My iPhone → Shiori, long-press
+`shiori-diag-<BUILD_ID>-<runId>.json` → Share, and send it to the Windows PC
+through any channel the user already uses (WeChat/QQ file transfer, email to
+self, a cloud drive). The export holds device/run metadata and timings only.
+
 With the phone unlocked/trusted and connected, in **Apple Devices → Files →
 Shiori**, select `shiori-diag-<BUILD_ID>-<runId>.json` and **Save** to a private
 local folder. If using the iTunes stack instead, select the device → **File
@@ -175,11 +214,17 @@ or EPUB reader performance. Keep presentation evidence explicitly unverified.
 1. Preserve the marker and first export. Make a second reviewed source build
    on the same workflow with a higher run number and unchanged source bundle
    identifier. Obtain confirmation for that exact additional public push.
-2. Repeat provenance/checksum validation. Install over the first build through
-   the same Classic account/tool; do not uninstall/deactivate to pass this
-   test. Verify the new visible build ID/number, unchanged installed identity,
-   home-screen launch and the exact marker value after reopening.
-3. Keep AltServer running and USB connected (same-network Wi-Fi is also
+2. Repeat provenance/checksum validation. Sign the second build in 全能签 with
+   the **same certificate and profile** and install it over the first build;
+   do not delete the app to pass this test. Verify the new visible build
+   ID/number, unchanged installed identity, home-screen launch and the exact
+   marker value after reopening.
+3. 全能签 route: there is no seven-day refresh. Record the certificate expiry
+   date instead, and treat "refresh" as re-signing the same build with the
+   same certificate: reinstall over the existing app and verify marker plus
+   last record again. Revocation or a certificate from another team is out of
+   scope for BC4 and must be reported as such, not hidden.
+4. AltStore alternative: keep AltServer running and USB connected (same-network Wi-Fi is also
    supported). In Classic, use **Refresh All**; record renewed expiry and any
    error, then reopen Shiori and verify marker plus last record. AltStore's
    documented signing period is seven days. An immediate refresh test does
@@ -194,13 +239,16 @@ Do not attach personal raw exports to public task files.
 
 | Criterion | Current status | Evidence/results to enter |
 | --- | --- | --- |
-| BC1: unsigned cloud device build/package | Unverified | Run URL/commit, actual image/Xcode/Flutter/engine, IPA checksum, bundle checks, native diff review |
-| BC2: signed install and independent launch | Unverified | Device/iOS, tool versions, installed identity, visible build ID/number, launch outcome |
-| BC3: capture and USB JSON retrieval | Unverified | Run ID, raw counts, declarations, cadence, incomplete/overflow/correlation flags, retrieval tool, summary match |
-| BC4: same-identity update and refresh retention | Unverified | First/second build numbers, marker before/after update/refresh, expiry renewal, reopen outcomes |
+| BC1: unsigned cloud device build/package | Pass (2026-10-22) | [Run 39739387588](https://github.com/natumeAi/shiori/actions/runs/39739387588), commit `9472fa0`, build ID `9472fa0b319d-gha-3`; `macos-15` image 20260907.0337.1, macOS 15.7.9, Xcode 26.3 (17C529), iOS SDK 26.2, Flutter 3.47.7 framework `abaf9c5…`, engine `deb2874…`; `Runner`, `Flutter.framework`, `App.framework` arm64; `iphoneos`, `io.github.natumeai.shiori`, `CFBundleVersion` 3, `MinimumOSVersion` 15.0, file-sharing keys present; IPA SHA-256 `955c8601…dd98` (re-checked after download); `ios-status.txt` and `ios-project.diff` empty, no untracked native files. Earlier runs 39738427751 (reserved `FLUTTER_VERSION` define) and 39738887388 (`lipo` argument order) failed and were fixed. |
+| BC2: signed install and independent launch | Pass (2026-10-22) | iPhone 14 Pro Max, iOS 27.0.1 (24A446); 全能签 V7.7.3 with a third-party Apple Distribution ad hoc certificate expiring 2027-05-15 (holder, team and device UDID deliberately not recorded in this public file); installed identifier `io.github.natumeai.shiori` unchanged; app launched without a debugger and showed `9472fa0b319d-gha-3` / build 3. 全能签 also rewrote `MinimumOSVersion` to 10.0, removed device-family limits and re-enabled file access (Info.plist only, no injection). |
+| BC3: capture and JSON retrieval | Partial (2026-10-22) | Run `1792654511245323-1`: 1821 engine frames, 1796 motion samples, 1796 frame-number-correlated (`engine_frame_number_identity`), overflow 0, `incompleteTrailingBatch` true by design. UI P50/P95/P99/max 313/358/630/11612 µs (1 over 8333); raster 736/834/910/18266 µs (2 over); vsync intervals P50/P95/P99/max 8339/8403/8457/25060 µs, `observed_near_120hz`. Declarations were left `unknown`. Clipboard summary received; the raw file `shiori-diag-9472fa0b319d-gha-3-1792654511245323-1.json` has not been retrieved (no USB; Files-app share is the alternative). `vsyncIntervals.over8333Us` = 1143 counts normal jitter above 8333 µs, not missed frames; missed-vsync counting needs a ≥12500 µs threshold. |
+| BC4: same-identity update and refresh retention | Unverified | First/second build numbers, same certificate team for both, marker before/after update and same-certificate re-sign, certificate expiry date, reopen outcomes |
 | BC5: local source quality and ordinary entry point | Pass locally: 90 tests, analyze/format/codegen/syntax green | Command exit codes/tails in local-validation.md and quality-gate-results.json; existing ordinary app tests unchanged; physical launch remains BC2 |
 | BC6: independent feasibility outcomes | Partial: runbook prepared | Report install, update, refresh, export, engine-data and cadence independently; physical presentation unverified; reader acceptance unverified |
 
-Next authorized boundary: local review, then separate commit review and exact
-push confirmation. No workflow was triggered and no account/device action was
-performed while preparing this runbook.
+Current boundary: BC1 passed on branch `ios-build/s1-probe`. Signing,
+installation, capture, update and re-sign (BC2–BC4) need the user's 全能签
+signing on the iPhone; no account or device action has been performed yet. On this
+Windows machine `gh run download` stalled while a direct download of the same
+artifact took about 4 seconds, so download the artifact from the run page in a
+browser if the CLI hangs.

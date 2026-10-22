@@ -4,7 +4,27 @@ import 'package:shiori/core/diagnostics/diagnostic_record.dart';
 import 'package:shiori/core/diagnostics/frame_sample.dart';
 
 abstract final class DiagnosticSummary {
-  static Map<String, Object?> distribution(Iterable<int> values) {
+  /// An interval of at least 1.5 nominal 120 Hz periods means a missed vsync.
+  /// Normal cadence jitter just above 8333 µs is not a miss.
+  static const missedVsyncThresholdUs = 12500;
+
+  /// Stage costs: counts frames over the 8333 µs budget.
+  static Map<String, Object?> distribution(Iterable<int> values) =>
+      _distribution(values, 'over8333Us', (v) => v > 8333);
+
+  /// Vsync intervals: counts missed vsyncs, not jitter around one period.
+  static Map<String, Object?> intervalDistribution(Iterable<int> values) =>
+      _distribution(
+        values,
+        'atLeast12500Us',
+        (v) => v >= missedVsyncThresholdUs,
+      );
+
+  static Map<String, Object?> _distribution(
+    Iterable<int> values,
+    String overKey,
+    bool Function(int) isOver,
+  ) {
     final sorted = values.toList()..sort();
     if (sorted.isEmpty) return {'count': 0, 'source': 'unavailable_no_samples'};
     int percentile(double p) => sorted[((sorted.length - 1) * p).ceil()];
@@ -14,7 +34,7 @@ abstract final class DiagnosticSummary {
       'p95Us': percentile(.95),
       'p99Us': percentile(.99),
       'maxUs': sorted.last,
-      'over8333Us': sorted.where((v) => v > 8333).length,
+      overKey: sorted.where(isOver).length,
     };
   }
 
@@ -72,7 +92,7 @@ abstract final class DiagnosticSummary {
       'raster': distribution(
         active.map((f) => f.rasterFinishUs - f.rasterStartUs),
       ),
-      'vsyncIntervals': distribution(intervals),
+      'vsyncIntervals': intervalDistribution(intervals),
       'cadencePattern': pattern,
       'cadenceInterpretation': 'engine_observation_not_physical_presentation',
     };
@@ -102,6 +122,7 @@ abstract final class DiagnosticSummary {
           'p99Us',
           'maxUs',
           'over8333Us',
+          'atLeast12500Us',
         ])
           if (value[key] is num) key: value[key],
       };

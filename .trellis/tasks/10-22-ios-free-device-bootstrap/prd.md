@@ -34,6 +34,11 @@ template placeholder `com.example.shiori`
 - **App identity:** `io.github.natumeai.shiori` replaces the placeholder
   before the first device installation and stays fixed for every later
   probe/product build, so the device data container survives updates.
+- **Signing route (user change, 2026-10-22):** the user signs on the iPhone
+  with 全能签 and a certificate supplied to them by a third party, instead of
+  AltStore Classic, which stays documented as an alternative. Signing
+  material never enters the repository, CI or agent tooling. Updates keep data
+  only while the same certificate team signs the same identifier.
 - **Diagnostic return path:** raw diagnostic exports are files in the app's
   Documents directory, retrieved on Windows over USB via the Apple Devices app
   or iTunes File Sharing. The clipboard carries only a short summary.
@@ -43,7 +48,7 @@ template placeholder `com.example.shiori`
 | ID | Requirement |
 | --- | --- |
 | B1 | Provide a reviewed, manually started GitHub Actions macOS build on the public repository using a pinned runner image/toolchain and the committed dependency lockfile, with no secrets. Keep the build/package logic in a host-neutral script so the Codemagic fallback can reuse it. Do not enable paid usage. |
-| B2 | Produce an unsigned release iPhone device app and package it for Windows-local signing. Set the fixed app identifier before the first install. Document AltStore Classic/AltServer installation, refresh, stable-identifier update and the free-account App ID/active-app limits. No user-owned Mac or TestFlight is required. |
+| B2 | Produce an unsigned release iPhone device app and package it for user-side signing. Set the fixed app identifier before the first install. Document the chosen 全能签 + supplied-certificate route (certificate type, trust/Developer Mode needs, no injection, same-team updates, revocation risk) and keep AltStore Classic installation, refresh and free-account limits as the alternative. No user-owned Mac or TestFlight is required. |
 | B3 | Add a separate diagnostic entry point containing a simple continuous native Flutter animation, start/stop capture and structured export. Keep diagnostic controls out of the production app flow. |
 | B4 | Capture bounded release frame/scheduling samples and run metadata, with clock domains, overflow, unavailable fields and delayed batches explicit. Report the observed engine vsync-interval distribution and the user-declared refresh-limiting settings so a 60 Hz cap is visible. Engine timing/cadence must not be labeled physical presentation or EPUB performance. |
 | B5 | Persist a non-sensitive probe marker to Application Support storage and verify that same-identifier update/refresh retains it. Write each complete or partial diagnostic export as a JSON file in the shared Documents directory; copy a bounded summary to the clipboard. |
@@ -72,13 +77,16 @@ before using it.
 - **BC3 (B3, B4, B5):** A capture run writes a nonempty, bounded export file
   with timing samples, scheduling/events, vsync-interval distribution,
   declared refresh-limit settings and metadata; the user retrieves it on
-  Windows over USB and the clipboard summary matches it. Missing clock
+  Windows (over USB, or through the Files app share sheet when no USB route
+  exists) and the clipboard summary matches it. Missing clock
   correlation or final batches are reported explicitly; no physical-FPS claim
   is produced.
 - **BC4 (B5, B6, B7):** Create a marker, update to a second build with a higher
-  build number and the same signing identity/app identifier, and exercise the
-  local tool's refresh. The marker survives; reopening works. Record refresh
-  outcome without waiting seven days or claiming an unobserved expiration test.
+  build number and the same signing identity/app identifier, and re-sign the
+  same build with the same certificate (the 全能签 equivalent of a refresh;
+  AltStore's refresh if that route is used). The marker survives; reopening
+  works. Record the certificate expiry and the re-sign outcome without
+  claiming an unobserved expiration, revocation or cross-team test.
 - **BC5 (B1–B7):** Generated code, formatting, analysis and relevant tests pass;
   the ordinary scaffold app still launches through its existing entry point.
 - **BC6 (B4, B6):** A short feasibility report distinguishes installed-device,
