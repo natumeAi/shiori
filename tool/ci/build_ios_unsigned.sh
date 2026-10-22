@@ -99,12 +99,12 @@ plist_value() { plutil -extract "$1" raw -o - "$PLIST"; }
 EXECUTABLE="$(plist_value CFBundleExecutable)"
 [[ -n "$EXECUTABLE" && "$EXECUTABLE" != */* ]]
 test -s "$APP/$EXECUTABLE"
-lipo -verify_arch arm64 "$APP/$EXECUTABLE"
+lipo "$APP/$EXECUTABLE" -verify_arch arm64
 printf 'Validated arm64 device executable: %s\n' "$EXECUTABLE"
 for framework in Flutter App; do
   test -d "$APP/Frameworks/$framework.framework"
   test -s "$APP/Frameworks/$framework.framework/$framework"
-  lipo -verify_arch arm64 "$APP/Frameworks/$framework.framework/$framework"
+  lipo "$APP/Frameworks/$framework.framework/$framework" -verify_arch arm64
   printf 'Validated arm64 framework: %s.framework\n' "$framework"
 done
 printf 'Validated bundle: iphoneos, io.github.natumeai.shiori, version %s\n' "$BUILD_NUMBER"
