@@ -10,7 +10,7 @@ design/implementation plan where complex, context manifests and review gate.
 | Stage | Deliverable / proposed child | Dependencies | Acceptance ownership |
 | --- | --- | --- | --- |
 | S1 | **Created:** `../10-22-ios-free-device-bootstrap` — fixed app identity, free GitHub Actions release build, Windows signing/update/refresh, diagnostic entry point and file-based metric export. | Parent plan approval; user-confirmed pushes to the public repository and user-operated Apple sign-in/device actions when needed. | AC9; establishes evidence availability for AC4. |
-| S2 | Native reader source/CFI/layout and high-refresh feasibility. | S1 runs on the phone; generated interoperability fixtures available. | AC3, AC5, AC8, AC10 and early AC4. |
+| S2 | **Created:** `../10-22-native-reader-feasibility` — oracle vectors, Dart source/CFI/canonical model, native layout and page proof, turn controller, reader probe and presentation-evidence spike. | S1 runs on the phone; generated interoperability fixtures available. | AC3, AC5, AC8, AC10 and early AC4. |
 | S3 | Runtime server connection, typed API models, file/cache lifecycle and base library loading. | S1; exact API audit. Can be prepared beside S2 but cannot replace its gate. | AC1, client portion of AC7; data foundation for remaining stages. |
 | S4 | Complete reader controls/settings/TOC/image viewer, accepted-position persistence and activity outbox. | S2 source/layout gate and S3 server/storage contracts. | AC3–AC6, AC8, UI09–UI14. |
 | S5 | Main shell, home and statistics visual/behavioral parity. | S3 DTOs and S4 activity semantics; UI baseline recorded. | AC2/UI01–UI03, UI08, UI14. |

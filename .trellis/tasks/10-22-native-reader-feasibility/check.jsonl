@@ -1,0 +1,10 @@
+{"file": ".trellis/spec/flutter/quality-guidelines.md", "reason": "Quality gate, dependency table, generated files and forbidden patterns."}
+{"file": ".trellis/spec/flutter/testing.md", "reason": "Meaningful tests, injected resources, golden vectors and skipped local-only tests."}
+{"file": ".trellis/spec/flutter/directory-structure.md", "reason": "Import boundaries: data/ free of dart:ui, core free of feature imports, engine not importing diagnostics."}
+{"file": ".trellis/spec/flutter/state-management.md", "reason": "No provider rebuilds or I/O in motion callbacks."}
+{"file": ".trellis/spec/flutter/widget-guidelines.md", "reason": "Probe strings, semantics and disposal."}
+{"file": ".trellis/spec/flutter/diagnostics.md", "reason": "Recorder correlation rules and evidence labels; S1 schema v1 stays compatible."}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Oracle/Dart/native/export/analyzer boundary review."}
+{"file": ".trellis/tasks/10-22-native-reader-feasibility/research/s2-entry-evidence.md", "reason": "Pinned engine hook points and reference pins to verify against."}
+{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/native-reader-contracts.md", "reason": "Reference semantics the ported code and tests must match."}
+{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/performance-acceptance.md", "reason": "Report wording: distinct evidence levels, no physical-FPS claim."}
