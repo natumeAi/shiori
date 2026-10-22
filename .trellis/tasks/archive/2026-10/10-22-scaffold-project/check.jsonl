@@ -1,0 +1,9 @@
+{"file":".trellis/spec/flutter/index.md","reason":"Review against: Flutter layer overview, stack, quality check commands"}
+{"file":".trellis/spec/flutter/directory-structure.md","reason":"Review against: Target lib/ layout and import rules for every scaffold file"}
+{"file":".trellis/spec/flutter/quality-guidelines.md","reason":"Review against: Approved dependencies, analysis_options, build_runner, definition of done"}
+{"file":".trellis/spec/flutter/state-management.md","reason":"Review against: Riverpod codegen patterns for dioProvider, routerProvider, retry policy"}
+{"file":".trellis/spec/flutter/routing.md","reason":"Review against: Typed routes, routerProvider, MaterialApp.router wiring"}
+{"file":".trellis/spec/flutter/data-layer.md","reason":"Review against: Env config, dioProvider, build.yaml json_serializable options"}
+{"file":".trellis/spec/flutter/error-handling.md","reason":"Review against: AppException, guardDio, errorMessage, ErrorView, logging setup"}
+{"file":".trellis/spec/flutter/widget-guidelines.md","reason":"Review against: Theme, l10n.yaml and context.l10n, screen shape"}
+{"file":".trellis/spec/flutter/testing.md","reason":"Review against: Test layout, pumpApp helper, mocktail, ProviderContainer.test"}
