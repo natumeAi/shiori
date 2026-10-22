@@ -9,12 +9,14 @@ Context order: `implement.jsonl` entries → `prd.md` → `design.md` → this f
 Before writing code in a layer, load the matching `.trellis/spec/flutter/`
 guide (the `trellis-before-dev` skill does this).
 
-## Current checkpoint — stopped after Phase B
+## Current checkpoint — stopped after Phase C
 
-Phases 0, A and B passed and are committed locally (`4e15862`, `74932bb`, then
-the Phase B commit). The user asked to stop after Phase B (2026-10-22).
-Phase C starts only on the user's explicit instruction; continuous mode does
-not resume by itself. Do not archive the task or restart earlier phases.
+Phases 0, A, B and C passed and are committed locally (`4e15862`, `f06b933`,
+`d627692`, then the Phase C commit). Phases B and C were run by Sonnet 5.5
+(medium) implement/check agents in the Claude session; the user asks to stop
+after each phase. Phase D starts only on the user's explicit instruction;
+continuous mode does not resume by itself. Do not archive the task or
+restart earlier phases.
 
 ## Phase 0 — branch and baseline
 
@@ -69,22 +71,22 @@ not resume by itself. Do not archive the task or restart earlier phases.
 
 ## Phase C — layout, page map, anchors, detection (design §5–§6)
 
-- [ ] Style subset and cascade with reader overrides; block/inline model;
+- [x] Style subset and cascade with reader overrides; block/inline model;
   paragraph building with source maps; line packing; page plans and map.
-- [ ] Raster images, SVG wrapper fast path, vector SVG through the evaluated
+- [x] Raster images, SVG wrapper fast path, vector SVG through the evaluated
   renderer (add dependency per Phase B rules) or surfaced-unsupported.
-- [ ] Anchor export, resolution, proof and reflow restore.
-- [ ] Unsupported-layout detection and its recoverable state.
-- [ ] Tests: conservation check for every fixture at the three settings in
+- [x] Anchor export, resolution, proof and reflow restore.
+- [x] Unsupported-layout detection and its recoverable state.
+- [x] Tests: conservation check for every fixture at the three settings in
   design §5.6; per-page anchor round trip; oracle-CFI landing; injected proof
   failure keeps the previous anchor; style-matrix widget/golden tests where
   meaningful; detection tests. Run the conservation check locally on the four
   books (skipped when absent).
-- [ ] Record host-side (Windows `flutter test`) layout timings for the long
+- [x] Record host-side (Windows `flutter test`) layout timings for the long
   paragraph as indicative only.
-- **Gate C:** all of the above pass; every style-matrix row has an outcome in
+- **Gate C (met locally, see `local-validation.md` and `feasibility-report.md`):** all of the above pass; every style-matrix row has an outcome in
   a draft `feasibility-report.md`.
-- [ ] Commit: `feat(reader): native layout, page map and position proof`.
+- [x] Commit: `feat(reader): native layout, page map and position proof`.
 
 ## Phase D — motion controller and surfaces (design §7)
 
@@ -147,6 +149,9 @@ not resume by itself. Do not archive the task or restart earlier phases.
 - **S4:** `assets/reader_fixtures/` is registered in the shared `pubspec.yaml`,
   so product builds also carry ~1.2 MB of synthetic fixtures. Move them behind
   the diagnostic entry point (or out of product assets) before a product build.
+- **S4:** `FontRegistry` (`engine/layout/font_registry.dart`) never unloads
+  fonts (the engine cannot); each font is capped at 32 MB but the count is
+  unbounded across books. Bound it per reading session or restart policy.
 - **S4:** known HTML-mode parser gaps (head-level `<template>`, `<noscript>`
   content that closes an open `<p>`, attribute URLs in script-enabled
   `<noscript>` raw text) are listed in `local-validation.md`; add fixtures if

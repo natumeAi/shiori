@@ -75,12 +75,29 @@ Verified in the pub cache on 2026-10-22; all pure Dart, usable in isolates:
 | --- | --- | --- | --- |
 | `archive` | 4.5.2 | MIT | ZIP container reading with declared size and entry limits (`EpubArchive`). |
 | `html` | 0.15.7 | MIT | HTML5 tree builder for the reference's HTML fallback and `text/html` sections. |
-| `xml` | 7.1.0 | MIT | Only `XmlDefaultEntityMapping.html().entities` (HTML4/XHTML named entities for XHTML doctypes). The XML parser itself is project code because browser-strict well-formedness and fallback selection could not be matched with a permissive parser. |
+| `xml` | 7.0.1 (pin `^7.0.1`) | MIT | Only `XmlDefaultEntityMapping.html().entities` (HTML4/XHTML named entities for XHTML doctypes). The XML parser itself is project code because browser-strict well-formedness and fallback selection could not be matched with a permissive parser. |
+
+Phase C changed the pin from `^7.1.0` to `^7.0.1` (resolved 7.0.1): every
+`flutter_svg` release requires `xml <=7.0.1`. The Phase B data tests were
+re-run on 7.0.1 (256 passed, including the four local books).
 
 Transitive additions: `petitparser` 7.1.0, `posix` 6.5.2 (both MIT); `meta`
 moved 1.18.3 to 1.19.0. `csslib` was evaluated and removed again: Phase B
 does not parse CSS; Phase C may add it with its own justification. The SVG
 renderer decision stays with Phase C.
+
+### Phase C runtime dependencies (outcome)
+
+| Package | Version | Licence | Reason |
+| --- | --- | --- | --- |
+| `csslib` | 1.0.2 | BSD-3-Clause | CSS tokenizer/parser for the packaged author styles, `<style>`, `style` attributes and `@import`; the cascade, specificity, inheritance and reader overrides are project code (`engine/style`). |
+| `flutter_svg` | 2.3.0 | BSD-3-Clause | Static vector SVG that is not the plain raster wrapper: compiled to a recorded `ui.Picture` during preparation (`SvgStringLoader`, `vg.loadPicture`). It paints shapes and paths; `text`, `foreignObject`, filters and external images are not painted and are listed as `svg-partial`. |
+| `vector_graphics` / `vector_graphics_compiler` / `vector_graphics_codec` | 1.2.4 / 1.3.2 / 1.1.13 | BSD-3-Clause | Transitive of `flutter_svg` (picture decoding and SVG compilation). |
+| `path_parsing` and other `flutter_svg` transitives | as resolved in `pubspec.lock` | BSD-3-Clause / MIT | SVG path data parsing. |
+
+The SVG decision: evaluated `flutter_svg` against the pinned Flutter 3.47.7;
+it compiles and paints the synthetic vector fixtures (pixel-tested), so no
+custom renderer was written.
 
 ### Phase A tooling selected
 

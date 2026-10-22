@@ -26,7 +26,8 @@ paths:
 | Localization | `flutter_localizations` (sdk), `intl` |
 | Logging | `logging` |
 | App directories | `path_provider` (Application Support for private probe state; Documents for user exports) |
-| EPUB source (reader `data/` layer, pure Dart) | `archive` 4.5.2 (ZIP container, MIT); `html` 0.15.7 (HTML5 tree builder for the reference HTML fallback, MIT); `xml` 7.1.0 (HTML4/XHTML entity table only, MIT; the strict XML parser is project code) |
+| EPUB source (reader `data/` layer, pure Dart) | `archive` 4.5.2 (ZIP container, MIT); `html` 0.15.7 (HTML5 tree builder for the reference HTML fallback, MIT); `xml` pinned `^7.0.1`, resolved 7.0.1 (HTML4/XHTML entity table only, MIT; the strict XML parser is project code; held below 7.1 because every `flutter_svg` release requires `xml <=7.0.1`) |
+| Reader style and SVG (`engine/style`, `engine/layout`) | `csslib` 1.0.2 (CSS parser, BSD-3-Clause; cascade is project code); `flutter_svg` 2.3.0 with `vector_graphics` 1.2.4 / `vector_graphics_compiler` 1.3.2 / `vector_graphics_codec` 1.1.13 / `path_parsing` (static vector SVG compiled to a `ui.Picture` during preparation, BSD-3-Clause) |
 | Codegen | dev: `build_runner` |
 | Testing | dev: `flutter_test` (sdk), `mocktail` |
 

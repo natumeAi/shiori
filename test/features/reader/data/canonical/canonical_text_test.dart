@@ -19,8 +19,10 @@ void main() {
     final table = jsonDecode(
       File(generator.inputPath).readAsStringSync(),
     ) as Map<String, Object?>;
+    // Compare content, not line endings: with core.autocrlf a Windows
+    // checkout writes the committed LF file back as CRLF.
     expect(
-      File(generator.outputPath).readAsStringSync(),
+      File(generator.outputPath).readAsStringSync().replaceAll('\r\n', '\n'),
       generator.renderTable(table),
     );
   });

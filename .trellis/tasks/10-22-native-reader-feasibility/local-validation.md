@@ -1006,3 +1006,39 @@ would otherwise keep ~27 MB of vectors. Folded into the Phase A commit.
 - Size: `test/fixtures/reader/oracle/` 27 MB → 6.7 MB; ~1.14 M → ~99.5 k lines.
 - `flutter test`: exit 0, 347 passed (local books: 4, 60 sections, 168,677
   CFI samples). No Dart reader changed.
+
+## Phase C — layout, page map, anchors, detection
+
+Local commands only; host (Windows) Flutter test engine with the Ahem test font.
+
+- Style engine and unsupported-layout detection (C1) and layout, pagination,
+  images/SVG and anchors (C2) are implemented under `lib/features/reader/engine/`
+  with tests under `test/features/reader/engine/`.
+- Integration: `list-style-type` added to `ComputedStyle` (additive), parsed from
+  `list-style-type` and the `list-style` shorthand, UA defaults ul disc / nested
+  circle then square / ol decimal; layout markers follow the type, `ol start` and
+  `li value`; markers are synthetic. Inline `<style>` and linked `@font-face`
+  both carry real archive paths and load (test on the `styles` fixture).
+- Dependencies: `csslib` 1.0.2, `flutter_svg` 2.3.0 (+ `vector_graphics` 1.2.4,
+  `vector_graphics_compiler` 1.3.2), `xml` pin `^7.0.1` (resolved 7.0.1). Phase B
+  data tests re-run on 7.0.1: 256 passed.
+- Conservation: 10 supported fixtures x 3 settings pass; four local books pass at
+  all three gate settings (tables in `feasibility-report.md`).
+- Anchors: every page of every fixture round-trips; 2,980 oracle CFIs land;
+  2,413 native CFIs resolve identically in WebKit and Chromium (4,826/4,826);
+  reflow and injected-failure behaviour tested.
+- Host timing (indicative, Ahem): 100,000-unit paragraph layout median ~5-11 ms,
+  whole-section preparation ~25-52 ms.
+- The main session's Phase A/B history rewrite re-checked files out with CRLF under core.autocrlf; the canonical table test now compares content with normalized line endings.
+
+### Phase C gate (sequential)
+
+| Command | Exit |
+| --- | --- |
+| `dart run build_runner build` | 0 |
+| `dart format --set-exit-if-changed lib test tool/reader` | 0 (165 files, 0 changed) |
+| `flutter analyze` | 0, no issues |
+| `flutter test` (whole suite) | 0: 638 passed, 1 skipped (`native_cfi_export_test`, runs only with `SHIORI_NATIVE_CFI_OUT`) |
+
+`git status`: no changes under `tool/oracle/`, `assets/reader_fixtures/` or
+`test/fixtures/reader/oracle/`.
