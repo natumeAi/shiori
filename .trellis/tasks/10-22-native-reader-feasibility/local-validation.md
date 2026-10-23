@@ -291,7 +291,7 @@ a595d98d44007a7ce905e449c7342688211f934044527dfa3bb176d5df723160 chromium: 33 se
 
 Parent fixture static check exited 0: all 39 referenced section sources exist; expected XML sections parse with ElementTree (the deliberate HTML-fallback group is excluded); Unicode source bytes retain CRLF and bare CR.
 
-The first two clean build-fixtures + vectors runs matched SHA-256 for all 43 generated files (exit 0). Review then found fflate uses local calendar getters for ZIP DOS timestamps. The builder now uses a fixed local Date rather than a UTC instant. Both `TZ=UTC node src/build-fixtures.mjs` and `TZ=Asia/Hong_Kong node src/build-fixtures.mjs` exited 0 with 180 s timeouts; all 14 generated asset files are byte-identical. See oracle-timezone-reproducibility.json. The final clean vector comparison below supersedes pre-fix archive digests.
+The first two clean build-fixtures + vectors runs matched SHA-256 for all 43 generated files (exit 0). Review then found fflate uses local calendar getters for ZIP DOS timestamps. The builder now uses a fixed local Date rather than a UTC instant. Both `TZ=UTC node src/build-fixtures.mjs` and `TZ=Asia/Hong_Kong node src/build-fixtures.mjs` exited 0 with 180 s timeouts; all 14 generated asset files are byte-identical. See evidence/oracle-timezone-reproducibility.json. The final clean vector comparison below supersedes pre-fix archive digests.
 
 ### npm install --no-audit --no-fund --fetch-retries=0 --fetch-timeout=45000
 
@@ -587,7 +587,7 @@ PASS 13 EPUBs; 39 sections; 4807 CFI samples per engine; nested nav/NCX, literal
 
 ## Phase A final clean reproducibility
 
-Two clean builds/extractions under UTC and Asia/Hong_Kong: 45 generated/attribute files, 0 SHA-256 differences; exit 0. Scoped .gitattributes were preserved during cleanup. Every generation command had a 180 s process timeout and a 240 s wrapper bound. See oracle-final-reproducibility.json for final hashes.
+Two clean builds/extractions under UTC and Asia/Hong_Kong: 45 generated/attribute files, 0 SHA-256 differences; exit 0. Scoped .gitattributes were preserved during cleanup. Every generation command had a 180 s process timeout and a 240 s wrapper bound. See evidence/oracle-final-reproducibility.json for final hashes.
 
 ## Phase A — 2026-10-22T08:42:47.850590+00:00
 
@@ -867,7 +867,7 @@ PASS 13 EPUBs; 39 sections; 4807 CFI samples per engine; nested nav/NCX, literal
 
 ## Phase A final clean reproducibility
 
-Two clean builds/extractions under UTC and Asia/Hong_Kong: 45 generated/attribute files, 0 SHA-256 differences; exit 0. Scoped .gitattributes were preserved during cleanup. Every generation command had a 180 s process timeout and a 240 s wrapper bound. See oracle-final-reproducibility.json for final hashes.
+Two clean builds/extractions under UTC and Asia/Hong_Kong: 45 generated/attribute files, 0 SHA-256 differences; exit 0. Scoped .gitattributes were preserved during cleanup. Every generation command had a 180 s process timeout and a 240 s wrapper bound. See evidence/oracle-final-reproducibility.json for final hashes.
 
 ## Phase A-source-lf — 2026-10-22T08:50:53.853335+00:00
 
@@ -942,11 +942,11 @@ Exit: 0; timeout: 900 s; duration: 8.28 s; timed out: False.
 
 ## Phase A post-staging source-byte correction
 
-Review after the initial Phase A commit found that Git eol attributes had normalized index blobs without rewriting seven preexisting CRLF worktree files. In particular, only.xhtml and the packaged Roboto NOTICE made two EPUBs differ from a clean checkout. Ordinary oracle text was normalized to LF in the worktree; the intentional Unicode mixed-newline fixture and both font binaries were preserved. All 86 tracked tool/oracle files now compare byte-for-byte equal to HEAD blobs, with zero mismatches; exact vendored reference drift checks also pass (exit 0). See oracle-source-lf-normalization.json for affected paths and before/after digests.
+Review after the initial Phase A commit found that Git eol attributes had normalized index blobs without rewriting seven preexisting CRLF worktree files. In particular, only.xhtml and the packaged Roboto NOTICE made two EPUBs differ from a clean checkout. Ordinary oracle text was normalized to LF in the worktree; the intentional Unicode mixed-newline fixture and both font binaries were preserved. All 86 tracked tool/oracle files now compare byte-for-byte equal to HEAD blobs, with zero mismatches; exact vendored reference drift checks also pass (exit 0). See evidence/oracle-source-lf-normalization.json for affected paths and before/after digests.
 
 The reproducibility script now checks raw source hashes against Git path-filtered hashes before building. From those exact committed source bytes, two clean UTC/Hong_Kong generations again match all 45 output/attribute files, with zero differences and sourceFilterMismatches empty. The one-page EPUB is 2130 bytes and styles EPUB 360562 bytes; these final digests supersede the earlier pre-normalization outputs. Corpus assertions remain 13 EPUBs, 39 sections and 4807 CFI samples per engine, with zero engine differences.
 
-The complete quality gate was rerun for the corrected bundled assets: codegen exit 0 (0 outputs), formatter exit 0 (70 files, 0 changed; tool/diag still absent), analyzer exit 0 (no issues), tests exit 0 (91 passed). See quality-gate-A-source-lf.json. No reader code, dependency selection, local-book extraction behavior or protected source changed; local book vectors therefore did not require regeneration. No extra commit or push was made by the implementer.
+The complete quality gate was rerun for the corrected bundled assets: codegen exit 0 (0 outputs), formatter exit 0 (70 files, 0 changed; tool/diag still absent), analyzer exit 0 (no issues), tests exit 0 (91 passed). See evidence/quality-gate-A-source-lf.json. No reader code, dependency selection, local-book extraction behavior or protected source changed; local book vectors therefore did not require regeneration. No extra commit or push was made by the implementer.
 
 ## Phase A post-stage determinism review
 
@@ -954,7 +954,7 @@ Trellis checker: PASS after correction. Compared raw bytes of all 86 tracked ora
 
 ## User pause — Phase B incomplete
 
-Paused on 2026-10-22 at the user's explicit request. Dependency installation exited 0 (`reader-dependency-install.json`); no Phase B codegen, format, analysis, tests or review completed. Partial source/parser and CFI model drafts remain uncommitted. Both implementers report no remaining subprocesses. See `resume-handoff.md` and the source/CFI resume research notes. No further implementation, phase commit, push or task archive was performed during pause recording.
+Paused on 2026-10-22 at the user's explicit request. Dependency installation exited 0 (`evidence/reader-dependency-install.json`); no Phase B codegen, format, analysis, tests or review completed. Partial source/parser and CFI model drafts remain uncommitted. Both implementers report no remaining subprocesses. See `resume-handoff.md` and the source/CFI resume research notes. No further implementation, phase commit, push or task archive was performed during pause recording.
 
 ## Phase B evidence — 2026-10-22
 
@@ -995,11 +995,11 @@ would otherwise keep ~27 MB of vectors. Folded into the Phase A commit.
 - First attempt: `compactJSON` printed `undefined` object members, which
   `JSON.stringify` drops; `verify-vectors` failed with a JSON syntax error
   (`"properties": undefined`). The rerun overwrote that evidence file, so the
-  `oracle-final-clean-*.json` files show the final run only. Fixed by
+  `evidence/oracle-final-clean-*.json` files show the final run only. Fixed by
   normalizing through `JSON.parse(JSON.stringify(...))` before layout.
 - Reproducibility: two clean generations (UTC, Asia/Hong_Kong) — 32
   generated/attribute files, 0 SHA-256 differences, exit 0
-  (`oracle-final-reproducibility.json`). 45 → 32 files: the 13 Chromium vectors.
+  (`evidence/oracle-final-reproducibility.json`). 45 → 32 files: the 13 Chromium vectors.
 - Lossless check: all 29 previously committed vector files (13 WebKit, 13
   Chromium, summary, Unicode table, differences) parse to deep-equal content
   in their new locations. Assets and fixture sources are byte-unchanged.
@@ -1175,7 +1175,7 @@ the declared native bound were weakened.
 ### Phase D gate (sequential)
 
 Final successful sequence, repository root; machine records use the same six
-fields as `quality-gate-A.json` in `quality-gate-D.json`.
+fields as `evidence/quality-gate-A.json` in `evidence/quality-gate-D.json`.
 
 | Command | Timeout | Exit / result | Duration |
 | --- | --- | --- | --- |
@@ -1224,7 +1224,7 @@ normalized for comparison). Reference worktree remains clean at `a4bda23`.
 - Post-fix gate (coordinating session): `dart format --set-exit-if-changed lib
   test tool/reader` exit 0 (196 files, 0 changed); `flutter analyze` no
   issues; `flutter test` exit 0, **785 passed, 1 skipped**, 0 failed.
-  `quality-gate-D.json` keeps Codex's pre-fix records (784 passed).
+  `evidence/quality-gate-D.json` keeps Codex's pre-fix records (784 passed).
 
 ### Phase E part 1
 
@@ -1682,7 +1682,7 @@ Files by area (the full Phase E worktree, including earlier parts):
 | App/probe tests | `test/app/probe_app_test.dart`, `product_presentation_isolation_test.dart`; `test/features/diagnostics/data/probe_book_repository_test.dart`, `reader_probe_recorder_test.dart`, `reader_export_repository_test.dart`, `method_channel_presentation_probe_test.dart`, `presentation_export_test.dart`; `test/features/diagnostics/presentation/reader_probe_screen_test.dart`, `reader_scenario_runner_test.dart`, `reader_submission_test.dart` |
 | Engine/tool tests | `test/features/reader/engine/motion/reader_turn_evidence_test.dart`; `test/features/reader/engine/surface/surface_test_support.dart`; `test/tool/diag/reader_export_parity_test.dart`, `reader_export_metrics_test.dart`, `reader_export_contract_test.dart`, `reader_export_evidence_test.dart`, `reader_export_cli_test.dart`, `reader_export_privacy_test.dart`, `reader_correctness_resource_test.dart`; `test/tool/ci/check_reader_fixtures_test.dart` |
 | Helpers and fixtures | `test/helpers/reader_probe_fixtures.dart`, `presentation_probe_fixtures.dart`, `reader_analyzer_exports.dart`; `test/fixtures/reader/exports/*.json` (12 files) and `README.md`; `test/fixtures/reader/source_edge/manifest.json` |
-| Evidence | This appended section and `quality-gate-E.json` |
+| Evidence | This appended section and `evidence/quality-gate-E.json` |
 
 The engine imports no diagnostics code. Part 3b only adds sink observations
 in motion code; existing turn, proof, queue, cancellation and resource behavior
@@ -1795,7 +1795,7 @@ Final sequential repository-root gate (all commands completed without timeout):
 | `dart run tool/ci/check_reader_fixtures.dart` | 180 s | 0 | Real repository privacy/manifests PASS |
 | `dart run tool/diag/analyze_reader_export.dart --strict test/fixtures/reader/exports/passing-120hz-a1-1.json` | 180 s | 0 | Reader and engine aggregates MATCH; 7 pass rows, 0 fail, 2 unavailable |
 
-`quality-gate-E.json` contains these seven final successful records in the
+`evidence/quality-gate-E.json` contains these seven final successful records in the
 same array/record shape as Phase A: `command`, `timeoutSeconds`, `exitCode`,
 `timedOut`, `durationSeconds`, `outputTail`. Full intermediate logs are local
 under ignored `build/phase-e-gate/`. Windows executable resolution initially
@@ -1836,7 +1836,7 @@ branch switch, signing, deployment or Phase F work was performed.
 
 Verdict: **PASS with fixes** for the local Phase E gate. Reviewed in this
 session without sub-agents, commits, pushes, stash or branch changes. The
-coordinator's two workspace files and `quality-gate-E.json` were not edited.
+coordinator's two workspace files and `evidence/quality-gate-E.json` were not edited.
 The latter remains the earlier implementer gate; this section records the
 reviewer's subsequent validation.
 
@@ -1961,3 +1961,33 @@ presentation or touch-to-photon latency.
   growth rule (to be judged against device data).
 - Not verified locally: Swift compilation and hook behaviour, macOS plist
   operations and both IPAs, and all device evidence (NC7-NC9).
+
+## Phase F — runbook, report, evidence and specs (documentation only)
+
+- Implementation: Codex CLI `gpt-6.1-sol` (high). Part 1 wrote
+  `device-runbook.md`, completed `feasibility-report.md` (NC1-NC6 pass
+  locally, NC7-NC9 pending device run, S4 GO / NO-GO undecided) and moved the
+  31 per-command evidence files into `evidence/` with an index; part 2 added
+  `.trellis/spec/flutter/reader-engine.md` and updated `directory-structure.md`,
+  `quality-guidelines.md`, `diagnostics.md`, `testing.md` and `index.md`.
+  Part 2 first hit `account_session_capacity_exceeded` on the upstream proxy
+  (also for `gpt-6-astra`) and succeeded on a later retry.
+- Verification: Codex CLI `gpt-6-astra` (high), verification only. By the
+  user's decision no Flutter gate and no trellis-check review ran for this
+  documentation-only phase (part 1's verifier still ran the gate once: 969
+  passed, 1 skipped).
+  - Part 1: scope, evidence inventory, referenced paths and worktree hashes
+    pass. Its "raw bytes differ" result for 30 moved files is a CRLF artefact
+    of `core.autocrlf=true`: `git hash-object` of all 31 moved files equals
+    the HEAD blobs. Its privacy matches are pre-existing Phase A command
+    records (`local-validation.md` Phase A section and
+    `evidence/oracle-local-books.json`, unchanged since `f06b933`); the new
+    runbook and report contain none.
+  - Part 2: scope, dependency versions, numeric claims, S1 text preservation
+    and privacy (0 matches) pass. Identifier misses are Flutter SDK or
+    package names and an illustrative example, not repository code. One
+    pre-existing inaccuracy was corrected by the coordinator:
+    `quality-guidelines.md` no longer tells the build to pass SDK, framework
+    or engine defines (the Flutter tool injects them; see `diagnostics.md`
+    §3). `integration_test/` in `index.md` is an intentional future layer.
+- Not verified locally: Swift compilation, both IPAs and all device evidence.

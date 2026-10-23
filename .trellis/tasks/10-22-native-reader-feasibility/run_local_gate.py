@@ -16,6 +16,8 @@ def main() -> int:
     parser.add_argument("phase")
     args = parser.parse_args()
     task_dir = Path(__file__).resolve().parent
+    evidence_dir = task_dir / "evidence"
+    evidence_dir.mkdir(exist_ok=True)
     repo = task_dir.parents[2]
     env = dict(os.environ, PYTHONIOENCODING="utf-8")
     commands = [
@@ -58,7 +60,7 @@ def main() -> int:
         }
         records.append(record)
         print(json.dumps(record, ensure_ascii=False), flush=True)
-        (task_dir / f"quality-gate-{args.phase}.json").write_text(
+        (evidence_dir / f"quality-gate-{args.phase}.json").write_text(
             json.dumps(records, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )

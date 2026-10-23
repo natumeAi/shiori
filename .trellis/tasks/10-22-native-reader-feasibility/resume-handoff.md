@@ -48,8 +48,8 @@ Phase 0 baseline and Phase A passed their checks. Final Phase A evidence:
 - Latest full gate: codegen zero outputs, formatting unchanged, analyze clean,
   all 91 existing Flutter tests pass.
 
-See `local-validation.md`, `quality-gate-0.json`,
-`quality-gate-A-source-lf.json`, `oracle-final-reproducibility.json`, and
+See `local-validation.md`, `evidence/quality-gate-0.json`,
+`evidence/quality-gate-A-source-lf.json`, `evidence/oracle-final-reproducibility.json`, and
 `research/oracle-notes.md` for evidence and reference ambiguities.
 
 Phase A's initial commit was amended after catching source EOL drift: Git
@@ -61,7 +61,7 @@ Use the final HEAD above rather than the superseded Phase A commit `6304095`.
 
 ## Uncommitted Phase B state
 
-Installed runtime packages, recorded in `reader-dependency-install.json`:
+Installed runtime packages, recorded in `evidence/reader-dependency-install.json`:
 
 | Package | Resolved version | Licence |
 | --- | --- | --- |

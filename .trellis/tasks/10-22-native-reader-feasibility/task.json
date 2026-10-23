@@ -21,11 +21,11 @@
   "children": [],
   "parent": "10-22-flutter-lan-reader-parity",
   "relatedFiles": [],
-  "notes": "Planned 2026-10-22. User decisions: diagnostic-only native presentation hook allowed (time-boxed); local phases commit once each on ios-build/s2-reader-probe; no push without user confirmation. Codex (gpt-6.1-sol, high) did Phase 0 and A, then was paused during Phase B. Sonnet 5.5 (medium) implement/check agents in the Claude session did Phases B and C. The user asks to stop after each phase: Phase D starts only on the user's explicit instruction. Phase D was implemented by the Codex CLI (gpt-6.1-sol, high) and reviewed by trellis-check; Phase E starts only on the user's explicit instruction. Phase E was implemented by the Codex CLI (gpt-6.1-sol, high) and verified/reviewed by the Codex CLI (gpt-6-astra, high); Phase F starts only on the user's explicit instruction.",
+  "notes": "Planned 2026-10-22. User decisions: diagnostic-only native presentation hook allowed (time-boxed); local phases commit once each on ios-build/s2-reader-probe; no push without user confirmation. Codex (gpt-6.1-sol, high) did Phase 0 and A, then was paused during Phase B. Sonnet 5.5 (medium) implement/check agents in the Claude session did Phases B and C. The user asks to stop after each phase: Phase D starts only on the user's explicit instruction. Phase D was implemented by the Codex CLI (gpt-6.1-sol, high) and reviewed by trellis-check; Phase E starts only on the user's explicit instruction. Phase E was implemented by the Codex CLI (gpt-6.1-sol, high) and verified/reviewed by the Codex CLI (gpt-6-astra, high); Phase F starts only on the user's explicit instruction. Phase F (runbook, report, evidence, specs) is done; the device run waits for the user's push confirmation.",
   "meta": {
-    "execution_state": "stopped_after_phase_e_awaiting_user",
-    "stop_after_phase": "E",
-    "next_phase": "F",
+    "execution_state": "local_phases_complete_awaiting_user_push_decision",
+    "stop_after_phase": "F",
+    "next_phase": "device_run_after_confirmed_push",
     "codex_paused_at": "2026-10-22T17:05:00+08:00",
     "phase_b_resumed_at": "2026-10-22T17:40:00+08:00",
     "phase_b_completed_at": "2026-10-22T18:51:00+08:00",
@@ -33,7 +33,7 @@
     "phase_c_completed_at": "2026-10-22T19:45:00+08:00",
     "phase_c_executor": "Sonnet 5.5 (medium) trellis-implement agents C1 (style, detection) and C2 (layout, pagination, anchors), then trellis-check",
     "resume_handoff": "resume-handoff.md",
-    "last_completed_phase": "E",
+    "last_completed_phase": "F",
     "pushed_at": "2026-10-22T19:50:00+08:00",
     "pushed_commit": "73835bb3c7fa455b339643db0849474e8a4c2902",
     "pushed_ci_run": "https://github.com/natumeAi/shiori/actions/runs/39773602019",
@@ -42,6 +42,9 @@
     "phase_d_executor": "Codex CLI gpt-6.1-sol (high, workspace-write sandbox) for implementation; Sonnet 5.5 (medium) trellis-check review with one lifecycle fix",
     "phase_e_started_at": "2026-10-23T10:49:00+08:00",
     "phase_e_completed_at": "2026-10-23T14:49:00+08:00",
-    "phase_e_executor": "Codex CLI gpt-6.1-sol (high) in parts E1, E2, E3a, E3b; gate re-runs and trellis-check review by Codex CLI gpt-6-astra (high)"
+    "phase_e_executor": "Codex CLI gpt-6.1-sol (high) in parts E1, E2, E3a, E3b; gate re-runs and trellis-check review by Codex CLI gpt-6-astra (high)",
+    "phase_f_started_at": "2026-10-23T14:55:00+08:00",
+    "phase_f_completed_at": "2026-10-23T16:15:00+08:00",
+    "phase_f_executor": "Codex CLI gpt-6.1-sol (high) in parts F1 and F2; verification by Codex CLI gpt-6-astra (high); no Flutter gate or trellis-check review for this documentation-only phase by user decision"
   }
 }

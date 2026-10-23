@@ -12,7 +12,7 @@ passed gate. Do not commit the partial Phase B changes before resuming checks.
 - `lib/features/reader/data/source/source_parser.dart`
 - `pubspec.yaml` and `pubspec.lock`: successful `flutter pub add archive xml
   html csslib` (exit 0, 180-second timeout, 2.806 seconds), evidence in
-  `reader-dependency-install.json`.
+  `reader-dependency-install.json` (now `evidence/reader-dependency-install.json`).
 
 Resolved candidates: archive 4.5.2 (MIT, Dart >=3), xml 7.1.0 (MIT, Dart
 ^3.13), html 0.15.7 (MIT, Dart ^3.6), csslib 1.0.2 (BSD-3-Clause, Dart ^3.1).

@@ -9,19 +9,21 @@ Context order: `implement.jsonl` entries → `prd.md` → `design.md` → this f
 Before writing code in a layer, load the matching `.trellis/spec/flutter/`
 guide (the `trellis-before-dev` skill does this).
 
-## Current checkpoint — stopped after Phase E
+## Current checkpoint — stopped after Phase F (local work complete)
 
-Phases 0, A, B, C, D and E passed and are committed locally (`4e15862`,
-`f06b933`, `d627692`, `73835bb`, `25bac2d`, then the Phase E commit). Phases
-B and C were run by Sonnet 5.5 (medium) implement/check agents in the Claude
-session; Phase D was implemented by the Codex CLI (`gpt-6.1-sol`, high,
-sandboxed) and checked by a Sonnet 5.5 (medium) trellis-check agent; Phase E
-was implemented by the Codex CLI (`gpt-6.1-sol`, high) in sequential parts,
-with gate re-runs and the trellis-check review by the Codex CLI
-(`gpt-6-astra`, high). The user asks to stop after each phase. Phase F starts
-only on the user's explicit instruction; continuous mode does not resume by
-itself. Do not archive the task or restart earlier phases. Nothing after
-Phase C is pushed.
+Phases 0, A, B, C, D, E and F passed and are committed locally (`4e15862`,
+`f06b933`, `d627692`, `73835bb`, `25bac2d`, `bf12416`, then the Phase F
+commit). Phases B and C were run by Sonnet 5.5 (medium) implement/check
+agents in the Claude session; Phase D was implemented by the Codex CLI
+(`gpt-6.1-sol`, high, sandboxed) and checked by a Sonnet 5.5 (medium)
+trellis-check agent; Phases E and F were implemented by the Codex CLI
+(`gpt-6.1-sol`, high) in sequential parts, verified by the Codex CLI
+(`gpt-6-astra`, high). Phase F is documentation only, so by the user's
+decision it ran no Flutter gate and no trellis-check review; its verification
+covered script compilation, moved-evidence hashes, referenced paths and
+identifiers, dependency versions and privacy. All local phases are done; the
+next step is the user's push decision and the device run in
+`device-runbook.md`. Nothing after Phase C is pushed. Do not archive the task.
 
 ## Phase 0 — branch and baseline
 
@@ -126,25 +128,28 @@ Phase C is pushed.
 
 ## Phase F — handoff to the device step (then STOP)
 
-- [ ] Write `device-runbook.md` in this task directory, modeled on S1's: build
+- [x] Write `device-runbook.md` in this task directory, modeled on S1's: build
   provenance check, which IPA to sign in 全能签 for which runs, copying the
   four books into Files → On My iPhone → Shiori, pre-capture declarations,
   per-scenario steps and repeat counts, A1/A2/B procedure, export retrieval,
   where to put exports locally (`local-evidence/`, gitignored) and how to run
   the analyzer.
-- [ ] Update specs (Trellis step 3.3): add `.trellis/spec/flutter/reader-engine.md`
+- [x] Update specs (Trellis step 3.3): add `.trellis/spec/flutter/reader-engine.md`
   for the source/CFI/canonical/layout/motion contracts; update
   `directory-structure.md` (engine layer, tool dirs), `quality-guidelines.md`
   (dependencies), `diagnostics.md` (reader record, native probe, evidence
   levels), `testing.md` (oracle vectors, local-only tests) and the spec index.
-- [ ] Fill `feasibility-report.md` with every local row and placeholders
+- [x] Fill `feasibility-report.md` with every local row and placeholders
   marked "pending device run" for NC7–NC9.
-- [ ] Consolidate the per-command evidence files in this task directory
+- [x] Consolidate the per-command evidence files in this task directory
   (`oracle-*.json`, `quality-gate-*.json`, `reader-dependency-install.json`)
-  into one evidence folder or index, keeping their content.
-- [ ] Copy the "Carry-forward to later stages" items below into the report.
-- [ ] Commit: `docs(task): S2 device runbook, spec updates and local results`.
-- [ ] STOP. Do not push. Reply with the report format in the handoff prompt.
+  into one evidence folder or index, keeping their content. (Done in Phase F
+  part 1: all 31 files now live in `evidence/`, indexed by
+  `evidence/README.md`; the task scripts write there.)
+- [x] Copy the "Carry-forward to later stages" items below into the report.
+- [x] Commit: `docs(task): S2 device runbook, spec updates and local results`.
+- [x] STOP. Do not push. Reply with the report format in the handoff prompt.
+  (Stopped after the Phase F commit; awaiting the user.)
 
 ## Carry-forward to later stages (from Phase A/B review)
 
@@ -168,7 +173,9 @@ Phase C is pushed.
 
 1. Push `ios-build/s2-reader-probe`; CI builds both IPAs.
 2. The user signs and installs the default IPA, places the books, runs
-   R01–R11 (three repeats, limiters off) plus A1/A2, exports; then installs the
+   R01–R10 (three repeats, limiters off), R11 (one manual run of at least 50
+   turns per book, as `design.md` §8.2 and the code require) plus A1/A2,
+   exports (steps in `device-runbook.md`); then installs the
    `-cametal` IPA over it for Mode B and one R01/R02 comparison run.
 3. Exports go to `local-evidence/`; the analyzer fills the NC7/NC8 rows; the
    report gets its GO / NO-GO; the task finishes through `trellis-finish-work`.

@@ -19,6 +19,8 @@ def main() -> int:
     if not command:
         parser.error("a command is required")
     task_dir = Path(__file__).resolve().parent
+    evidence_dir = task_dir / "evidence"
+    evidence_dir.mkdir(exist_ok=True)
     repo = task_dir.parents[2]
     start = time.monotonic()
     process = subprocess.Popen(
@@ -37,7 +39,7 @@ def main() -> int:
               "timeoutSeconds": args.timeout, "exitCode": 124 if timed_out else process.returncode,
               "timedOut": timed_out, "durationSeconds": round(time.monotonic() - start, 3),
               "outputTail": "\n".join(line.rstrip() for line in output.decode("utf-8", errors="replace").splitlines()[-60:])}
-    (task_dir / f"oracle-{args.label}.json").write_text(
+    (evidence_dir / f"oracle-{args.label}.json").write_text(
         json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     with (task_dir / "local-validation.md").open("a", encoding="utf-8") as stream:
         stream.write(f"\n## Phase A — {args.label}\n\n`{record['command']}` in tool/oracle.\n\n"

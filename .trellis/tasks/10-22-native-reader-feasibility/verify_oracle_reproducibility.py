@@ -11,6 +11,8 @@ import sys
 
 def main() -> int:
     task_dir = Path(__file__).resolve().parent
+    evidence_dir = task_dir / "evidence"
+    evidence_dir.mkdir(exist_ok=True)
     repo = task_dir.parents[2]
     # Git's eol filter can normalize the index without rewriting the worktree.
     # Refuse to build from bytes that differ after the committed path's filters.
@@ -57,7 +59,7 @@ def main() -> int:
     report = {"timezones": ["UTC", "Asia/Hong_Kong"], "files": len(snapshots[0]),
               "sourceFilterMismatches": filtered_mismatches,
               "byteIdentical": not changed, "changed": changed, "sha256": snapshots[1]}
-    (task_dir / "oracle-final-reproducibility.json").write_text(
+    (evidence_dir / "oracle-final-reproducibility.json").write_text(
         json.dumps(report, indent=2) + "\n", encoding="utf-8")
     with (task_dir / "local-validation.md").open("a", encoding="utf-8") as stream:
         stream.write(f"\n## Phase A final clean reproducibility\n\n"
@@ -66,7 +68,7 @@ def main() -> int:
                      f"{len(changed)} SHA-256 differences; exit {int(bool(changed))}. "
                      "Scoped .gitattributes were preserved during cleanup. "
                      "Every generation command had a 180 s process timeout and a 240 s wrapper bound. "
-                     "See oracle-final-reproducibility.json for final hashes.\n")
+                     "See evidence/oracle-final-reproducibility.json for final hashes.\n")
     print(f"Reproducibility: {len(snapshots[0])} files; {len(changed)} differences", flush=True)
     return int(bool(changed))
 
