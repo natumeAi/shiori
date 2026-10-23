@@ -4,6 +4,7 @@ library;
 import 'package:csslib/parser.dart' as css;
 import 'package:csslib/visitor.dart';
 import 'package:shiori/features/reader/data/epub/epub_url.dart';
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 import 'package:shiori/features/reader/engine/style/computed_style.dart';
 import 'package:shiori/features/reader/engine/style/css_properties.dart';
 import 'package:shiori/features/reader/engine/style/css_selector.dart';
@@ -66,6 +67,7 @@ final class CssSheetBuilder {
     int depth = 0,
     Set<String> active = const {},
   }) {
+    ReaderWorkGuard.check(ReaderWork.parsing);
     final errors = <css.Message>[];
     StyleSheet sheet;
     try {
@@ -248,6 +250,7 @@ List<CssDeclaration> declarationsOf(
 
 /// Declarations of an inline `style` attribute value.
 List<CssDeclaration> parseInlineStyle(String text, StyleDiagnosticSink? sink) {
+  ReaderWorkGuard.check(ReaderWork.parsing);
   final errors = <css.Message>[];
   StyleSheet sheet;
   try {

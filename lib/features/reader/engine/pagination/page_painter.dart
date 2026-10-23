@@ -1,5 +1,7 @@
 import 'dart:ui' as ui;
 
+import 'package:shiori/features/reader/engine/layout/image_cache.dart';
+
 import 'package:shiori/features/reader/engine/layout/layout_model.dart';
 import 'package:shiori/features/reader/engine/pagination/page_plan.dart';
 import 'package:shiori/features/reader/engine/pagination/prepared_section.dart';
@@ -31,8 +33,9 @@ abstract final class PagePainter {
     ui.Canvas canvas,
     PreparedSection section,
     int pageIndex,
-    PagePaintTheme theme,
-  ) {
+    PagePaintTheme theme, {
+    ImageLease? Function(int)? imageOf,
+  }) {
     final width = section.box.width;
     for (final fragment in section.pages[pageIndex].fragments) {
       final laid = section.blocks[fragment.blockIndex];
@@ -65,7 +68,7 @@ abstract final class PagePainter {
             ..drawParagraph(laid.paragraph!.paragraph, ui.Offset.zero)
             ..restore();
         case BoxFragment():
-          _paintBox(canvas, section, laid, fragment, theme);
+          _paintBox(canvas, section, laid, fragment, theme, imageOf);
       }
     }
   }
@@ -76,6 +79,7 @@ abstract final class PagePainter {
     LaidOutBlock laid,
     BoxFragment fragment,
     PagePaintTheme theme,
+    ImageLease? Function(int)? imageOf,
   ) {
     final rect = ui.Rect.fromLTWH(
       fragment.left,
@@ -106,7 +110,9 @@ abstract final class PagePainter {
             ..drawPicture(vector.picture)
             ..restore();
         } else {
-          final lease = section.leaseOf(laid.index);
+          final lease = imageOf == null
+              ? section.leaseOf(laid.index)
+              : imageOf(laid.index);
           if (lease == null) {
             canvas.drawRect(
               rect,
@@ -142,8 +148,9 @@ abstract final class PagePainter {
   static ui.Picture record(
     PreparedSection section,
     int pageIndex,
-    PagePaintTheme theme,
-  ) {
+    PagePaintTheme theme, {
+    ImageLease? Function(int)? imageOf,
+  }) {
     final recorder = ui.PictureRecorder();
     final canvas = ui.Canvas(recorder);
     canvas
@@ -158,7 +165,7 @@ abstract final class PagePainter {
       )
       ..save()
       ..translate(section.box.left, section.box.top);
-    paintContent(canvas, section, pageIndex, theme);
+    paintContent(canvas, section, pageIndex, theme, imageOf: imageOf);
     canvas.restore();
     return recorder.endRecording();
   }

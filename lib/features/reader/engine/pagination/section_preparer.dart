@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:shiori/features/reader/data/epub/epub_book.dart';
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 import 'package:shiori/features/reader/data/source/source_document.dart';
 import 'package:shiori/features/reader/engine/layout/block_builder.dart';
 import 'package:shiori/features/reader/engine/layout/font_registry.dart';
@@ -67,6 +68,7 @@ final class SectionPreparer {
     PreparationControl? control,
     void Function(ReaderPage page)? onPageReady,
   }) async {
+    ReaderWorkGuard.check(ReaderWork.pagination);
     final checkpoint = control ?? PreparationControl();
     final box = ContentBox.fromViewport(
       request.viewportWidth,

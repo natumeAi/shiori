@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:shiori/features/reader/data/canonical/fnv1a64.dart';
 import 'package:shiori/features/reader/data/canonical/unicode_exclusion_table.g.dart';
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 import 'package:shiori/features/reader/data/source/source_document.dart';
 import 'package:shiori/features/reader/data/source/source_node.dart';
 
@@ -37,6 +38,7 @@ bool isCanonicalCodePoint(int codePoint) {
 /// Walks [text] by code point: unpaired surrogates are their own code point.
 /// Calls [visit] with `(codePoint, utf16Offset)`.
 void forEachCodePoint(String text, void Function(int, int) visit) {
+  ReaderWorkGuard.check(ReaderWork.canonicalTraversal);
   for (var offset = 0; offset < text.length;) {
     final unit = text.codeUnitAt(offset);
     var codePoint = unit;
@@ -55,6 +57,7 @@ void forEachCodePoint(String text, void Function(int, int) visit) {
 
 /// Canonical characters of [text] under normalization v1.
 int countCanonicalCharacters(String text) {
+  ReaderWorkGuard.check(ReaderWork.canonicalTraversal);
   var count = 0;
   forEachCodePoint(text, (codePoint, _) {
     if (isCanonicalCodePoint(codePoint)) count++;
@@ -87,13 +90,16 @@ final class CanonicalEntry {
   /// UTF-16 start offset of canonical character `k` of this node.
   final Uint32List canonicalToUtf16;
 
-  Map<String, Object?> toJson() => {
-    'node': nodeIndex,
-    'start': start,
-    'length': length,
-    'utf16Length': utf16Length,
-    'canonicalToUtf16': canonicalToUtf16.toList(growable: false),
-  };
+  Map<String, Object?> toJson() {
+    ReaderWorkGuard.check(ReaderWork.jsonSerialization);
+    return {
+      'node': nodeIndex,
+      'start': start,
+      'length': length,
+      'utf16Length': utf16Length,
+      'canonicalToUtf16': canonicalToUtf16.toList(growable: false),
+    };
+  }
 }
 
 /// Layout-independent text coordinates for one spine document.
@@ -110,6 +116,7 @@ final class CanonicalIndex {
   /// `template` and SVG/MathML subtrees get no coordinates. CSS visibility
   /// never changes coordinates.
   factory CanonicalIndex.build(SourceDocument document) {
+    ReaderWorkGuard.check(ReaderWork.canonicalTraversal);
     final rootIndex = document.bodyIndex ?? document.documentElementIndex;
     final entries = <CanonicalEntry>[];
     final hash = Fnv1a64();
@@ -162,12 +169,15 @@ final class CanonicalIndex {
   /// Opaque `fnv1a64:<16 hex>` token over the canonical text.
   final String signature;
 
-  Map<String, Object?> toJson() => {
-    'version': version,
-    'length': length,
-    'signature': signature,
-    'entries': entries.map((entry) => entry.toJson()).toList(growable: false),
-  };
+  Map<String, Object?> toJson() {
+    ReaderWorkGuard.check(ReaderWork.jsonSerialization);
+    return {
+      'version': version,
+      'length': length,
+      'signature': signature,
+      'entries': entries.map((entry) => entry.toJson()).toList(growable: false),
+    };
+  }
 
   static bool _isExcluded(SourceNode element) =>
       element.namespaceUri == _svgNamespace ||

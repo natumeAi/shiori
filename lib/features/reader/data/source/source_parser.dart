@@ -3,6 +3,7 @@ import 'package:shiori/features/reader/data/source/content_protection.dart';
 import 'package:shiori/features/reader/data/source/dom_node.dart';
 import 'package:shiori/features/reader/data/source/dom_serializer.dart';
 import 'package:shiori/features/reader/data/source/html_adapter.dart';
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 import 'package:shiori/features/reader/data/source/source_attribute.dart';
 import 'package:shiori/features/reader/data/source/source_document.dart';
 import 'package:shiori/features/reader/data/source/source_node.dart';
@@ -44,6 +45,7 @@ final class SourceParser {
   /// The reference's first parse: XML for XHTML/SVG, falling back to HTML when
   /// the XML is malformed or its root has no namespace; HTML for `text/html`.
   static ParsedSection parseTree(String source, String mediaType) {
+    ReaderWorkGuard.check(ReaderWork.parsing);
     var tree = DomNode(DomKind.document);
     var htmlFallback = false;
     String? errorClass;
@@ -78,6 +80,7 @@ final class SourceParser {
     SectionTransform? transform,
     bool protect = true,
   }) {
+    ReaderWorkGuard.check(ReaderWork.parsing);
     final parsed = parseTree(source, mediaType);
     var tree = parsed.tree;
     final htmlFallback = parsed.htmlFallback;

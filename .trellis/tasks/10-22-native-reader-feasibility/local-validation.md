@@ -1042,3 +1042,186 @@ Local commands only; host (Windows) Flutter test engine with the Ahem test font.
 
 `git status`: no changes under `tool/oracle/`, `assets/reader_fixtures/` or
 `test/fixtures/reader/oracle/`.
+
+## Phase D — motion controller and surfaces
+
+2026-10-23; local Windows commands, Flutter 3.47.7 / Dart 3.13.5.
+Branch `ios-build/s2-reader-probe`, HEAD `73835bb`; reference `a4bda23`.
+Resumed the existing uncommitted implementation. The motion baseline passed
+62 tests before edits. No commit, push, branch change or reference edit.
+The supplied process-only Git configuration allowed the sandbox SDK to start;
+this session did not change trust configuration or sandbox permissions.
+
+### Built and completed
+
+Paths below are relative to `lib/features/reader/`.
+
+- Motion (`engine/motion/`): `page_turn_gesture.dart`, `page_turn_engine.dart`,
+  `turn_clock.dart`, `turn_session.dart`, `turn_intent_queue.dart`,
+  `turn_acceptance.dart`, `turn_motion.dart`, `reader_turn_controller.dart`,
+  `turn_controller_work.dart`, `turn_controller_pointer.dart`,
+  `turn_controller_drag.dart`. Reader-local numeric motion, frozen admission
+  ruler, 1+8 FIFO with explicit overflow, accepted-origin rebase, lifecycle
+  cancellation, generation rejection, paired motion and proof before acceptance.
+- Surfaces (`engine/surface/`): `page_surface_pool.dart`,
+  `prepared_page_position.dart`, `prepared_reader_session.dart`,
+  `surface_frame.dart`, `prepared_reader.dart`. Retained pictures, reference-
+  counted leases, repaint-only Flow transforms, stable page subtrees, real
+  Phase C anchor/visibility proof and reduced-motion acceptance.
+- Bounds: three presented surfaces plus one declared reserve; pending owners
+  count against the same bound. Picture budget 16 MiB, decoded-image budget
+  48 MiB. No idle picture cache. Last release disposes pictures and releases
+  image leases; pending decode cannot publish after pool close. Closing a
+  session is idempotent and late controller cleanup cannot touch its notifier.
+- Guard: `data/source/reader_work_guard.dart` marks pointer/ticker zones in
+  debug mode. Checks precede parsing, shaping, decode starts, font loading,
+  pagination, canonical traversal, archive resource reads and JSON projection.
+  Data remains isolate-safe with no `dart:ui` or providers. S2 has no filesystem
+  position/activity storage; its existing archive byte/text reads are guarded
+  as storage work. No product persistence was added.
+- Guard-only entry edits in `data/source/`: `source_parser.dart`,
+  `html_adapter.dart`, `xml_parser.dart`, `source_document.dart`;
+  `data/canonical/canonical_text.dart`; `data/cfi/`: `cfi_parser.dart`,
+  `cfi_expression.dart`, `cfi_step.dart`; `data/epub/`: `epub_archive.dart`,
+  `epub_loader.dart`, `epub_package.dart`.
+- Guard-only engine entry edits in `engine/layout/`: `paragraph_factory.dart`,
+  `font_registry.dart`, `image_cache.dart`, `svg_picture.dart`;
+  `engine/pagination/`: `section_preparer.dart`, `section_paginator.dart`;
+  `engine/style/`: `css_stylesheet.dart`, `reader_settings.dart`. Expression
+  bodies became block bodies only where a guard needed to precede the return.
+  The inherited `engine/pagination/page_painter.dart` image-lease integration
+  was preserved and formatted.
+
+### Ported reference inventory
+
+Reference paths are relative to `D:/Projects/lan-reader/client/test/`; Dart
+paths are relative to `test/features/reader/`. Counts expand parameterized
+reference cases. Motion tests inject `TestTurnClock`; pure canonical/image
+functions have no clock dependency. No sleeps or wall-time assertions were added.
+
+| Reference file | Dart test file(s) | Cases ported / deferred |
+| --- | --- | --- |
+| `pageTurnEasing.test.ts` | `engine/motion/page_turn_easing_test.dart` | 6/6 ported; 7 Dart tests including tap-zone boundary checks; none deferred |
+| `readerPageTurnEngine.test.ts` | `engine/motion/page_turn_engine_test.dart` | 14/14 ported; none deferred |
+| `readerInputQueue.test.ts` | `engine/motion/reader_input_queue_test.dart`, `reader_input_queue_lifecycle_test.dart` in the same directory | 30/31 ported; browser pointer-capture hook deferred |
+| `readerTurnProof.test.ts` | `engine/motion/reader_turn_proof_test.dart` | 15/15 ported; none deferred |
+| `readerMotionIsolation.test.ts` | `engine/motion/reader_motion_isolation_test.dart` | 7 native equivalents plus 2 pending-admission reversal regressions; browser animation/disposer mechanics replaced by native picture/lease evidence |
+| `foliateTurnTargetProof.test.ts` | `engine/surface/foliate_turn_target_proof_test.dart` | 10/11 ported; fixed-layout frame proof deferred |
+| `readingActivityText.test.ts` | `data/canonical/reading_activity_text_test.dart` | 6/7 ported; mutable browser DOM cache case deferred |
+| `contentImage.test.ts` | `engine/layout/content_image_test.dart` | 2 source-side ports, 3 preparation subcases, 1 additional dimension check; 9 UI/viewer cases remain deferred (3 have preparation coverage) |
+
+Additional tests: `engine/motion/reader_work_guard_test.dart` has 38 cases
+(29 real entry calls inside/outside callbacks and all 9 work categories).
+`engine/surface/prepared_reader_test.dart` has 5 widget cases: actual painted
+offset changes with unchanged page-build count, final-lease/widget disposal,
+3+1 live bound, disposal during an active drag, reduced motion proving and
+accepting once. `engine/surface/page_surface_pool_test.dart` has 6 cases:
+picture/image disposal, both byte budgets, pending-decode ownership through
+close, assertion-before-release mutation and coalesced neighbor warming.
+Helpers: `engine/motion/motion_test_support.dart` (inherited, formatted),
+`engine/surface/surface_test_support.dart` (real 25-page native preparation).
+The Phase D files contribute 146 passing tests: 62 inherited plus 84 added here.
+
+### Deferred cases and native substitutions
+
+| Reference file:line | Deferred subject / reason |
+| --- | --- |
+| `readerInputQueue.test.ts:241` | React hook / DOM `setPointerCapture`, capture failure and late `lostpointercapture`; Flutter uses native pointer routing, and S2 has no browser capture hook. The four engine lifecycle cases at :224 and :280 were added. |
+| `foliateTurnTargetProof.test.ts:154` | Fixed-layout spread/frame visibility. Rendering fixed-layout publications is explicitly outside S2. Reflowable own-page visibility/round-trip checks are ported. |
+| `readingActivityText.test.ts:74` | Mutable DOM identity cache and mutation invalidation. S2 indexes immutable `SourceDocument` snapshots explicitly and exposes no mutable DOM cache. No activity tracking feature was added. |
+| `contentImage.test.ts:31` | Reader tap through a link to the original resource: original archive-path preservation is covered; product hit testing/viewer dispatch belongs to S4–S6. |
+| `contentImage.test.ts:69`, `:98` | Disabled hit testing and positioned image tap recovery require the product gesture/hit-test layer. |
+| `contentImage.test.ts:135`, `:150` | Background/hidden image exclusion at a tap point requires product hit testing; the existing S2 block-preparation exclusions are covered separately. |
+| `contentImage.test.ts:171` | Occlusion-aware tap resolution is product image hit testing, absent from S2. |
+| `contentImage.test.ts:230` | Viewer SVG export with captured publication styles, absolute resource placeholders and font embedding is absent from S2. Native SVG serialization is covered at :196. |
+| `contentImage.test.ts:273` | Viewer-time external resource fetching/data-URL embedding is absent from S2; no network service or viewer was implemented. |
+| `contentImage.test.ts:335` | Hover zoom cursor belongs to the product image viewer/gesture layer. |
+
+At `readerMotionIsolation.test.ts:98`, browser disposal is asynchronous and
+WAAPI must wait for retirement. Native picture disposal is synchronous: its
+equivalent retains an owner until final lease release, refuses over-capacity
+preparation, then admits a replacement. A separate real codec test proves
+pending asynchronous decode remains an owner through close until it drains.
+The native current foreground is included in the 3+1 count; the browser's
+provider-owner count excludes its foreground. Neither reference constants nor
+the declared native bound were weakened.
+
+### Reference/design comparison and bugs caught
+
+- No unresolved semantic disagreement with design §7 or the reference source.
+  Round-trip equality is structural `Cfi.compare == 0`, matching
+  `foliateEngine.ts:397`; it is not CFI string identity. The test uses an offset
+  that resolves through ToUint32 but cannot structurally round-trip, while
+  distinct valid anchors on the same visible page are accepted.
+- The execution-plan validation snippet still names `tool/diag`; the current
+  Phase C evidence and this handoff name `tool/reader`. The requested existing
+  `tool/reader` directory was checked; planning files were left untouched.
+- Previous session's port caught waiting inputs resolving as committed after
+  a post-acceptance callback rejected. Its fix is retained: the accepted intent
+  stays committed, waiting inputs fail, and only one destination is published.
+- Widget tests caught double-disposal of the session frame notifier. Close is
+  now idempotent; late bind/unbind/navigation/proof/restore reject closed state.
+- The callback test caught final release mutating its reference/released state
+  before asserting. The guard now runs before any lease mutation, so a rejected
+  callback release can still be performed normally by its owner.
+- The held-drag isolation port caught overlapping preparations while a drain
+  was pending, retaining an extra neighbor. Pointer preparation is serialized;
+  newest samples/reversals are preserved and cancellation returns to one owner.
+  A related repeated-warm regression caught duplicate warm owners; in-flight
+  warming is coalesced and stale-origin results are released.
+- All six reported analyzer infos were fixed. Formatting exposed additional
+  multiline-if lint cases, also fixed; final analysis has no issues.
+
+### Phase D gate (sequential)
+
+Final successful sequence, repository root; machine records use the same six
+fields as `quality-gate-A.json` in `quality-gate-D.json`.
+
+| Command | Timeout | Exit / result | Duration |
+| --- | --- | --- | --- |
+| `dart run build_runner build` | 900 s | 0; 0 outputs written | 5.273 s |
+| `dart format --set-exit-if-changed lib test tool/reader` | 180 s | 0; 196 files, 0 changed | 0.802 s |
+| `flutter analyze` | 180 s | 0; no issues | 3.486 s |
+| `flutter test` | 900 s | 0; 784 passed, 1 skipped, 0 failed | 14.311 s |
+
+The sole skip is the existing `native_cfi_export_test.dart:75`, conditional on
+`SHIORI_NATIVE_CFI_OUT`; local-book tests ran and passed. Host tests establish
+state-machine, proof and lifetime behavior, not iPhone 120 Hz presentation or
+touch-to-photon performance. Phase E/probe/device evidence remains outside
+this Phase D handoff.
+
+Scope review: only authorized reader lib/test paths and these two Phase D
+evidence files changed. The three pre-existing coordinating-session edits
+(`task.json`, workspace `index.md`, `journal-1.md`) retained their exact SHA-256
+bytes. Prior validation text is preserved as an append-only prefix (CRLF
+normalized for comparison). Reference worktree remains clean at `a4bda23`.
+
+### Phase D review and independent re-run
+
+- Executor: Codex CLI (`gpt-6.1-sol`, reasoning high, `workspace-write`
+  sandbox with the Flutter SDK, pub cache and `.dart-tool` as extra writable
+  roots). Three earlier runs stopped on upstream stream disconnects; the
+  finishing session needed process-only `safe.directory` environment
+  variables for `D:/DevTools/flutter` and `D:/Projects/lan-reader` because the
+  sandbox runs as a different Windows user. No global Git or trust setting
+  changed.
+- The coordinating session re-ran the four gate commands independently before
+  review: all exit 0, `flutter test` 784 passed, 1 skipped.
+- trellis-check (Sonnet 5.5, medium): PASS with one fix.
+  - High, fixed: `engine/surface/prepared_reader.dart` suspended the
+    controller on every non-`resumed` lifecycle state but never resumed it, so
+    one app switch or Control Center pull left the reader refusing input. The
+    widget now tracks a local suspended flag and calls `controller.resume()` on
+    `resumed`; new widget test `background suspends the controller and
+    foreground resumes it` in `prepared_reader_test.dart`.
+  - Low, reported (S4 hardening): `PreparedReaderSession.warm()` coalesces only
+    warm calls per direction; a controller `prepare()` racing a warm for the
+    same target can briefly hold a second lease. The 3+1 owner cap bounds it
+    and an over-cap result becomes a static-fallback prepare failure, not a
+    leak.
+  - Info: Dart `round()` (half away from zero) and JS `Math.round` (half up)
+    agree for the positive thresholds used.
+- Post-fix gate (coordinating session): `dart format --set-exit-if-changed lib
+  test tool/reader` exit 0 (196 files, 0 changed); `flutter analyze` no
+  issues; `flutter test` exit 0, **785 passed, 1 skipped**, 0 failed.
+  `quality-gate-D.json` keeps Codex's pre-fix records (784 passed).

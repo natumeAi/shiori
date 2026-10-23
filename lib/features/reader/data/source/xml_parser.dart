@@ -1,4 +1,5 @@
 import 'package:shiori/features/reader/data/source/dom_node.dart';
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 import 'package:xml/xml.dart' show XmlDefaultEntityMapping;
 
 /// A well-formedness or namespace error. The message never contains document
@@ -17,7 +18,10 @@ final class XmlSyntaxException implements Exception {
 /// Strict XML 1.0 + Namespaces parser used where the browser reference uses
 /// `DOMParser`. Anything a browser XML parser rejects throws
 /// [XmlSyntaxException], which selects the HTML fallback for XHTML sections.
-DomNode parseXmlDocument(String source) => _XmlParser(source).parse();
+DomNode parseXmlDocument(String source) {
+  ReaderWorkGuard.check(ReaderWork.parsing);
+  return _XmlParser(source).parse();
+}
 
 const _predefinedEntities = {
   'lt': '<',

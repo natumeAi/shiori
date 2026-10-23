@@ -9,12 +9,14 @@ Context order: `implement.jsonl` entries → `prd.md` → `design.md` → this f
 Before writing code in a layer, load the matching `.trellis/spec/flutter/`
 guide (the `trellis-before-dev` skill does this).
 
-## Current checkpoint — stopped after Phase C
+## Current checkpoint — stopped after Phase D
 
-Phases 0, A, B and C passed and are committed locally (`4e15862`, `f06b933`,
-`d627692`, then the Phase C commit). Phases B and C were run by Sonnet 5.5
-(medium) implement/check agents in the Claude session; the user asks to stop
-after each phase. Phase D starts only on the user's explicit instruction;
+Phases 0, A, B, C and D passed and are committed locally (`4e15862`,
+`f06b933`, `d627692`, `73835bb`, then the Phase D commit). Phases B and C were
+run by Sonnet 5.5 (medium) implement/check agents in the Claude session;
+Phase D was implemented by the Codex CLI (`gpt-6.1-sol`, high, sandboxed) and
+checked by a Sonnet 5.5 (medium) trellis-check agent. The user asks to stop
+after each phase. Phase E starts only on the user's explicit instruction;
 continuous mode does not resume by itself. Do not archive the task or
 restart earlier phases.
 
@@ -90,12 +92,13 @@ restart earlier phases.
 
 ## Phase D — motion controller and surfaces (design §7)
 
-- [ ] Port gesture/engine functions and controller semantics; prepared
+- [x] Port gesture/engine functions and controller semantics; prepared
   surfaces with bounded lifetimes; reader widget with local motion state.
-- [ ] Port the reference tests listed in `research/s2-entry-evidence.md` as
+- [x] Port the reference tests listed in `research/s2-entry-evidence.md` as
   Dart tests with injected clocks; add the callback-work guard test.
-- **Gate D:** all ported and new tests pass.
-- [ ] Commit: `feat(reader): page-turn controller and prepared surfaces`.
+- **Gate D (met locally, see `local-validation.md`):** all ported and new
+  tests pass; deferred reference cases are listed there with reasons.
+- [x] Commit: `feat(reader): page-turn controller and prepared surfaces`.
 
 ## Phase E — probe harness, analyzer, native spike, CI (design §8–§10)
 

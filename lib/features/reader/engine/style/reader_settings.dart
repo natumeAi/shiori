@@ -5,6 +5,8 @@
 /// `foliateEngine.ts:205`). Pure Dart so it can cross isolates.
 library;
 
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
+
 final class ReaderSettings {
   const ReaderSettings({
     this.fontSize = defaultFontSize,
@@ -127,6 +129,7 @@ final class ReaderSettings {
 
   /// JSON object with the reference keys (sanitized values).
   Map<String, Object?> toJson() {
+    ReaderWorkGuard.check(ReaderWork.jsonSerialization);
     final clean = sanitized();
     return {
       'fontSize': clean.fontSize,

@@ -1,3 +1,4 @@
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 import 'package:shiori/features/reader/data/source/source_position.dart';
 import 'package:shiori/features/reader/engine/layout/layout_model.dart';
 import 'package:shiori/features/reader/engine/layout/paragraph_map.dart';
@@ -33,6 +34,7 @@ final class SectionPaginator {
 
   /// Adds the next block in reading order.
   void add(LaidOutBlock laid) {
+    ReaderWorkGuard.check(ReaderWork.pagination);
     _blocks.add(laid);
     final block = laid.block;
     if (block.breakBefore && !_pageEmpty) _closePage();
@@ -46,6 +48,7 @@ final class SectionPaginator {
 
   /// Finishes the last page. A section without content still has one page.
   void finish() {
+    ReaderWorkGuard.check(ReaderWork.pagination);
     if (!_pageEmpty || pages.isEmpty) _closePage();
   }
 

@@ -2,6 +2,7 @@ import 'package:shiori/core/errors/app_exception.dart';
 import 'package:shiori/features/reader/data/epub/epub_archive.dart';
 import 'package:shiori/features/reader/data/epub/epub_url.dart';
 import 'package:shiori/features/reader/data/source/dom_node.dart';
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 import 'package:shiori/features/reader/data/source/xml_parser.dart';
 
 const containerNamespace = 'urn:oasis:names:tc:opendocument:xmlns:container';
@@ -90,12 +91,15 @@ final class EpubTocItem {
   /// NCX leaf points carry no `subitems` key at all.
   final bool hasSubitemsKey;
 
-  Map<String, Object?> toJson() => {
-    if (!labelAbsent) 'label': label,
-    'href': href,
-    if (hasSubitemsKey)
-      'subitems': subitems?.map((item) => item.toJson()).toList(),
-  };
+  Map<String, Object?> toJson() {
+    ReaderWorkGuard.check(ReaderWork.jsonSerialization);
+    return {
+      if (!labelAbsent) 'label': label,
+      'href': href,
+      if (hasSubitemsKey)
+        'subitems': subitems?.map((item) => item.toJson()).toList(),
+    };
+  }
 }
 
 final class EpubPackage {

@@ -1,6 +1,7 @@
 import 'package:html/dom.dart' as html;
 import 'package:html/parser.dart' as html_parser;
 import 'package:shiori/features/reader/data/source/dom_node.dart';
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 
 /// Parses [source] with the HTML5 tree builder and converts the result to the
 /// shared tree.
@@ -10,6 +11,7 @@ import 'package:shiori/features/reader/data/source/dom_node.dart';
 /// By default scripting is disabled, like `DOMParser`: each raw `<noscript>`
 /// text is then reparsed as an HTML fragment so its markup becomes elements.
 DomNode parseHtmlDocument(String source, {bool scripting = false}) {
+  ReaderWorkGuard.check(ReaderWork.parsing);
   final document = html_parser.parse(source);
   final root = DomNode(DomKind.document);
   for (final node in document.nodes) {

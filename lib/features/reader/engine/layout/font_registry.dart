@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:shiori/features/reader/data/epub/epub_archive.dart';
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 import 'package:shiori/features/reader/engine/style/style_resolver.dart';
 
 /// One `@font-face` load attempt.
@@ -58,6 +59,7 @@ final class FontRegistry {
     List<StyleFontFace> faces, {
     required String scope,
   }) async {
+    ReaderWorkGuard.check(ReaderWork.fontLoad);
     final aliases = <String, String>{};
     for (final face in faces) {
       final alias = aliasFor(scope, face.family);

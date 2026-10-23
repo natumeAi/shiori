@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 import 'package:shiori/features/reader/engine/layout/font_mapping.dart';
 import 'package:shiori/features/reader/engine/layout/layout_model.dart';
 import 'package:shiori/features/reader/engine/style/computed_style.dart';
@@ -131,6 +132,7 @@ BuiltParagraph buildParagraph(
   double layoutWidth,
   ParagraphFonts fonts,
 ) {
+  ReaderWorkGuard.check(ReaderWork.paragraphLayout);
   final base = block.baseStyle;
   final baseFamilies = fonts.resolve(base.fontFamilies);
   final baseHeight = _heightMultiplier(base, base.fontSize);

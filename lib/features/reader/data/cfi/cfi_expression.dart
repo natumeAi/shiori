@@ -1,5 +1,6 @@
 import 'package:shiori/features/reader/data/cfi/cfi_exception.dart';
 import 'package:shiori/features/reader/data/cfi/cfi_step.dart';
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 
 /// Indirection groups of steps, as the reference's nested arrays.
 typedef CfiGroups = List<List<CfiStep>>;
@@ -49,13 +50,16 @@ final class CfiExpression {
   }
 
   /// The reference's `JSON.stringify` of the parse result.
-  Object toJson() => isRange
-      ? <String, Object?>{
-          'parent': _groupsJson(parent!),
-          'start': _groupsJson(start!),
-          if (end != null) 'end': _groupsJson(end!),
-        }
-      : _groupsJson(groups);
+  Object toJson() {
+    ReaderWorkGuard.check(ReaderWork.jsonSerialization);
+    return isRange
+        ? <String, Object?>{
+            'parent': _groupsJson(parent!),
+            'start': _groupsJson(start!),
+            if (end != null) 'end': _groupsJson(end!),
+          }
+        : _groupsJson(groups);
+  }
 }
 
 CfiGroups _freeze(CfiGroups groups) =>

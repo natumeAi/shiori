@@ -1,3 +1,5 @@
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
+
 /// One Foliate CFI step. NaN is retained for its permissive malformed grammar.
 ///
 /// Only [index] is required; the other fields exist when the grammar produced
@@ -24,16 +26,19 @@ final class CfiStep {
 
   /// The reference's `JSON.stringify` shape: absent fields are omitted and
   /// non-finite numbers become null.
-  Map<String, Object?> toJson() => {
-    'index': _jsonNumber(index),
-    if (id != null) 'id': id,
-    if (offset != null) 'offset': _jsonNumber(offset),
-    if (temporal != null) 'temporal': _jsonNumber(temporal),
-    if (spatial case final values?)
-      'spatial': values.map(_jsonNumber).toList(growable: false),
-    if (text != null) 'text': text,
-    if (side != null) 'side': side,
-  };
+  Map<String, Object?> toJson() {
+    ReaderWorkGuard.check(ReaderWork.jsonSerialization);
+    return {
+      'index': _jsonNumber(index),
+      if (id != null) 'id': id,
+      if (offset != null) 'offset': _jsonNumber(offset),
+      if (temporal != null) 'temporal': _jsonNumber(temporal),
+      if (spatial case final values?)
+        'spatial': values.map(_jsonNumber).toList(growable: false),
+      if (text != null) 'text': text,
+      if (side != null) 'side': side,
+    };
+  }
 }
 
 num? _jsonNumber(num? value) => value != null && value.isFinite ? value : null;

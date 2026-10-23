@@ -1,3 +1,4 @@
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 import 'package:shiori/features/reader/data/source/source_node.dart';
 
 enum SourceParserMode { xhtml, html }
@@ -46,21 +47,24 @@ final class SourceDocument {
     return null;
   }
 
-  List<Map<String, Object?>> toProjectionJson() => nodes
-      .map(
-        (node) => <String, Object?>{
-          'index': node.index,
-          'kind': switch (node.kind) {
-            SourceNodeKind.processingInstruction => 'pi',
-            _ => node.kind.name,
+  List<Map<String, Object?>> toProjectionJson() {
+    ReaderWorkGuard.check(ReaderWork.jsonSerialization);
+    return nodes
+        .map(
+          (node) => <String, Object?>{
+            'index': node.index,
+            'kind': switch (node.kind) {
+              SourceNodeKind.processingInstruction => 'pi',
+              _ => node.kind.name,
+            },
+            'namespaceURI': node.namespaceUri,
+            'localName': node.localName,
+            'id': node.id,
+            'parent': node.parentIndex,
+            'slot': node.childSlot,
+            'text': node.text,
           },
-          'namespaceURI': node.namespaceUri,
-          'localName': node.localName,
-          'id': node.id,
-          'parent': node.parentIndex,
-          'slot': node.childSlot,
-          'text': node.text,
-        },
-      )
-      .toList(growable: false);
+        )
+        .toList(growable: false);
+  }
 }

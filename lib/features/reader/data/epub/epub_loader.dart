@@ -8,6 +8,7 @@ import 'package:shiori/features/reader/data/epub/epub_package.dart';
 import 'package:shiori/features/reader/data/epub/epub_url.dart';
 import 'package:shiori/features/reader/data/source/dom_node.dart';
 import 'package:shiori/features/reader/data/source/dom_serializer.dart';
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 import 'package:shiori/features/reader/data/source/source_document.dart';
 import 'package:shiori/features/reader/data/source/source_parser.dart';
 
@@ -129,6 +130,7 @@ final class _Run {
   final List<(String href, String key)> _records = [];
 
   Map<String, int> ordinals() {
+    ReaderWorkGuard.check(ReaderWork.jsonSerialization);
     final groups = <String, Set<String>>{};
     final latest = <String, String>{};
     for (final (href, key) in _records) {

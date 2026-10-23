@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:shiori/core/errors/app_exception.dart';
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 
 /// Declared bounds enforced before any entry is expanded.
 final class EpubLimits {
@@ -29,6 +30,7 @@ final class EpubArchive {
     Uint8List bytes, {
     EpubLimits limits = const EpubLimits(),
   }) {
+    ReaderWorkGuard.check(ReaderWork.parsing);
     if (bytes.length > limits.maxArchiveBytes) {
       throw const ParseException(FormatException('EPUB archive is too large'));
     }
@@ -72,6 +74,7 @@ final class EpubArchive {
   int size(String name) => _entries[name]?.size ?? 0;
 
   Uint8List? bytes(String name) {
+    ReaderWorkGuard.check(ReaderWork.storage);
     final file = _entries[name];
     if (file == null) return null;
     final Uint8List data;
@@ -92,6 +95,7 @@ final class EpubArchive {
   /// dropped by the decoder, like `fflate.strFromU8` through `TextDecoder`.
   /// Null when absent.
   String? text(String name) {
+    ReaderWorkGuard.check(ReaderWork.storage);
     final data = bytes(name);
     if (data == null) return null;
     return utf8.decode(data, allowMalformed: true);

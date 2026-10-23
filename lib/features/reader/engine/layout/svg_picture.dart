@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter_svg/flutter_svg.dart' show SvgStringLoader, vg;
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 
 /// A vector SVG compiled to a recorded picture during preparation.
 final class VectorSvg {
@@ -19,6 +20,7 @@ final class VectorSvg {
 /// external images are not painted by this renderer: the block builder lists
 /// them as partial features before this is called.
 Future<VectorSvg?> loadVectorSvg(String markup) async {
+  ReaderWorkGuard.check(ReaderWork.imageDecode);
   try {
     final info = await vg.loadPicture(SvgStringLoader(markup), null);
     if (info.size.width <= 0 || info.size.height <= 0) {

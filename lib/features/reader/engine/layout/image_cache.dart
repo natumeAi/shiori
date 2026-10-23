@@ -2,6 +2,8 @@ import 'dart:collection';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
+
 /// A decoded raster held by [ReaderImageCache] until released.
 final class ImageLease {
   ImageLease._(this._cache, this._key, this.image, this.bytes);
@@ -51,6 +53,7 @@ final class ReaderImageCache {
     String key,
     Uint8List bytes,
   ) async {
+    ReaderWorkGuard.check(ReaderWork.imageDecode);
     if (_sizes.containsKey(key)) return _sizes[key];
     ({double width, double height})? size;
     try {
@@ -81,6 +84,7 @@ final class ReaderImageCache {
     required int targetWidth,
     required int targetHeight,
   }) async {
+    ReaderWorkGuard.check(ReaderWork.imageDecode);
     final entryKey = '$key@${targetWidth}x$targetHeight';
     final existing = _entries.remove(entryKey);
     if (existing != null) {

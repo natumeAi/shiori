@@ -2,6 +2,7 @@ import 'package:shiori/features/reader/data/cfi/cfi_exception.dart';
 import 'package:shiori/features/reader/data/cfi/cfi_expression.dart';
 import 'package:shiori/features/reader/data/cfi/cfi_numbers.dart';
 import 'package:shiori/features/reader/data/cfi/cfi_step.dart';
+import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 
 // Port of Foliate's permissive CFI tokenizer and parser. This is a state
 // machine, not a strict grammar: malformed input is accepted or fails
@@ -18,6 +19,7 @@ String wrapCfi(String text) =>
 
 /// Parses [cfi]; unknown assertion parameters are discarded as in the pin.
 CfiExpression parseCfi(String cfi) {
+  ReaderWorkGuard.check(ReaderWork.parsing);
   final tokens = _tokenize(unwrapCfi(cfi));
   final commas = _indicesOf(tokens, ',');
   if (commas.isEmpty) return CfiExpression.path(_parseIndirections(tokens));
