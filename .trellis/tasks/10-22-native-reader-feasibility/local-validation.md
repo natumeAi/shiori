@@ -1225,3 +1225,739 @@ normalized for comparison). Reference worktree remains clean at `a4bda23`.
   test tool/reader` exit 0 (196 files, 0 changed); `flutter analyze` no
   issues; `flutter test` exit 0, **785 passed, 1 skipped**, 0 failed.
   `quality-gate-D.json` keeps Codex's pre-fix records (784 passed).
+
+### Phase E part 1
+
+Completed locally on 2026-10-23 on `ios-build/s2-reader-probe`, starting from
+the previous session's uncommitted Dart implementation. This is the part 1
+handoff only; native sampling, analyzer/CI work and device evidence remain
+for subsequent parts. No commit, push or branch operation was performed.
+
+Files by area (paths relative to the repository):
+
+- App: modified `lib/app/probe_app.dart`, added its generated
+  `probe_app.g.dart`. Probe-only typed routes expose a home, the unchanged S1
+  synthetic screen and reader feasibility. Product entry point/routes unchanged.
+- Shared diagnostics: added `lib/core/diagnostics/bounded_ring.dart`; added a
+  source-subscription generation guard in `diagnostic_recorder.dart`. S1
+  `DiagnosticRecord` schema v1, defaults, generated models and existing tests
+  are unchanged.
+- Reader probe data: added `lib/features/diagnostics/data/book_digest.dart`,
+  `probe_book_repository.dart`, `reader_preparation_repository.dart`,
+  `probe_turn_session.dart`, `presentation_probe.dart`,
+  `reader_probe_recorder.dart`, `reader_probe_summary.dart`,
+  `reader_export_repository.dart`, `reader_feasibility_record.dart` and its
+  generated `.freezed.dart` / `.g.dart`.
+- Reader probe UI: added `lib/features/diagnostics/presentation/reader_probe/`
+  files `reader_probe_screen.dart`, `reader_probe_controller.dart`,
+  `reader_probe_controls.dart`, `reader_probe_settings.dart`,
+  `reader_probe_capture.dart`, `reader_scenario_runner.dart`,
+  `scenario_frames.dart`, `scenario_scripts.dart`, `scenario_target.dart`.
+  Includes digest-only Documents book selection, unsupported/error states,
+  settings, section jumps, declarations, capture, automatic per-repeat export
+  and bounded clipboard summary.
+- Engine hooks: modified `lib/features/reader/engine/motion/` files
+  `reader_turn_controller.dart`, `turn_controller_pointer.dart`,
+  `turn_controller_drag.dart`, `turn_controller_work.dart`, `turn_session.dart`,
+  plus `engine/surface/prepared_reader.dart`. Diff review confirms optional
+  sink interfaces/calls, opaque input access and a test-only frame reader;
+  admission decisions, gesture constants, motion curves, queue bounds,
+  navigation/proof/acceptance and surface ownership behavior are preserved.
+  Reader core imports no diagnostics.
+- Localization: `lib/l10n/app_zh.arb` plus generated
+  `app_localizations.dart` / `app_localizations_zh.dart`.
+- Tests: added `test/app/probe_app_test.dart`; diagnostics data tests
+  `probe_book_repository_test.dart`, `reader_export_repository_test.dart`,
+  `reader_probe_recorder_test.dart`; presentation tests
+  `reader_probe_screen_test.dart`, `reader_scenario_runner_test.dart`,
+  `reader_submission_test.dart`; helper `test/helpers/reader_probe_fixtures.dart`.
+  Added optional timing injection to the existing
+  `test/features/reader/engine/surface/surface_test_support.dart`.
+
+Scenario coverage (default three scripted repeats; R11 is one manual run):
+
+| ID | Implementation | Fixture | Deferred evidence |
+| --- | --- | --- | --- |
+| R01 | 40 next and 40 previous taps, warm neighbors | `long-content` | Device timing/presentation |
+| R02 | Slow drag, flick, reversal, first/last-page rebound | `chapters` | Device timing/presentation |
+| R03 | Cold neighbor held behind probe preparation barrier; release while finger remains down | `long-content` | Device late-neighbor observation |
+| R04 | 16 rapid taps exercise FIFO/overflow; jump cancels pending turns | `chapters` | Device timing/presentation |
+| R05 | Cold/warm chapter crossings in both directions | `chapters` | Device timing/presentation |
+| R06 | Locate the section containing a >=100,000-code-unit text block, then traverse all its pages | `long-content` | Device long-paragraph cost |
+| R07 | Traverse all sections/pages containing text, raster and SVG cases | `images` | Device visual/presentation check |
+| R08 | Mid-book font size/line height reflow, CFI anchor restore, subsequent turns | `styles` | Device typography/anchor observation |
+| R09 | Suspend/resume controller during motion and held preparation | `chapters` | Actual OS lifecycle run; scripted run explicitly declares simulation |
+| R10 | 100 alternating turns and 12 cold jumps with memory/cache snapshots | `long-content` | Device resource trend |
+| R11 | Manual user-book capture, one repeat, >=50 accepted turns; early stop explicitly incomplete | Documents book, SHA-256 identity only | User places/reads each real book on device |
+
+Scripted input uses `GestureBinding.handlePointerEvent` through the real
+`PreparedReader` Listener. It sends at most one move per actual frame, keeps
+actual timestamps on slower displays, and declares nominal 8333-us cadence
+and `synthetic_injected`; manual input is `manual_touch`. Schedule tests
+cover R01-R11 event counts, cadence, cancellation and control API calls.
+They do not establish real-device scenario results.
+
+Correlation contract for the next parts:
+
+- Engine `TurnTraceSink.recordTurn(...)` and `TurnFrameSink.submitted(...)`
+  receive the same opaque `TurnIntent` identity. The recorder maps it through
+  a per-capture `Expando<int>` to exported `inputId`; no intent, anchor, CFI or
+  book text is serialized. A drag's release generation change keeps the same
+  input ID and produces only one first-submission event. FIFO inputs retain
+  their own IDs for queue-wait and warm-input submission aggregates.
+- `PreparedReader` snapshots input, controller generation, controller owner
+  and sink `frameEpoch`, then reads the engine frame number in a same-frame
+  post-frame callback. Owner/generation/epoch changes reject pending samples.
+  Start/dispose increment the capture epoch; the S1 source-generation guard
+  rejects callbacks retained from previous subscriptions.
+- Fixed an integration failure where an offset rewrite in a control task
+  read scheduler timestamps outside a frame. The additive sampling hook now
+  skips idle/post-frame writes; the next ticker samples the rendered motion.
+  The real injected-drag test verifies post-frame reads, the first submission's
+  exact engine frame number, matching raw timing/motion frame IDs and the same
+  opaque/exported input ID through receipt, submission and acceptance.
+- Fixed the privacy integration test's timing race by awaiting real neighbor
+  preparation before advancing its injected motion clock. It still runs the
+  real preparation, navigation and proof pipeline, then checks exported JSON
+  for absence of fixture title, prose, EPUB filename and CFI.
+
+Export is `kind: reader_feasibility`, `schemaVersion: 1`, with top-level keys
+`kind`, `schemaVersion`, `bookSha256`, `fixtureId`, `scenarioId`, `repeatIndex`,
+`repeatCount`, `input`, `engine`, `readerEvents`, `layoutCosts`, `resources`,
+`presentation`, `aggregates`, `overflow`, `omissions`. `engine` composes the S1
+v1 timing schema with reader scenario identity, build/viewport metadata,
+declarations, raw frames/motion, clock boundaries and stage aggregates.
+Exports use `shiori-reader-<BUILD_ID>-<runId>.json` in Documents; clipboard
+summaries stay within 4000 UTF-8 bytes. Invalid/missing schema versions are
+rejected at the repository boundary. Reader events/layout/resources default
+to 16384 samples each; the screen uses 65536 engine samples, a ten-minute
+capture limit and the existing 1200-ms drain. Overflow and trailing-batch
+incompleteness remain explicit; no threshold was weakened.
+
+Part 2 implements `PresentationProbe` in
+`lib/features/diagnostics/data/presentation_probe.dart`:
+`Future<PresentationReport> install()`,
+`Future<void> start({required String runId, required PresentationMode mode})`,
+`Future<PresentationReport> stop()`, `Future<void> dispose()`. Modes are
+`inventory`, `a1`, `a2`, `b`. Return availability/evidence/omission, inventory,
+raw samples and native overflow through `PresentationReport`; native clock
+epochs stay separate from Dart. Inject the client into `ReaderProbeRecorder`
+at `reader_probe_screen.dart`. The current unavailable implementation exports
+`native_client_not_installed_phase_e_part_1` and explicit unverified evidence.
+Native hooks/client, offline analyzer and packaging/privacy guards are deferred
+because they belong to parts 2/3. Physical presentation and touch-to-photon
+remain unverified; NC6 as a whole also awaits part 3's analyzer reproduction.
+
+Part 1 checks, final sequential run from repository root:
+
+| Command | Timeout | Exit / result | Duration |
+| --- | --- | --- | --- |
+| `dart run build_runner build` | 900 s | 0; generated outputs refreshed, no extra tracked diff | 5.544 s |
+| `dart format --set-exit-if-changed lib test tool/reader` | 180 s | 0; 226 files, 0 changed | 0.835 s |
+| `flutter analyze` | 180 s | 0; no issues | 3.239 s |
+| `flutter test --reporter expanded` | 900 s | 0; 823 passed, 1 skipped, 0 failed | 15.184 s |
+
+The requested focused `flutter test test/features/diagnostics test/app` run
+also passed: 60 tests, exit 0, within its 600-s timeout. The full suite's sole
+skip is the existing optional native-CFI export guarded by
+`SHIORI_NATIVE_CFI_OUT`. `tool/diag` does not yet exist and was omitted from
+formatting as requested. Initial failures (gesture integration, privacy-test
+clock ordering, formatting and nine lint findings) were fixed without dropping
+assertions or reducing coverage. Coordinating workspace files retained exact
+bytes. No prohibited/product/native/CI/reference/fixture files changed.
+Cross-part contracts and the sampling regression lesson are retained here
+for later spec synchronization within the coordinator's broader scope.
+
+### Phase E part 2
+
+Implemented on 2026-10-23, on `ios-build/s2-reader-probe`, without committing,
+pushing, changing the product plist, or changing the Xcode project. **The Swift
+code was not compiled locally.** Windows cannot verify Swift compilation,
+Objective-C IMP ABI/ownership, or device presentation. Native modes remain
+unverified until the later macOS CI build and device iteration. This is a
+local part-2 PASS, not completion of NC6-NC9 or the whole Phase E gate.
+
+Pinned source recheck: local `bin/cache/flutter.version.json` confirms Flutter
+3.47.7 / Dart 3.13.5, framework
+`abaf9c523780a608bd46686fd5e53740a07077f8`, engine
+`deb287481e3ce9468f3434937ced4240a70539ca`. Paths in the following table are
+relative to `D:/DevTools/flutter/engine/src/flutter/shell/platform/darwin/ios/`.
+Every cited hook matched `research/s2-entry-evidence.md`; no replacement
+engine-private hook was invented.
+
+| Mode | Checked hook or boundary | Pinned source file:line | Matches note |
+| --- | --- | --- | --- |
+| Inventory / all | FlutterView layer selection | `framework/Source/FlutterView.mm:193-195`; `rendering_api_selection.mm:59,65-68` | yes |
+| Inventory / variants | Default enabled; only explicit false disables FlutterMetalLayer | `framework/Source/FlutterMetalLayer.mm:459-470` | yes |
+| A1 / A2 | Main-thread contents assignment inside CATransaction | `framework/Source/FlutterMetalLayer.mm:398-414` | yes |
+| A1 / A2 | Texture timestamp and main-thread dispatch | `framework/Source/FlutterMetalLayer.mm:425-442` | yes |
+| A2 | Existing layer display link, rate range, double-commit boost, idle pause | `framework/Source/FlutterMetalLayer.mm:187-189,203-228,415-421` | yes |
+| B | Alternate CAMetalLayer selected when default layer disabled | `rendering_api_selection.mm:65-68`; `framework/Source/FlutterMetalLayer.mm:459-470` | yes |
+| B exclusion on default | FlutterDrawable presentedTime is zero; handler only warns | `framework/Source/FlutterMetalLayer.mm:118-119,133-135` | yes |
+
+Registration was also checked against `framework/Headers/FlutterEngine.h:456-490`
+and `framework/Headers/FlutterPlugin.h:297,472`. The implicit-engine registrar
+provides the messenger; SceneDelegate is untouched. `ios/Runner/Info.plist`
+still has no `FLTUseFlutterMetalLayer` key. `FlutterMetalLayer.mm` has no own
+`setContents:` implementation: A adds an override to that class with
+`class_addMethod`, preserving CALayer's inherited original IMP. It does not
+replace CALayer's implementation.
+
+Swift static self-review (source review only; SDK availability must still be
+confirmed by the macOS compiler):
+
+- [x] Flutter APIs: existing `FlutterAppDelegate.application` and
+  `FlutterImplicitEngineDelegate.didInitializeImplicitFlutterEngine`,
+  `GeneratedPluginRegistrant.register`, `pluginRegistry.registrar(forPlugin:)`,
+  `messenger()`, `FlutterMethodChannel`, `setMethodCallHandler`,
+  `FlutterMethodCall.method/arguments`, `FlutterResult`, `FlutterError`, and
+  `FlutterMethodNotImplemented` are from the pinned framework. Retain the
+  channel in AppDelegate; registration does not instantiate the probe.
+- [x] UIKit: `UIApplication.shared.connectedScenes`, `UIWindowScene.windows`,
+  `UIWindow.isKeyWindow`, `UIView.subviews/layer` find the current key-window
+  FlutterView without loading another controller. Scene APIs require iOS 13;
+  project deployment target is iOS 15. `UIScreen.main.maximumFramesPerSecond`
+  (iOS 10.3+) and `UIDevice.current.systemVersion` provide inventory only.
+  Missing view/class/variant yields an explicit omission. Multiple-window
+  selection and view readiness need a device check.
+- [x] Foundation: `NSObject`, `Thread.isMainThread`, `Bundle.main` /
+  `object(forInfoDictionaryKey:)`, `NSNull`, `NSLock.lock/try/unlock`, and
+  `ProcessInfo.processInfo.isLowPowerModeEnabled/thermalState.rawValue` are
+  available below the iOS 15 baseline (low power: iOS 9; thermal: iOS 11).
+  Control/UI work runs on main. Ring state, weak target layer, generation,
+  counters and lookup slots are all protected by the buffer lock.
+- [x] QuartzCore: `CALayer`, `CACurrentMediaTime`, `CADisplayLink` creation,
+  `timestamp`, `targetTimestamp`, `add(to:forMode:)`, `invalidate`, main/common
+  run loop, and `CAFrameRateRange` / `preferredFrameRateRange` are compatible
+  with the iOS 15 baseline (frame-rate range requires iOS 15). A1 has no extra
+  display link; A2 requests 60-120 Hz, preferred 120, and invalidates on
+  stop/dispose. This request can perturb pacing and cannot establish scan-out.
+- [x] Objective-C runtime: `NSClassFromString`, `NSStringFromClass`,
+  `NSSelectorFromString`, `object_getClass`, `class_getInstanceMethod`,
+  `class_addMethod`, `method_getImplementation`, `method_getTypeEncoding`,
+  `method_setImplementation`, `imp_implementationWithBlock`, and
+  `imp_removeBlock` are longstanding APIs below iOS 15. Exact class identity
+  guards A/B; FlutterMetalLayer's custom `isKindOfClass:` is not trusted.
+  C IMP signatures and block bridging require compiler/device confirmation.
+- [x] Metal: `CAMetalLayer.nextDrawable`, `CAMetalDrawable.layer`,
+  `MTLDrawable.drawableID`, `presentedTime`, and public `addPresentedHandler:`
+  are below the deployment baseline (presentation handlers/time/ID: iOS 10.3).
+  B calls the original +0-returning nextDrawable IMP using `Unmanaged` before
+  attaching a handler. The shared Objective-C callback block is bridged once
+  at install and passed to the public handler method through its typed IMP;
+  no fresh Swift closure bridge is constructed per drawable. The callback
+  can run off main and only accesses the thread-safe buffer. Validate ABI,
+  +0 ownership, handler invocation, and Metal's internal block retain/copy
+  costs on Mac/device. The original nextDrawable can itself wait in Metal;
+  the probe does not add a waiting lock.
+- [x] Swift storage/runtime: `UnsafeMutablePointer.allocate/initialize`,
+  `Unmanaged.passUnretained/toOpaque/takeUnretainedValue`, `unsafeBitCast`,
+  `type(of:)`, identity comparisons, and `@convention(c/block)` are standard
+  Swift/runtime facilities. Preallocate 16384 sample structs, 16384 lookup
+  indices and one Int64 contention counter at install; keep them alive for
+  permanent hooks and late callbacks. Native hooks create no sample maps,
+  arrays, strings, tasks or per-frame capture closures. Export allocation
+  happens after disabling capture. Confirm actual allocation overhead with
+  native profiling; source review cannot certify framework internals.
+- [x] Darwin `OSAtomicIncrement64Barrier` and `OSAtomicAdd64Barrier` count
+  failed try-locks using stable allocated Int64 storage, avoiding concurrent
+  Swift inout access to a stored property. These APIs predate iOS 15 and are
+  deprecated since iOS 10; their Swift import/link availability and warnings
+  need the pinned Xcode build. Every hook buffer lock uses `NSLock.try()`;
+  only the control plane uses a waiting lock. No dispatch or blocking probe
+  synchronization is introduced in the callback path.
+- [x] Bounds/lifecycle: head/count always index modulo 16384; the drawable-ID
+  hash lookup is bounded and validates ID, object address and run generation
+  before updating a slot. Reset lookup on start, disable before exporting,
+  ignore callbacks while disabled and never free hook-owned storage on
+  dispose. Eviction, active lookup misses and try-lock drops increment loss
+  counters. Confirm drawable identity lifetime and stale callbacks across
+  repeated runs on device. Swizzles install once and remain inert afterward.
+
+Dart implementation and tests:
+
+- `lib/features/diagnostics/data/method_channel_presentation_probe.dart`: inert
+  construction; install/start/stop/dispose; missing-plugin and platform-error
+  fallback with safe omission codes; best-effort native disposal on channel
+  failures. `presentation_payload.dart` validates mode/evidence, inventory,
+  bounded sample shapes, finite native seconds, unsigned drawable-ID strings
+  and counters, throwing typed `ParseException` for malformed data.
+- `presentation_probe.dart`: mode evidence labels, contention loss metadata,
+  configurable `UnavailablePresentationProbe` fallback (supersedes part 1's
+  temporary omission code). `reader_probe_recorder.dart` exports selected
+  mode and completes pending captures with native parse errors.
+- `reader_probe_screen.dart` injects the channel client only into the reader
+  probe; `reader_probe_capture.dart` surfaces parse failures safely. Existing
+  mode selector reused; `app_zh.arb` removes its part-1 placeholder and names
+  A1/A2/B clearly. Both generated localization Dart files were regenerated
+  with `flutter gen-l10n` (exit 0). No model/codegen input changed.
+- New `test/features/diagnostics/data/method_channel_presentation_probe_test.dart`
+  (37 tests), `presentation_export_test.dart` (7),
+  `test/app/product_presentation_isolation_test.dart` (1), and
+  `test/helpers/presentation_probe_fixtures.dart`; expanded
+  `test/features/diagnostics/presentation/reader_probe_screen_test.dart` (+1).
+  Mock channels use `TestDefaultBinaryMessengerBinding`; tests cover all
+  modes, lifecycle, malformed payloads, fallbacks, raw clock/overflow export,
+  recoverable native-stop failure, actual selector-to-channel wiring, and
+  the real product entry point making zero channel calls.
+
+Final local gate (explicit subprocess timeouts; no gate constants changed):
+
+| Command | Timeout | Exit / result |
+| --- | --- | --- |
+| `dart format --set-exit-if-changed lib test tool/reader` | 180 s | 0; 232 files, 0 changed |
+| `flutter analyze` | 180 s | 0; no issues |
+| `flutter test --reporter expanded` | 900 s | 0; 869 passed, 1 skipped, 0 failed |
+
+46 tests were added to the part-1 baseline. The existing optional native-CFI
+export remains the sole skip. Initial focused-test binding setup and six
+test-only missing-brace lint findings were corrected before this gate.
+`tool/diag` still does not exist, so it is omitted from formatting.
+
+Part 3 handoff: identify variants from both inventory.layerClass and the
+nullable inventory.FLTUseFlutterMetalLayer (`null` means absent): default
+FlutterMetalLayer with absent/default key; B requires exact CAMetalLayer and
+explicit false. Packaging must create the false-key variant; this session
+does not modify Info.plist or CI. Evidence labels are exactly `metadata`,
+`layer_commit_cadence`, `layer_commit_cadence_per_display_period`, and
+`system_drawable_presentation_non_product_path`. Native channel start returns
+null; install/stop return report maps. Export `presentation.mode` is the
+selected mode even when the channel is unavailable.
+
+Raw sample shapes: `{kind: layer_commit, timestamp: seconds}`,
+`{kind: display_link, timestamp: seconds, targetTimestamp: seconds}`, and
+`{kind: drawable, timestamp: acquisitionSeconds, drawableId: decimalString,
+presentedTime: secondsOrZero}`. Treat drawable IDs as unsigned decimal strings,
+not signed codec integers. B records acquisitions immediately with zero, then
+updates the retained slot when its presented callback arrives. Zero at stop
+means no presented time observed by that stop, including pending/lost callbacks;
+do not infer scan-out failure from zero. All-zero B yields
+`no_presented_drawables_at_stop`; A2 missing either stream yields an explicit
+omission. Native capture includes the reader engine's timing-drain interval.
+No Dart/native clock epoch or event correlation is inferred.
+
+`overflow` is the total lost native-event count (evicted samples, unmatched
+active drawable updates, try-lock drops), not a count of unique lost frames;
+`contentionDrops` is the included try-lock subset. Both are exported; native
+overflow is also in the record's `overflow.native`. Any losses must qualify
+cadence/binning conclusions. A2 bins raw commits against display-link periods
+(0 repeated, 1 new, >=2 overwritten); compare A1/A2 for link perturbation and
+do not fabricate missing periods or physical/touch-to-photon evidence. The
+spike's one-device-iteration plus at-most-one-fix time box remains pending.
+
+### Phase E part 3a
+
+Implemented the offline reader export analyzer on 2026-10-23. This section
+records part 3a only; part 3b owns packaging, privacy guards and the final
+Phase E decision. No commit, push, branch switch or product/native edit.
+
+Files added:
+
+- `tool/diag/analyze_reader_export.dart`: pure Dart CLI, multiple input files,
+  `--strict`, schema/kind refusal, Markdown output and documented exit codes.
+- `tool/diag/reader_export_data.dart`: independent JSON access, percentile
+  conventions, symmetric aggregate comparison and all named gate constants.
+- `tool/diag/reader_engine_analysis.dart`: engine frame-number matching, stage
+  and interval distributions, missing-identity accounting and motion stalls.
+- `tool/diag/reader_input_analysis.dart`: capture-local input identity joins,
+  reader distributions, event counters and per-input proof/acceptance counts.
+- `tool/diag/reader_native_resources.dart`: resource OLS trends and mode-specific
+  native-clock reductions, including explicit loss/contention accounting.
+- `tool/diag/reader_export_analysis.dart` and `reader_export_report.dart`: gate
+  decisions, omissions/overflow, aggregate differences and repeat summaries.
+- `test/helpers/reader_analyzer_exports.dart`: deterministic raw samples,
+  production model encoding and app-generated reader/engine aggregates.
+- `test/tool/diag/reader_export_{parity,metrics,contract,evidence,cli,privacy}_test.dart`.
+- Nine JSON exports plus `test/fixtures/reader/exports/README.md`.
+
+The analyzer imports only Dart SDK libraries and its own tool helpers. It
+imports no application model, summary, Flutter package or `dart:ui`. The
+fixture generator deliberately imports production summaries on the reference
+side: `ReaderProbeSummary.aggregate` and `DiagnosticSummary.aggregate`. It
+never imports analyzer code. All eight supported fixture exports independently
+match every reader and nested engine aggregate; the ninth tests version refusal.
+S1 and reader percentile conventions are preserved separately.
+
+| Aggregate / gate row | Raw source | Threshold / interpretation | Coverage |
+| --- | --- | --- | --- |
+| UI and raster P50/P95/P99/max, over8333Us, within-budget fraction | Engine frames joined to nonnegative motion frame IDs | Each stage independently >=99% <=8333 us | `motion stage distributions and separate 99 percent budgets`; exact 99/98% and budget boundary tests |
+| Engine cadence distribution and classification | Vsync-start deltas only for consecutive matched engine frame numbers | atLeast12500Us; cadence is engine identity evidence | `engine cadence is consecutive matched engine identity only` |
+| Motion stall candidates | Matched stage costs, consecutive engine intervals and recorder submission gaps within first-submission/settle windows | >=50000 us; a candidate fails pending explanation; missing IDs/adjacency/windows or overflow prevent an absence claim | Stall, idle-window, inclusive-threshold and open-window tests |
+| Warm admitted receipt-to-first-submission P95 | readerEvents inputId within one export/capture epoch | <=16700 us; unqueued, no preparationMiss; generation changes do not break identity | Warm-latency, incomplete-join, epoch-isolation and inclusive-boundary tests |
+| Queue wait, all input preparation, cold input/section preparation, paragraph layout | Reader events and layoutCosts.layoutUs | Report separately; no invented cold/queue threshold | Warm/queue/preparation and paragraph-layout tests |
+| Fallback count/rate, accepted turns, event/proof/rejected counters | Reader events, accepted denominator | Proof failures=0; one accepted per proofPassed input proxy | `paragraph layout, fallback rate and observable correctness`; proof/duplicate/unpaired tests |
+| Per-input accepted destination counts and stale callbacks | inputId proofPassed/accepted counters | Explicit commit/destination identities and stale-callback observations are absent in v1; broader correctness stays unavailable | Correctness, missing-identity and omission tests |
+| Resource first/last/max, RSS delta and OLS slope per second | resources monotonicUs/liveSurfaces/pictureBytes/imageBytes/rssBytes | >=100 accepted turns; bounded ownership cannot be certified without caps/warm-up/cycle/direction evidence | 100-turn, missing-time and nonuniform-time OLS tests |
+| A1 commit interval distributions | Native layer_commit.timestamp | Layer-commit cadence only | `native A1 intervals retain their own clock` |
+| A2 commits per recorded display period 0/1/>=2 | layer_commit plus display_link timestamp/targetTimestamp | Half-open periods; outside-period commits counted; no missing periods invented | A2 boundary/bin and overlap tests |
+| B presented/not-observed-by-stop counts and presentation intervals | drawable.presentedTime, zero excluded from interval computation | System drawable evidence on non-product path; zero may be pending/lost | B mixed/zero-only and native-epoch tests |
+| Native metadata, omissions and overflow | presentation and top-level omissions/overflow; engine errors/trailing state | contentionDrops is a subset of native overflow; no cross-clock epoch inference | Metadata/mode/stream/subset, overflow and omission tests |
+| Repeat summary and app aggregate parity | Separate raw reductions per export, grouped by scenario/book/fixture/input/native mode | >=3 repeats except R11; duplicate/missing/inconsistent repeats explicit; --strict mismatch exit=1 | Repeat-summary, nine fixture-parity and CLI tests |
+
+Fixture list (all use synthetic digest/fixture ID, with no book text):
+
+- `passing-120hz-a1-{1,2,3}.json`: complete three-repeat 120 Hz-like stage
+  and A1-cadence example, warm/queued/cold work, layout/fallback/correctness
+  counters and resource samples. UI/raster=100%; warm P95=16000 us.
+- `failing-budgets-a2.json`: UI and raster both fail; A2 periods exercise
+  0/1/>=2 and a boundary/outside-period commit.
+- `stall-b.json`: 58333 us engine/submission stall inside motion; B includes
+  two observed presentations, one zero at stop and an unsigned drawable ID.
+- `negative-missing-frames.json`: negative engine/motion IDs, missing engine
+  frame 3 and missing motion frame 5; only one cadence interval remains.
+- `overflowed-rings.json`: all retained reader/engine rings have recorded
+  loss; native overflow=2 includes contentionDrops=1.
+- `resources-100-turns-unavailable.json`: 100 accepted input identities,
+  first/last/max/slopes and an explicit native-unavailable omission.
+- `unknown-schema.json`: version 2, refused with exit 65.
+
+Regenerate from repository root in PowerShell (full notes in fixture README):
+
+```powershell
+$env:REGENERATE_READER_EXPORTS = '1'
+try {
+  flutter test test/tool/diag/reader_export_parity_test.dart --reporter expanded
+} finally {
+  Remove-Item Env:REGENERATE_READER_EXPORTS
+}
+```
+
+Ordinary tests perform structural comparisons with fresh app-produced JSON;
+they do not write fixtures, and CRLF/LF differences do not affect parity.
+Privacy coverage loads every bundled EPUB via the existing `openFixture`
+helper, checks its sentences and the existing 12-character prose-fragment
+boundary against all nine exports, and also rejects EPUB filenames/CFIs.
+Assertions do not print the prose on failure. Only synthetic book identities
+are persisted. No user-book content is read by the analyzer or fixture helper.
+
+Validation (explicit subprocess timeouts; no gate constants changed):
+
+| Command | Timeout | Exit / result |
+| --- | --- | --- |
+| `flutter test test/tool/diag --reporter expanded` | 180 s | 0; 49 passed, 0 skipped/failed |
+| `dart format --set-exit-if-changed lib test tool/reader tool/diag` | 180 s | 0; 246 files, 0 changed |
+| `flutter analyze` | 180 s | 0; no issues |
+| `flutter test --reporter expanded` | 900 s | 0; 918 passed, 1 skipped, 0 failed |
+| `dart run tool/diag/analyze_reader_export.dart test/fixtures/reader/exports/passing-120hz-a1-1.json` | 120 s | 0; Markdown tables; app aggregate MATCH |
+
+49 tests added: 9 fixture parity, 13 metrics, 13 contracts, 8 evidence,
+5 CLI and 1 privacy. The existing optional native-CFI test is the sole skip.
+Passing samples have no observed budget/submission/stall/proof/count violation;
+the intentional budget/stall fixtures fail their measurement rows. Loss,
+unavailable modes and unobserved correctness/resource/presentation guarantees
+remain explicit. `--strict` governs aggregate parity, not device acceptance.
+No app-side aggregation discrepancy was found. Schema-v1 observation gaps
+are reported as limitations rather than repaired or inferred in this part.
+
+## Phase E — probe harness, analyzer, native spike, CI
+
+Final local gate: PASS on 2026-10-23, Windows, Flutter 3.47.7 / Dart 3.13.5,
+branch `ios-build/s2-reader-probe`, committed base `25bac2d`. Parts 1, 2, 3a
+and 3b remain uncommitted. This closes the local Phase E implementation and
+validation scope; CI compilation, device acceptance and Phase F remain pending.
+The earlier part-by-part entries above retain their historical results.
+
+Part 1 supplies the isolated reader probe, synthetic/manual book inventory,
+settings, R01–R11 scenario injection, bounded recorder, preparation/session
+adapters and private exports. It reuses the existing reader data/layout/motion
+and prepared surfaces. S1 capture/export compatibility remains covered. Part 2
+supplies the Swift inventory/A1/A2/B presentation spike and its typed Dart
+method-channel client, with native clocks and evidence levels kept separate.
+Part 3a supplies the independent pure Dart analyzer, deterministic app-produced
+fixtures, parity/CLI/privacy tests and explicit evidence omissions. Part 3b
+closes the correctness/resource observation gaps, regenerates the fixture set,
+adds the Git/manifest guard and packages the two variants from one build.
+
+Files by area (the full Phase E worktree, including earlier parts):
+
+| Area | Files |
+| --- | --- |
+| Probe entry and shared capture | `lib/app/probe_app.dart`, `lib/app/probe_app.g.dart`, `lib/core/diagnostics/bounded_ring.dart`, `lib/core/diagnostics/diagnostic_recorder.dart` |
+| Diagnostics data | `lib/features/diagnostics/data/book_digest.dart`, `probe_book_repository.dart`, `probe_turn_session.dart`, `reader_preparation_repository.dart`, `reader_probe_recorder.dart`, `reader_probe_summary.dart`, `reader_export_repository.dart`, `reader_feasibility_record.dart`, `reader_feasibility_record.freezed.dart`, `reader_feasibility_record.g.dart`, `presentation_probe.dart`, `presentation_payload.dart`, `method_channel_presentation_probe.dart` (all basenames in that directory) |
+| Probe presentation | `lib/features/diagnostics/presentation/reader_probe/reader_probe_screen.dart`, `reader_probe_controller.dart`, `reader_probe_capture.dart`, `reader_probe_controls.dart`, `reader_probe_settings.dart`, `reader_scenario_runner.dart`, `scenario_target.dart`, `scenario_scripts.dart`, `scenario_frames.dart` (all basenames in that directory) |
+| Engine observation | `lib/features/reader/engine/motion/turn_session.dart`, `reader_turn_controller.dart`, `turn_controller_pointer.dart`, `turn_controller_drag.dart`, `turn_controller_work.dart`; `lib/features/reader/engine/surface/prepared_reader.dart` |
+| Native/localization | `ios/Runner/AppDelegate.swift`; `lib/l10n/app_zh.arb`, `app_localizations.dart`, `app_localizations_zh.dart` (native/localization changes are from earlier parts; not edited in 3b) |
+| Analyzer | `tool/diag/analyze_reader_export.dart`, `reader_export_data.dart`, `reader_export_analysis.dart`, `reader_engine_analysis.dart`, `reader_input_analysis.dart`, `reader_native_resources.dart`, `reader_export_report.dart`, `reader_correctness_analysis.dart`, `reader_resource_gate.dart` (all basenames in that directory) |
+| CI | `tool/ci/check_reader_fixtures.dart`, `tool/ci/build_ios_unsigned.sh`; workflow unchanged |
+| App/probe tests | `test/app/probe_app_test.dart`, `product_presentation_isolation_test.dart`; `test/features/diagnostics/data/probe_book_repository_test.dart`, `reader_probe_recorder_test.dart`, `reader_export_repository_test.dart`, `method_channel_presentation_probe_test.dart`, `presentation_export_test.dart`; `test/features/diagnostics/presentation/reader_probe_screen_test.dart`, `reader_scenario_runner_test.dart`, `reader_submission_test.dart` |
+| Engine/tool tests | `test/features/reader/engine/motion/reader_turn_evidence_test.dart`; `test/features/reader/engine/surface/surface_test_support.dart`; `test/tool/diag/reader_export_parity_test.dart`, `reader_export_metrics_test.dart`, `reader_export_contract_test.dart`, `reader_export_evidence_test.dart`, `reader_export_cli_test.dart`, `reader_export_privacy_test.dart`, `reader_correctness_resource_test.dart`; `test/tool/ci/check_reader_fixtures_test.dart` |
+| Helpers and fixtures | `test/helpers/reader_probe_fixtures.dart`, `presentation_probe_fixtures.dart`, `reader_analyzer_exports.dart`; `test/fixtures/reader/exports/*.json` (12 files) and `README.md`; `test/fixtures/reader/source_edge/manifest.json` |
+| Evidence | This appended section and `quality-gate-E.json` |
+
+The engine imports no diagnostics code. Part 3b only adds sink observations
+in motion code; existing turn, proof, queue, cancellation and resource behavior
+is unchanged. Resource metadata reads existing configured values directly from
+`PageSurfacePool` and its `ReaderImageCache`; no cap copies or engine cache
+changes were needed. Product entry/routes, bundle ID, signing, plist source,
+dependencies and workflow triggers/permissions were not changed. Coordinator
+journal files were left untouched by this session.
+
+Additive export contract (`kind: reader_feasibility`, `schemaVersion: 1`):
+
+| Field/event | Producer and contract | Analyzer rule |
+| --- | --- | --- |
+| `engine.metadata.readerCorrectnessVersion: 1`, `captureEpoch` | Recorder capability and capture identity; S1 schema remains unchanged | Missing capability/epoch leaves the combined correctness gate unavailable with a reason |
+| `readerEvents[].captureEpoch`, `inputId` | Recorder maps opaque engine input objects to capture-scoped IDs; known old inputs retain their original epoch across restart | Join correctness by epoch and ID within one export; never infer identity from generation or join exports |
+| `generation`, `activeGeneration` | Engine supplies callback token and current generation | Acceptance with a different active token, foreign epoch or prior invalidation/rejected token is a stale publication and fails |
+| `inputCommitted` | Engine emits immediately before `session.navigate`, after settlement; boundary/rebound/no-turn inputs have no navigation commit | Exactly one acceptance per explicit commit, and no acceptance before a commit; duplicate commits/acceptances or missing acceptance fail |
+| `staleCallbackRejected` | Engine generation/pair guards report discarded work with its original input/token | Report rejection count separately; safe rejection alone is not a correctness failure |
+| `proofPassed`, `proofFailed`, `accepted.destination` | Engine proof/acceptance seam; destination contains `sectionIndex`, `pageIndex`, `layoutGeneration`, and recorder-hashed SHA-256 `pageIdentity` | Zero proof failures; required destination fields must exist; missing evidence is unavailable rather than fabricated |
+| `engine.metadata.resourceCaps` | Active pool's `presentedCapacity`, `reserve`, `maxPictureBytes`, and active image cache's `maxBytes` become `liveSurfaceCap`, `liveSurfaceReserve`, `pictureCacheBytes`, `imageCacheBytes` | Observed live maximum <= cap + reserve; picture/image maxima <= their declared byte caps |
+| `resources[].rssBytes`, `monotonicUs` | Existing snapshots from `ProcessInfo.currentRss` and recorder monotonic clock | Report first/last/max and OLS slope; apply the named RSS rule below |
+
+Correctness requires zero proof failures, zero stale publications, one accepted
+destination per committed input and no acceptance without a commit. Missing
+fields and event overflow prevent a passing absence claim; definite observed
+violations still fail. Acceptance identity contains no CFI, page text, layout
+key string, book title or user-book filename. Hashing happens at handoff, not
+per motion tick.
+
+The resource rule requires >=100 accepted turns, complete retained events and
+resource snapshots, declared caps, and at least two distinct snapshot times.
+`ReaderGates.maximumRssGrowthFraction = 0.05`: both endpoint growth (`last-first`)
+and OLS slope projected over the observed duration must be <=5% of positive
+first RSS, inclusive. Negative growth is permitted. Any observed cap/RSS breach
+is unbounded and fails, including on partial captures; otherwise missing caps,
+samples, duration, turns or overflow leave the gate unavailable. This is an
+observational bound over the captured run, not an indefinite leak guarantee.
+R10 supplies the alternating-turn/repeated-jump workload; telemetry does not
+independently certify direction, warm-up completion or cycle completeness.
+Existing budget, latency, stall and repeat constants were not weakened.
+
+Scenario coverage implemented and exercised through injected control seams:
+
+| Scenario | Coverage |
+| --- | --- |
+| R01 | 40 next taps followed by 40 previous taps |
+| R02 | Slow settlement, flick, reversal and boundary rebound |
+| R03 | Held pointer and delayed neighbor preparation |
+| R04 | FIFO/overflow and programmatic section jump |
+| R05 | Cold/warm chapter crossings in both directions |
+| R06 | Long-paragraph turns |
+| R07 | Mixed text/images, image-only pages and SVG paths |
+| R08 | Font/line-height reflow and accepted-anchor restore |
+| R09 | Controller/session lifecycle simulation during motion/preparation |
+| R10 | >=100 alternating turns, repeated jumps and resource snapshots |
+| R11 | Manual user-book capture; >=50-turn completion marker |
+
+Automated scenarios use frame-driven synthetic pointer injection through the
+real gesture/controller path. Their local tests establish harness behavior,
+not iPhone timing or actual OS background/foreground delivery. R11 has no
+scripted substitute. The device step still needs three limiter-off repeats
+per mandatory scripted scenario and the manual real-book runs.
+
+Fixture regeneration used the documented `REGENERATE_READER_EXPORTS=1 flutter
+test test/tool/diag/reader_export_parity_test.dart` path. All 12 exports match
+fresh production app aggregates and independent analyzer recomputation
+(unsupported-schema fixture is deliberately rejected). The added fixtures
+`double-acceptance.json` and `cap-breach.json` fail their respective gate rows
+with aggregate parity intact; `resources-100-turns-bounded.json` passes both
+new gates. The retained legacy 100-turn fixture stays unavailable. Privacy
+tests check all exports against bundled fixture prose, filenames and CFIs;
+the actual prepared-reader export test also remains green. `--strict` still
+controls aggregate mismatches, not measurement-gate exit status.
+
+The pure Dart guard runs after enforced-lockfile dependency resolution and
+before the single Flutter build. It uses Git's NUL-delimited tracked plus
+nonignored-untracked inventory, including tracked files that match ignore
+rules. Existing EPUBs outside `assets/reader_fixtures/` fail except the exact
+two Phase B edge files with matching byte counts and SHA-256 in their new
+manifest. A new file in that edge folder or a new manifest exemption fails.
+Asset payloads must exactly match the asset manifest: missing/extra files,
+byte drift and equal-size hash drift fail. `manifest.json` and `.gitattributes`
+are asset metadata, not fixture payload entries. Missing/malformed manifests,
+duplicate/traversal entries and symlink payloads fail closed. Messages omit
+discovered private book names and contents. The real repository passes; 17
+temporary-directory/real-repository guard tests pass. No EPUB or asset manifest
+was changed, and no dependencies were added.
+
+Packaging retains the pins, original validation and failure trap. From the
+same validated unsigned `Runner.app` it stages `shiori-probe-<BUILD_ID>.ipa`
+and `shiori-probe-<BUILD_ID>-cametal.ipa`. The default copy's plist is compared
+byte-for-byte with the source; only the CAMetal copy receives
+`FLTUseFlutterMetalLayer=false` using `plutil`. Both staged bundles pass the
+same iphoneos/bundle ID/version/executable/arm64/Flutter+App framework checks
+before ZIP validation. `sha256.txt` records both names and digests. Provenance
+records each variant's file, digest, variant name, actual plist value (null
+when absent), and effective value (true when absent; false for CAMetal).
+The source bundle/plist is unchanged. The existing `build/ios-probe/` upload
+already collects both IPAs and metadata, so the workflow was not edited.
+
+Final sequential repository-root gate (all commands completed without timeout):
+
+| Command | Timeout | Exit | Key result |
+| --- | --- | --- | --- |
+| `dart run build_runner build` | 900 s | 0 | Generated outputs current; no errors |
+| `dart format --set-exit-if-changed lib test tool/reader tool/diag tool/ci` | 180 s | 0 | 252 files; 0 changed |
+| `flutter analyze` | 180 s | 0 | No issues |
+| `flutter test` | 900 s | 0 | 962 passed, 1 skipped, 0 failed |
+| `bash -n tool/ci/build_ios_unsigned.sh` | 180 s | 0 | Git Bash syntax validation |
+| `dart run tool/ci/check_reader_fixtures.dart` | 180 s | 0 | Real repository privacy/manifests PASS |
+| `dart run tool/diag/analyze_reader_export.dart --strict test/fixtures/reader/exports/passing-120hz-a1-1.json` | 180 s | 0 | Reader and engine aggregates MATCH; 7 pass rows, 0 fail, 2 unavailable |
+
+`quality-gate-E.json` contains these seven final successful records in the
+same array/record shape as Phase A: `command`, `timeoutSeconds`, `exitCode`,
+`timedOut`, `durationSeconds`, `outputTail`. Full intermediate logs are local
+under ignored `build/phase-e-gate/`. Windows executable resolution initially
+selected the WSL launcher for the syntax check; the final sequential run
+explicitly resolves Git Bash at `D:/DevTools/git/usr/bin/bash.exe`. No sandbox
+or trust settings were changed. Two formatting-expanded brace lints found
+during iteration were corrected before the final run.
+
+The suite adds 44 passing tests over part 3a's 918: 18 correctness/resource,
+3 export parity fixtures, 17 guard, 4 engine evidence, 1 recorder epoch/privacy
+and 1 configured-cap round-trip test. The analyzer area now has 70 tests. The
+existing optional native-CFI test remains the sole skip. Product app/S1 tests
+are green. A separate `git diff --exit-code HEAD` check returned 0 for the
+product entry/app/router/routes, dependency manifests, protected asset corpus,
+edge EPUB/WebKit files and workflow. `lib/main.dart` behavior is unchanged as
+covered by the existing app tests.
+
+Unverified until CI/device:
+
+- Swift compilation and channel/hook integration with the pinned iOS engine;
+  local Dart method-channel tests do not compile or execute Swift.
+- Actual macOS `plutil`/`lipo` validation, one-build/two-IPA packaging, both
+  IPA checksums/provenance, and hosted artifact creation. Only shell syntax
+  was exercised locally. Signing, installation and update retention remain
+  device operations.
+- All S2 device exports: real R01–R11 workload execution, three limiter-off
+  repeats where required, resource/RSS behavior over >=100 alternating turns,
+  real OS lifecycle delivery, and manual real-book captures.
+- Native A1/A2 cadence, auxiliary-display-link perturbation, B presented
+  drawable evidence, and any physical presentation claim. B describes the
+  nondefault path only; touch-to-photon remains unverified. NC7–NC9 and the
+  device feasibility decision remain pending.
+
+Stopped after the authorized Phase E local gate and evidence. No commit, push,
+branch switch, signing, deployment or Phase F work was performed.
+
+### Phase E independent trellis-check review — 2026-10-23
+
+Verdict: **PASS with fixes** for the local Phase E gate. Reviewed in this
+session without sub-agents, commits, pushes, stash or branch changes. The
+coordinator's two workspace files and `quality-gate-E.json` were not edited.
+The latter remains the earlier implementer gate; this section records the
+reviewer's subsequent validation.
+
+Findings and local repairs:
+
+- Medium: app aggregation and independent analyzer joined input events by
+  numeric ID alone. A retained old input keeps its previous capture epoch,
+  while new inputs restart numbering; late evidence could therefore complete
+  another input's latency or motion window. Both reducers now use epoch plus
+  ID, with epoch-less legacy records kept separate. First-submission
+  deduplication in the recorder also includes the epoch. Added three tests
+  for reused IDs, interleaved windows, legacy records and first submissions.
+- Medium: the script's unawaited completion observer forwarded malformed
+  native-stop errors into an unhandled child future. It now handles that
+  observer's failure by cancelling the script; the awaited capture still
+  surfaces the typed error through the localized UI. A widget regression
+  checks stop failure, no export, no uncaught error and restored controls.
+- Medium, defensive native fix: changed the shared `@convention(block)`
+  handler conversion from `as AnyObject` to explicit
+  `unsafeBitCast(handler, to: AnyObject.self)`. This removes ambiguity at the
+  raw handler IMP boundary; this review does not claim the previous cast was
+  demonstrated to box incorrectly. Swift/ARC behavior remains a CI/device
+  check.
+- Low: unmatched drawable callbacks no longer increment ring overflow. A
+  separate `unmatchedCallbacks` counter crosses the native/Dart boundary and
+  appears in analyzer output. Overflow still includes ring eviction plus
+  contention drops, with contention explicitly a subset. Missing new fields
+  default to zero; nonzero counts are exported additively. Added three tests
+  for channel export, malformed counters and analyzer reporting.
+
+Native review: rechecked the local pinned FlutterMetalLayer contents
+assignment and layer-selection flag against the entry evidence. A1 adds an
+override only on FlutterMetalLayer and calls the inherited original IMP. B's
+global nextDrawable replacement is reached only after mode B starts with the
+explicit false plist flag and exact CAMetalLayer class; recording filters the
+layer instance. Registration has no buffer allocation or hook installation.
+The original nextDrawable call uses +0 `takeUnretainedValue`, then a strong
+local and an object-returning block; no explicit unmatched retain/release was
+found by source inspection. Runtime ABI/ownership is still unverified.
+Deprecated OSAtomic operations were retained: this Swift 5/iOS 15 review
+does not introduce a new dependency or an uncompiled atomic replacement.
+
+Other reviewed boundaries: engine changes remain optional additive sink
+observations, post-frame engine-ID reads retain owner/generation/epoch guards,
+S1 schema/default behavior is preserved, and exports hash page identities
+without book text, titles, assertion CFIs or user filenames. Scenario scripts
+match R01-R11 fixtures/workloads; R09 explicitly records controller/session
+simulation and still requires real OS lifecycle evidence. The analyzer stays
+independent of app code and preserves both percentile conventions. The CI
+guard precedes the build; insert-versus-replace plist handling, two bundle
+validations, checksums/provenance, pins and the original failure trap remain
+intact. Only the two exact hashed source-edge fixture names are exempt.
+
+Judgement retained for device review: the existing 5% endpoint/projected-OLS
+RSS rule is an implementation-specific observational bound, not a numerical
+threshold specified by NC7 and not a proof of no per-cycle growth. R10 starts
+with a cold snapshot; warm-up/cycle interpretation still needs the device
+report. No gate constants or reference semantics were changed.
+
+Files edited by this reviewer (relative to repository root):
+
+- `ios/Runner/AppDelegate.swift`
+- `lib/features/diagnostics/data/presentation_probe.dart`,
+  `presentation_payload.dart`, `reader_probe_recorder.dart`,
+  `reader_probe_summary.dart`
+- `lib/features/diagnostics/presentation/reader_probe/reader_probe_capture.dart`
+- `tool/diag/reader_input_analysis.dart`, `reader_native_resources.dart`,
+  `reader_export_analysis.dart`, `reader_export_report.dart`
+- `test/features/diagnostics/data/reader_probe_recorder_test.dart`,
+  `method_channel_presentation_probe_test.dart`
+- `test/features/diagnostics/presentation/reader_probe_screen_test.dart`
+- `test/tool/diag/reader_input_epoch_test.dart` (new),
+  `reader_export_metrics_test.dart`
+- This Phase E section of `local-validation.md`
+
+Final checks (explicit subprocess timeouts, no command timed out):
+
+| Command | Timeout | Exit | Result |
+| --- | --- | --- | --- |
+| `dart run build_runner build` | 900 s | 0 | Generated outputs current |
+| `dart format --set-exit-if-changed lib test tool/reader tool/diag tool/ci` | 180 s | 0 | 253 files, 0 changed |
+| `flutter analyze` | 180 s | 0 | No issues |
+| `flutter test` | 900 s | 0 | 969 passed, 1 skipped, 0 failed |
+| `bash -n tool/ci/build_ios_unsigned.sh` | 180 s | 0 | Git Bash syntax passed |
+| `dart run tool/ci/check_reader_fixtures.dart` | 180 s | 0 | Manifest/privacy guard passed |
+
+The sole skip is the existing `native_cfi_export_test`, requiring
+`SHIORI_NATIVE_CFI_OUT`. Seven regressions were added. All existing export
+parity/privacy fixtures pass unchanged; no fixture regeneration was needed.
+One new-test null-aware-element lint was corrected before the final gate.
+The local log wrapper needed UTF-8 stdout after a successful codegen command;
+its command result remained zero. Logs and per-command records are under
+ignored `build/phase-e-review/`. A protected-path `git diff --exit-code HEAD`
+returned zero for product entry/routes, plist/Xcode/workflow, dependencies,
+oracle/assets and task requirement/design/implementation metadata.
+
+Still unverified: native Swift compilation, block/IMP ABI and ownership,
+callback identity across repeated captures, actual native hook overhead,
+macOS plist/lipo/two-IPA execution, real R01-R11 device runs, A1/A2 observer
+effects, B presentation callbacks, and NC7-NC9. This is no claim of physical
+presentation or touch-to-photon latency.
+
+### Phase E execution and verification chain
+
+- Implementation: Codex CLI `gpt-6.1-sol` (high, `workspace-write` sandbox,
+  reasoning summaries on), split into sequential fresh sessions: part 1 (Dart
+  probe, scenarios, recorder, export; finished in a second session after a
+  remote-compaction failure), part 2 (Swift presentation probe and Dart
+  client), part 3a (offline analyzer), part 3b (export correctness/resource
+  fields, fixture guard, two-IPA packaging, final gate).
+- Independent gate re-runs after each part: Codex CLI `gpt-6-astra` (high),
+  verification only, with before/after file hashes. Results: part 1 823
+  passed / 1 skipped; part 2 869 / 1; part 3a 918 / 1; part 3b 962 / 1; all
+  scope checks passed each time (product entry/routes, Info.plist,
+  project.pbxproj, pubspec, oracle and fixture assets, workflow unchanged).
+- trellis-check review: Codex CLI `gpt-6-astra` (high), PASS with fixes (input
+  ids across capture epochs, unhandled native-stop error, explicit block
+  bridging, separate unmatched-callback counter); post-fix gate 969 passed /
+  1 skipped, `bash -n` and the fixture guard pass.
+- Kept by decision: deprecated `OSAtomic*` calls (warnings only in Swift 5;
+  rewriting synchronization without a compiler is riskier) and the 5 % RSS
+  growth rule (to be judged against device data).
+- Not verified locally: Swift compilation and hook behaviour, macOS plist
+  operations and both IPAs, and all device evidence (NC7-NC9).

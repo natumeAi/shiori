@@ -25,6 +25,7 @@ final class SurfaceHarness {
     this.pool,
     this.session,
     this.clock,
+    TurnTimingSink? timing,
   ) {
     controller = ReaderTurnController(
       session: session,
@@ -32,6 +33,7 @@ final class SurfaceHarness {
       clock: clock,
       width: 400,
       onAccepted: accepted.add,
+      timing: timing,
     );
     capture();
     session.frames.addListener(capture);
@@ -50,6 +52,7 @@ final class SurfaceHarness {
     Future<void> Function()? drain,
     AnchorProofHook? proofHook,
     int page = 10,
+    TurnTimingSink? timing,
   }) async {
     final book = EpubBook.open(
       buildEpub(
@@ -97,7 +100,14 @@ final class SurfaceHarness {
       drain: drain,
     );
     expect(session, isNotNull);
-    return SurfaceHarness._(request, section, pool, session!, TestTurnClock());
+    return SurfaceHarness._(
+      request,
+      section,
+      pool,
+      session!,
+      TestTurnClock(),
+      timing,
+    );
   }
 
   void capture() {

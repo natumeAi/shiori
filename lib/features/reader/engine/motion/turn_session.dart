@@ -101,6 +101,16 @@ abstract interface class TurnSession {
 }
 
 enum TurnTimingEvent {
+  inputReceived,
+  pointerAdmitted,
+  rejected,
+  preparationStart,
+  preparationHit,
+  preparationMiss,
+  settleEnd,
+  proofPassed,
+  proofFailed,
+  generationInvalidated,
   admitted,
   queued,
   overflow,
@@ -112,6 +122,8 @@ enum TurnTimingEvent {
   cancelled,
   failed,
   queueClosed,
+  inputCommitted,
+  staleCallbackRejected,
 }
 
 abstract interface class TurnTimingSink {
@@ -121,4 +133,46 @@ abstract interface class TurnTimingSink {
     int generation,
     int queueDepth,
   );
+}
+
+/// Same-frame engine submission identity; never implies physical presentation.
+abstract interface class TurnFrameSink {
+  int get frameEpoch;
+  void submitted({
+    required int frameNumber,
+    required int schedulerUs,
+    required int rawSchedulerUs,
+    required int generation,
+    required double offset,
+    Object? input,
+  });
+}
+
+/// Opaque input identity allows FIFO/drag correlation without exporting anchors.
+abstract interface class TurnTraceSink {
+  void recordTurn(
+    TurnTimingEvent event,
+    double time,
+    int generation,
+    int queueDepth,
+    Object? input,
+  );
+}
+
+/// Optional error observer; implementations must sanitize book-derived errors.
+abstract interface class TurnFailureSink {
+  void failure(Object error, StackTrace stack);
+}
+
+/// Optional correctness evidence, without copying anchors or book content.
+abstract interface class TurnEvidenceSink {
+  void recordEvidence(
+    TurnTimingEvent event,
+    double time,
+    int generation,
+    int activeGeneration,
+    int queueDepth,
+    Object? input, {
+    TurnPosition? destination,
+  });
 }

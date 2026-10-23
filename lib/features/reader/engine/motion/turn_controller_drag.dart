@@ -45,7 +45,14 @@ extension _TurnControllerDrag on ReaderTurnController {
   }
 
   Future<PreparedTurn?> _prepareDirection(TurnDirection next, int token) async {
+    final input = _current;
     final existing = _neighbors[next];
+    _event(TurnTimingEvent.preparationStart);
+    _event(
+      existing != null && _bound
+          ? TurnTimingEvent.preparationHit
+          : TurnTimingEvent.preparationMiss,
+    );
     if (existing != null && _bound) return existing;
     // A cold reversal first parks the foreground in a control task.
     if (_bound) _clearPair();
@@ -53,13 +60,19 @@ extension _TurnControllerDrag on ReaderTurnController {
     final origin = _accepted;
     final prepared = await _bounded(session.prepare(origin, next));
     if (prepared == null) return null;
-    if (!_alive(token) || epoch != _pairGeneration) {
+    if (!_alive(token, input: input) || epoch != _pairGeneration) {
+      if (token == _generation && epoch != _pairGeneration) {
+        _event(TurnTimingEvent.staleCallbackRejected, input: input);
+      }
       prepared.release();
       return null;
     }
     await session.stopAndDrain();
     await _controlTask();
-    if (!_alive(token) || epoch != _pairGeneration) {
+    if (!_alive(token, input: input) || epoch != _pairGeneration) {
+      if (token == _generation && epoch != _pairGeneration) {
+        _event(TurnTimingEvent.staleCallbackRejected, input: input);
+      }
       prepared.release();
       return null;
     }
@@ -83,7 +96,12 @@ extension _TurnControllerDrag on ReaderTurnController {
     try {
       await session.stopAndDrain();
       await _controlTask();
-      if (!_alive(token) || _pointer != pointer || epoch != _pairGeneration) {
+      if (!_alive(token, input: pointer.intent) ||
+          _pointer != pointer ||
+          epoch != _pairGeneration) {
+        if (token == _generation) {
+          _event(TurnTimingEvent.staleCallbackRejected, input: pointer.intent);
+        }
         for (final preview in warm) {
           preview.release();
         }
@@ -127,7 +145,11 @@ extension _TurnControllerDrag on ReaderTurnController {
       } else {
         final token = _generation;
         final preview = await _prepareDirection(latest.direction!, token);
-        if (_pointer != pointer || !_alive(token) || preview == null) return;
+        if (_pointer != pointer ||
+            !_alive(token, input: pointer.intent) ||
+            preview == null) {
+          return;
+        }
         pointer.catchUp = DragCatchUp(_offset);
       }
       pointer.dirty = true;

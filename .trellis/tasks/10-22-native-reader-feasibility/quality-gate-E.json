@@ -1,0 +1,58 @@
+[
+  {
+    "command": "dart run build_runner build",
+    "timeoutSeconds": 900,
+    "exitCode": 0,
+    "timedOut": false,
+    "durationSeconds": 6.073,
+    "outputTail": "  0s riverpod_generator on 232 inputs; lib/app/app.dart\n  4s riverpod_generator on 232 inputs: 1 skipped, 1 no-op; spent 3s analyzing; lib/app/router.dart\n  4s riverpod_generator on 232 inputs: 230 skipped, 2 no-op; spent 3s analyzing\n  0s freezed on 232 inputs; lib/app/app.dart\n  0s freezed on 232 inputs: 230 skipped, 2 no-op\n  0s json_serializable on 464 inputs; lib/app/app.dart\n  0s json_serializable on 464 inputs: 443 skipped, 21 no-op\n  0s go_router_builder on 464 inputs; lib/app/app.dart\n  0s go_router_builder on 464 inputs: 443 skipped, 1 same, 20 no-op\n  0s source_gen:combining_builder on 464 inputs; lib/app/app.dart\n  0s source_gen:combining_builder on 464 inputs: 463 skipped, 1 same\n  Built with build_runner/aot in 5s; wrote 2 outputs."
+  },
+  {
+    "command": "dart format --set-exit-if-changed lib test tool/reader tool/diag tool/ci",
+    "timeoutSeconds": 180,
+    "exitCode": 0,
+    "timedOut": false,
+    "durationSeconds": 0.921,
+    "outputTail": "Formatted 252 files (0 changed) in 0.40 seconds."
+  },
+  {
+    "command": "flutter analyze",
+    "timeoutSeconds": 180,
+    "exitCode": 0,
+    "timedOut": false,
+    "durationSeconds": 3.523,
+    "outputTail": "Analyzing shiori...                                             \nNo issues found! (ran in 2.2s)"
+  },
+  {
+    "command": "flutter test",
+    "timeoutSeconds": 900,
+    "exitCode": 0,
+    "timedOut": false,
+    "durationSeconds": 18.095,
+    "outputTail": "00:08 +952 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:08 +953 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:09 +953 ~1: D:/Projects/shiori/test/features/reader/engine/pagination/local_books_layout_test.dart: local books: conservation and anchors at the three gate settings\nbook 9bfc26bc676d default: sections=21 pages=443 lines=9313 chars=128385 images=14 surfaced=0 unsupported=0 anchors=443 differences={background-lines-only: 4} ms=865\n00:09 +954 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:09 +955 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:09 +956 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:10 +957 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:10 +957 ~1: D:/Projects/shiori/test/features/reader/engine/pagination/local_books_layout_test.dart: local books: conservation and anchors at the three gate settings\nbook 9bfc26bc676d size26-lh2.0: sections=21 pages=1019 lines=13127 chars=128385 images=14 surfaced=0 unsupported=0 anchors=1019 differences={background-lines-only: 4} ms=853\n00:10 +958 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:10 +958 ~1: D:/Projects/shiori/test/features/reader/engine/pagination/local_books_layout_test.dart: local books: conservation and anchors at the three gate settings\nbook 9bfc26bc676d size14-ls0.12-margin48: sections=21 pages=381 lines=10801 chars=128385 images=14 surfaced=0 unsupported=0 anchors=381 differences={background-lines-only: 4} ms=670\n00:10 +959 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:10 +960 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:11 +961 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\nlocal books compared: 4, sections: 60, cfi samples: 168677\n00:14 +962 ~1: All tests passed!"
+  },
+  {
+    "command": "bash -n tool/ci/build_ios_unsigned.sh",
+    "timeoutSeconds": 180,
+    "exitCode": 0,
+    "timedOut": false,
+    "durationSeconds": 0.015,
+    "outputTail": ""
+  },
+  {
+    "command": "dart run tool/ci/check_reader_fixtures.dart",
+    "timeoutSeconds": 180,
+    "exitCode": 0,
+    "timedOut": false,
+    "durationSeconds": 0.88,
+    "outputTail": "Running build hooks...Running build hooks...PASS: reader fixture manifests and EPUB privacy guard"
+  },
+  {
+    "command": "dart run tool/diag/analyze_reader_export.dart --strict test/fixtures/reader/exports/passing-120hz-a1-1.json",
+    "timeoutSeconds": 180,
+    "exitCode": 0,
+    "timedOut": false,
+    "durationSeconds": 0.759,
+    "outputTail": "| omission | null |\n| overflow | 0 |\n| contentionDrops | 0 |\n| inventory | {\"layerClass\":\"FlutterMetalLayer\",\"FLTUseFlutterMetalLayer\":null,\"maximumFramesPerSecond\":120,\"lowPowerMode\":false,\"thermalState\":0,\"iosVersion\":\"26.0\",\"ringCapacity\":16384} |\n| commitIntervals | {\"count\":3,\"p50Us\":8333,\"p95Us\":8333,\"p99Us\":8333,\"maxUs\":8333,\"atLeast12500Us\":0} |\n| interpretation | \"native clock only; no Dart correlation; does not establish physical presentation or touch-to-photon latency; B is a non-product path; zero may include pending/lost callbacks\" |\n\nApp aggregate comparison: MATCH (reader and engine).\n\n\n## Summary across repeats\n\nRepeats are never pooled across book, fixture, input or native mode. Counts summarize gate rows; no averaged percentile replaces a failed repeat.\n\n| Scenario / fixture / mode | Repeats | pass rows | fail rows | unavailable rows | Repeat coverage | App mismatches |\n| --- | --- | --- | --- | --- | --- | --- |\n| R01 / synthetic-export / a1 | 1 | 7 | 0 | 2 | unavailable: missing, duplicate or inconsistent repeats (need >=3) | 0 |\n"
+  }
+]

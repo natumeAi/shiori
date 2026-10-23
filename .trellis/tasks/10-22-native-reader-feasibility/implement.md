@@ -9,16 +9,19 @@ Context order: `implement.jsonl` entries → `prd.md` → `design.md` → this f
 Before writing code in a layer, load the matching `.trellis/spec/flutter/`
 guide (the `trellis-before-dev` skill does this).
 
-## Current checkpoint — stopped after Phase D
+## Current checkpoint — stopped after Phase E
 
-Phases 0, A, B, C and D passed and are committed locally (`4e15862`,
-`f06b933`, `d627692`, `73835bb`, then the Phase D commit). Phases B and C were
-run by Sonnet 5.5 (medium) implement/check agents in the Claude session;
-Phase D was implemented by the Codex CLI (`gpt-6.1-sol`, high, sandboxed) and
-checked by a Sonnet 5.5 (medium) trellis-check agent. The user asks to stop
-after each phase. Phase E starts only on the user's explicit instruction;
-continuous mode does not resume by itself. Do not archive the task or
-restart earlier phases.
+Phases 0, A, B, C, D and E passed and are committed locally (`4e15862`,
+`f06b933`, `d627692`, `73835bb`, `25bac2d`, then the Phase E commit). Phases
+B and C were run by Sonnet 5.5 (medium) implement/check agents in the Claude
+session; Phase D was implemented by the Codex CLI (`gpt-6.1-sol`, high,
+sandboxed) and checked by a Sonnet 5.5 (medium) trellis-check agent; Phase E
+was implemented by the Codex CLI (`gpt-6.1-sol`, high) in sequential parts,
+with gate re-runs and the trellis-check review by the Codex CLI
+(`gpt-6-astra`, high). The user asks to stop after each phase. Phase F starts
+only on the user's explicit instruction; continuous mode does not resume by
+itself. Do not archive the task or restart earlier phases. Nothing after
+Phase C is pushed.
 
 ## Phase 0 — branch and baseline
 
@@ -102,23 +105,24 @@ restart earlier phases.
 
 ## Phase E — probe harness, analyzer, native spike, CI (design §8–§10)
 
-- [ ] Probe home, reader feasibility screen, Documents EPUB listing, settings
+- [x] Probe home, reader feasibility screen, Documents EPUB listing, settings
   controls, scenario runner R01–R11, reader recorder and `reader_feasibility`
   export with clipboard summary. Keep S1 synthetic capture working unchanged.
-- [ ] `tool/diag/analyze_reader_export.dart` with tests on committed synthetic
+- [x] `tool/diag/analyze_reader_export.dart` with tests on committed synthetic
   exports.
-- [ ] Swift presentation probe (inventory, A1, A2, B) behind the method
+- [x] Swift presentation probe (inventory, A1, A2, B) behind the method
   channel; Dart client used only by the probe. Check hook points against the
   pinned engine sources named in `research/s2-entry-evidence.md`.
-- [ ] Build script: two-variant packaging and the fixture/privacy guards;
+- [x] Build script: two-variant packaging and the fixture/privacy guards;
   update the workflow only if needed. Run `bash -n` on the script.
   The "no `*.epub` outside `assets/reader_fixtures/`" guard must also accept
   `test/fixtures/reader/source_edge/edge-{html,xhtml}.epub` (Phase B edge
   fixtures) through a hashed manifest, not a blanket folder exemption.
-- **Gate E:** full local gate passes; `flutter run -t lib/main.dart` behavior
-  is unchanged (existing app tests green); analyzer tests pass; a scan of a
-  generated export finds no fixture text.
-- [ ] Commit: `feat(diagnostics): reader feasibility probe and presentation spike`.
+- **Gate E (met locally, see `local-validation.md`):** full local gate passes;
+  `flutter run -t lib/main.dart` behavior is unchanged (existing app tests
+  green); analyzer tests pass; a scan of a generated export finds no fixture
+  text. Swift compilation and both IPAs are verified only by CI after a push.
+- [x] Commit: `feat(diagnostics): reader feasibility probe and presentation spike`.
 
 ## Phase F — handoff to the device step (then STOP)
 

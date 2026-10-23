@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 import 'package:shiori/features/reader/engine/motion/page_turn_engine.dart';
 import 'package:shiori/features/reader/engine/motion/reader_turn_controller.dart';
+import 'package:shiori/features/reader/engine/motion/turn_session.dart';
 import 'package:shiori/features/reader/engine/surface/prepared_reader_session.dart';
 import 'package:shiori/features/reader/engine/surface/surface_frame.dart';
 
@@ -19,11 +20,13 @@ final class PreparedReader extends StatefulWidget {
     required this.session,
     this.closeOnDispose = true,
     this.onPageBuild,
+    this.frameNumberForTesting,
   });
   final ReaderTurnController controller;
   final PreparedReaderSession session;
   final bool closeOnDispose;
   final VoidCallback? onPageBuild;
+  final int Function()? frameNumberForTesting;
   @override
   State<PreparedReader> createState() => _PreparedReaderState();
 }
@@ -56,6 +59,40 @@ final class _PreparedReaderState extends State<PreparedReader>
   void _move(double value) {
     _offset.value = value;
     _oldOffset?.call(value);
+    final sink = controller.timing;
+    if (sink is! TurnFrameSink || !controller.needsTick || value == 0) return;
+    final frameSink = sink as TurnFrameSink;
+    final epoch = frameSink.frameEpoch;
+    final input = controller.inputIdentity;
+    final binding = SchedulerBinding.instance;
+    // Control tasks can rewrite the offset between frames. The next ticker
+    // samples that value; scheduler timestamps only exist inside a frame.
+    if (binding.schedulerPhase == SchedulerPhase.idle ||
+        binding.schedulerPhase == SchedulerPhase.postFrameCallbacks) {
+      return;
+    }
+    final schedulerUs = binding.currentFrameTimeStamp.inMicroseconds;
+    final rawUs = binding.currentSystemFrameTimeStamp.inMicroseconds;
+    final generation = controller.generation;
+    final owner = controller;
+    binding.addPostFrameCallback((_) {
+      if (!mounted ||
+          owner != controller ||
+          generation != controller.generation ||
+          epoch != frameSink.frameEpoch) {
+        return;
+      }
+      frameSink.submitted(
+        frameNumber:
+            widget.frameNumberForTesting?.call() ??
+            ui.PlatformDispatcher.instance.frameData.frameNumber,
+        schedulerUs: schedulerUs,
+        rawSchedulerUs: rawUs,
+        generation: generation,
+        offset: value,
+        input: input,
+      );
+    });
   }
 
   void _changed() {

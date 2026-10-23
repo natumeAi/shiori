@@ -85,6 +85,7 @@ final class ReaderTurnController {
   int get queueDepth => _queue.length;
   int get staticFallbacks => _staticFallbacks;
   int get generation => _generation;
+  Object? get inputIdentity => _current;
   void tick() => _tick();
   bool pointerDown(
     int id,
@@ -125,9 +126,48 @@ final class ReaderTurnController {
     return done.future;
   }
 
-  bool _alive(int token) => !_closed && !_suspended && token == _generation;
-  void _event(TurnTimingEvent event) =>
-      timing?.record(event, clock.now, _generation, _queue.length);
+  bool _alive(int token, {Object? input}) {
+    final alive = !_closed && !_suspended && token == _generation;
+    if (!alive) {
+      _event(
+        TurnTimingEvent.staleCallbackRejected,
+        input: input,
+        generation: token,
+      );
+    }
+    return alive;
+  }
+
+  void _event(
+    TurnTimingEvent event, {
+    Object? input,
+    int? generation,
+    TurnPosition? destination,
+  }) {
+    final sink = timing;
+    if (sink is TurnEvidenceSink) {
+      (sink as TurnEvidenceSink).recordEvidence(
+        event,
+        clock.now,
+        generation ?? _generation,
+        _generation,
+        _queue.length,
+        input ?? _current,
+        destination: destination,
+      );
+    } else if (sink is TurnTraceSink) {
+      (sink as TurnTraceSink).recordTurn(
+        event,
+        clock.now,
+        generation ?? _generation,
+        _queue.length,
+        input ?? _current,
+      );
+    } else {
+      sink?.record(event, clock.now, generation ?? _generation, _queue.length);
+    }
+  }
+
   void _setPhase(TurnPhase value) {
     _phase = value;
     onChanged?.call();
@@ -140,13 +180,15 @@ final class ReaderTurnController {
 
   Future<TurnResult> turnPage(TurnDirection direction) {
     final intent = TurnIntent(direction);
+    _event(TurnTimingEvent.inputReceived, input: intent);
     if (_blocked) {
+      _event(TurnTimingEvent.rejected, input: intent);
       intent.resolve(const TurnResult(TurnResultKind.blocked, 'not-ready'));
     } else if (_current != null || _pointer != null || !_queue.isEmpty) {
       if (_queue.add(intent)) {
-        _event(TurnTimingEvent.queued);
+        _event(TurnTimingEvent.queued, input: intent);
       } else {
-        _event(TurnTimingEvent.overflow);
+        _event(TurnTimingEvent.overflow, input: intent);
       }
     } else {
       _current = intent;
@@ -165,6 +207,7 @@ final class ReaderTurnController {
 
   void cancel([String reason = 'cancelled']) {
     ++_generation;
+    _event(TurnTimingEvent.generationInvalidated);
     _motion?.complete(false);
     _motion = null;
     _pointer?.engine.cancel();

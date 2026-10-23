@@ -69,7 +69,7 @@ extension _TurnControllerWork on ReaderTurnController {
       if (!boundary && !reducedMotion) {
         preview = await _prepareDirection(next, token);
       }
-      if (!_alive(token)) return;
+      if (!_alive(token, input: intent)) return;
       if (boundary) {
         await _animate(start, 0, (
           duration: PageTurnRules.settleDurationMinMs,
@@ -80,6 +80,7 @@ extension _TurnControllerWork on ReaderTurnController {
         if (preview != null) {
           final conflict = TurnAcceptance.previewConflict(origin, preview);
           if (conflict != null) {
+            _event(TurnTimingEvent.proofFailed, input: intent);
             result = TurnResult(TurnResultKind.failed, 'proof-$conflict');
             return;
           }
@@ -94,7 +95,10 @@ extension _TurnControllerWork on ReaderTurnController {
                   duration: PageTurnRules.tapDurationMs,
                   launch: PageTurnRules.turnLaunch,
                 );
-          if (!await _animate(start, target, motion) || !_alive(token)) return;
+          if (!await _animate(start, target, motion) ||
+              !_alive(token, input: intent)) {
+            return;
+          }
         } else {
           _event(
             reducedMotion
@@ -103,8 +107,9 @@ extension _TurnControllerWork on ReaderTurnController {
           );
           if (!reducedMotion) _staticFallbacks++;
         }
-        if (!_alive(token)) return;
+        if (!_alive(token, input: intent)) return;
         _setPhase(TurnPhase.committing);
+        _event(TurnTimingEvent.inputCommitted, input: intent);
         final operation = session.navigate(origin, next, preview);
         final pending = operation.then<void>(
           (_) {},
@@ -112,7 +117,7 @@ extension _TurnControllerWork on ReaderTurnController {
         );
         _navigation = pending;
         final response = await operation;
-        if (!_alive(token)) return;
+        if (!_alive(token, input: intent)) return;
         _navigation = null;
         final destination = response.position;
         String? conflict;
@@ -124,12 +129,21 @@ extension _TurnControllerWork on ReaderTurnController {
             destination,
             preview,
           );
-          if (!_alive(token)) return;
+          if (!_alive(token, input: intent)) return;
+          _event(
+            conflict == null
+                ? TurnTimingEvent.proofPassed
+                : TurnTimingEvent.proofFailed,
+          );
           if (conflict == null) {
             intent.accepted = true;
             _accepted = destination;
             session.accept(destination);
-            _event(TurnTimingEvent.accepted);
+            _event(
+              TurnTimingEvent.accepted,
+              input: intent,
+              destination: destination,
+            );
             onAccepted?.call(destination);
             result = const TurnResult(TurnResultKind.committed);
             await onCommitted?.call();
@@ -138,6 +152,7 @@ extension _TurnControllerWork on ReaderTurnController {
             preview == null) {
           result = const TurnResult(TurnResultKind.boundary, 'boundary');
         } else {
+          _event(TurnTimingEvent.proofFailed, input: intent);
           conflict = response.reason ?? response.kind.name;
         }
         if (conflict != null) {
@@ -147,10 +162,14 @@ extension _TurnControllerWork on ReaderTurnController {
           if (!await session.restore(origin)) _setPhase(TurnPhase.failed);
         }
       }
-    } on Object {
+    } on Object catch (error, stack) {
+      final sink = timing;
+      if (sink is TurnFailureSink) {
+        (sink as TurnFailureSink).failure(error, stack);
+      }
       result = const TurnResult(TurnResultKind.failed, 'navigation-error');
       _navigation = null;
-      if (_alive(token)) {
+      if (_alive(token, input: intent)) {
         _terminateWaiting(result);
         if (!intent.accepted && !await session.restore(origin)) {
           _setPhase(TurnPhase.failed);
@@ -158,9 +177,9 @@ extension _TurnControllerWork on ReaderTurnController {
       }
     } finally {
       intent.resolve(result);
-      if (_alive(token)) {
+      if (_alive(token, input: intent)) {
         await _controlTask();
-        if (_alive(token)) {
+        if (_alive(token, input: intent)) {
           _clearPair();
           if (identical(_current, intent)) _current = null;
           if (result.kind == TurnResultKind.failed) _terminateWaiting(result);
@@ -188,6 +207,7 @@ extension _TurnControllerWork on ReaderTurnController {
       _write(motion.sample(clock.now));
       if (motion.finished) {
         _motion = null;
+        _event(TurnTimingEvent.settleEnd);
         _post(() => motion.complete(true));
       }
     } else {

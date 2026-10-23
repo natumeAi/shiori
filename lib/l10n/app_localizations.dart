@@ -100,6 +100,204 @@ abstract class AppLocalizations {
   /// **'设备诊断探针'**
   String get diagnosticsTitle;
 
+  /// No description provided for @probeSynthetic.
+  ///
+  /// In zh, this message translates to:
+  /// **'S1 合成动画采集'**
+  String get probeSynthetic;
+
+  /// No description provided for @readerProbeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'阅读器可行性探针'**
+  String get readerProbeTitle;
+
+  /// No description provided for @readerProbeHelp.
+  ///
+  /// In zh, this message translates to:
+  /// **'从内置夹具或 Documents 中选择 EPUB。用户书籍仅以 SHA-256 标识。引擎提交不等于物理呈现；原生呈现数据尚未验证。'**
+  String get readerProbeHelp;
+
+  /// No description provided for @readerProbeControls.
+  ///
+  /// In zh, this message translates to:
+  /// **'探针控制'**
+  String get readerProbeControls;
+
+  /// No description provided for @readerBooks.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择书籍 / 刷新列表'**
+  String get readerBooks;
+
+  /// No description provided for @readerFixture.
+  ///
+  /// In zh, this message translates to:
+  /// **'夹具：{id}'**
+  String readerFixture(String id);
+
+  /// No description provided for @readerUserBook.
+  ///
+  /// In zh, this message translates to:
+  /// **'用户书籍 SHA-256：{digest}'**
+  String readerUserBook(String digest);
+
+  /// No description provided for @readerEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有可用书籍，请将 EPUB 放入 Documents 后刷新。'**
+  String get readerEmpty;
+
+  /// No description provided for @readerUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'此书包含固定版式、竖排或从右至左布局，探针无法打开。可选择其他书籍。'**
+  String get readerUnsupported;
+
+  /// No description provided for @readerFailure.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法打开、准备或证明阅读位置，请重试或选择其他书籍。'**
+  String get readerFailure;
+
+  /// No description provided for @readerFont.
+  ///
+  /// In zh, this message translates to:
+  /// **'字体'**
+  String get readerFont;
+
+  /// No description provided for @readerFontName.
+  ///
+  /// In zh, this message translates to:
+  /// **'{id, select, system{默认} pingfang{苹方} yahei{微软雅黑} sans{黑体} serif{宋体} kai{楷体} other{默认}}'**
+  String readerFontName(String id);
+
+  /// No description provided for @readerSize.
+  ///
+  /// In zh, this message translates to:
+  /// **'字号'**
+  String get readerSize;
+
+  /// No description provided for @readerLineHeight.
+  ///
+  /// In zh, this message translates to:
+  /// **'行高'**
+  String get readerLineHeight;
+
+  /// No description provided for @readerLetterSpacing.
+  ///
+  /// In zh, this message translates to:
+  /// **'字距（em）'**
+  String get readerLetterSpacing;
+
+  /// No description provided for @readerHorizontalMargin.
+  ///
+  /// In zh, this message translates to:
+  /// **'水平附加边距'**
+  String get readerHorizontalMargin;
+
+  /// No description provided for @readerVerticalMargin.
+  ///
+  /// In zh, this message translates to:
+  /// **'垂直附加边距'**
+  String get readerVerticalMargin;
+
+  /// No description provided for @readerTheme.
+  ///
+  /// In zh, this message translates to:
+  /// **'主题'**
+  String get readerTheme;
+
+  /// No description provided for @readerThemeName.
+  ///
+  /// In zh, this message translates to:
+  /// **'{id, select, light{明亮} sepia{柔和} green{护眼} dark{深色} other{主题 {id}}}'**
+  String readerThemeName(String id);
+
+  /// No description provided for @readerSettingValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'{label}：{value}'**
+  String readerSettingValue(String label, String value);
+
+  /// No description provided for @readerReducedMotion.
+  ///
+  /// In zh, this message translates to:
+  /// **'减少动态效果'**
+  String get readerReducedMotion;
+
+  /// No description provided for @readerJump.
+  ///
+  /// In zh, this message translates to:
+  /// **'跳转章节'**
+  String get readerJump;
+
+  /// No description provided for @readerSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {number} 节'**
+  String readerSection(int number);
+
+  /// No description provided for @readerScenario.
+  ///
+  /// In zh, this message translates to:
+  /// **'场景'**
+  String get readerScenario;
+
+  /// No description provided for @readerScenarioName.
+  ///
+  /// In zh, this message translates to:
+  /// **'{id, select, R01{R01 前后各 40 次轻点} R02{R02 拖动、快滑、反向和边界回弹} R03{R03 按住手指等待冷邻页} R04{R04 队列溢出和跳转} R05{R05 冷热双向跨章} R06{R06 十万字长段落} R07{R07 图文和 SVG} R08{R08 字号行高重排和锚点恢复} R09{R09 运动及准备时模拟后台恢复} R10{R10 百次交替翻页和跳转资源采样} R11{R11 用户书籍手动阅读至少 50 次} other{未知场景}}'**
+  String readerScenarioName(String id);
+
+  /// No description provided for @readerRepeat.
+  ///
+  /// In zh, this message translates to:
+  /// **'重复次数（默认 3）'**
+  String get readerRepeat;
+
+  /// No description provided for @readerManual.
+  ///
+  /// In zh, this message translates to:
+  /// **'手动触摸采集（R11 必须使用用户书籍）'**
+  String get readerManual;
+
+  /// No description provided for @readerStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始阅读器采集'**
+  String get readerStart;
+
+  /// No description provided for @readerRunning.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在采集；脚本触摸为注入输入，后台切换为控制器模拟。'**
+  String get readerRunning;
+
+  /// No description provided for @readerPosition.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {section} 节 · 第 {page}/{total} 页'**
+  String readerPosition(int section, int page, int total);
+
+  /// No description provided for @readerManualMinimum.
+  ///
+  /// In zh, this message translates to:
+  /// **'R11 每本书至少完成 50 次已接受翻页；提前停止的记录保留为不完整证据。'**
+  String get readerManualMinimum;
+
+  /// No description provided for @readerNativeMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'原生呈现证据（仅诊断）'**
+  String get readerNativeMode;
+
+  /// No description provided for @readerNativeModeName.
+  ///
+  /// In zh, this message translates to:
+  /// **'{mode, select, inventory{系统信息} a1{A1 图层提交（无辅助显示链接）} a2{A2 图层提交及辅助显示链接} b{B 非默认路径的 drawable 呈现} other{未知}}'**
+  String readerNativeModeName(String mode);
+
   /// No description provided for @diagnosticsBuild.
   ///
   /// In zh, this message translates to:

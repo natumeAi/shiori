@@ -1,0 +1,779 @@
+{
+  "kind": "reader_feasibility",
+  "schemaVersion": 1,
+  "bookSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "fixtureId": "synthetic-export",
+  "scenarioId": "R01",
+  "repeatIndex": 1,
+  "repeatCount": 3,
+  "input": "synthetic_injected",
+  "engine": {
+    "schemaVersion": 1,
+    "scenarioId": "R01",
+    "runId": "synthetic-budget-1",
+    "buildId": "synthetic",
+    "startedAt": "2026-10-22T12:00:00.000Z",
+    "stoppedAt": "2026-10-22T12:00:03.000Z",
+    "startedMonotonicUs": 7000000,
+    "stoppedMonotonicUs": 10000000,
+    "finalizedMonotonicUs": 11200000,
+    "stopReason": "user_stop",
+    "declarations": {
+      "deviceModel": "",
+      "lowPowerMode": "unknown",
+      "limitFrameRate": "unknown",
+      "charging": "unknown",
+      "warm": "unknown",
+      "source": "user_provided"
+    },
+    "metadata": {
+      "os": "iOS 26",
+      "reportedRefreshRate": null,
+      "readerCorrectnessVersion": 1,
+      "captureEpoch": 1,
+      "resourceCaps": {
+        "liveSurfaceCap": 3,
+        "liveSurfaceReserve": 1,
+        "pictureCacheBytes": 16777216,
+        "imageCacheBytes": 50331648
+      }
+    },
+    "clocks": {
+      "correlation": "engine_frame_number_identity"
+    },
+    "frames": [
+      {
+        "frameNumber": 1,
+        "vsyncUs": 100000,
+        "buildStartUs": 100100,
+        "buildFinishUs": 109100,
+        "rasterStartUs": 109100,
+        "rasterFinishUs": 119100,
+        "rasterFinishWallUs": 1792670400119100,
+        "arrivalMonotonicUs": 9000000
+      },
+      {
+        "frameNumber": 2,
+        "vsyncUs": 108333,
+        "buildStartUs": 108433,
+        "buildFinishUs": 117434,
+        "rasterStartUs": 117434,
+        "rasterFinishUs": 127435,
+        "rasterFinishWallUs": 1792670400127435,
+        "arrivalMonotonicUs": 9000000
+      },
+      {
+        "frameNumber": 3,
+        "vsyncUs": 116666,
+        "buildStartUs": 116766,
+        "buildFinishUs": 125768,
+        "rasterStartUs": 125768,
+        "rasterFinishUs": 135770,
+        "rasterFinishWallUs": 1792670400135770,
+        "arrivalMonotonicUs": 9000000
+      },
+      {
+        "frameNumber": 4,
+        "vsyncUs": 124999,
+        "buildStartUs": 125099,
+        "buildFinishUs": 134102,
+        "rasterStartUs": 134102,
+        "rasterFinishUs": 144105,
+        "rasterFinishWallUs": 1792670400144105,
+        "arrivalMonotonicUs": 9000000
+      },
+      {
+        "frameNumber": 5,
+        "vsyncUs": 133332,
+        "buildStartUs": 133432,
+        "buildFinishUs": 142436,
+        "rasterStartUs": 142436,
+        "rasterFinishUs": 152440,
+        "rasterFinishWallUs": 1792670400152440,
+        "arrivalMonotonicUs": 9000000
+      },
+      {
+        "frameNumber": 6,
+        "vsyncUs": 141665,
+        "buildStartUs": 141765,
+        "buildFinishUs": 150770,
+        "rasterStartUs": 150770,
+        "rasterFinishUs": 160775,
+        "rasterFinishWallUs": 1792670400160775,
+        "arrivalMonotonicUs": 9000000
+      }
+    ],
+    "motion": [
+      {
+        "frameNumber": 1,
+        "schedulerUs": 0,
+        "rawSchedulerUs": 108333,
+        "monotonicUs": 7010000,
+        "progress": 0.0
+      },
+      {
+        "frameNumber": 2,
+        "schedulerUs": 8333,
+        "rawSchedulerUs": 116666,
+        "monotonicUs": 7018333,
+        "progress": 0.16666666666666666
+      },
+      {
+        "frameNumber": 3,
+        "schedulerUs": 16666,
+        "rawSchedulerUs": 124999,
+        "monotonicUs": 7026666,
+        "progress": 0.3333333333333333
+      },
+      {
+        "frameNumber": 4,
+        "schedulerUs": 24999,
+        "rawSchedulerUs": 133332,
+        "monotonicUs": 7034999,
+        "progress": 0.5
+      },
+      {
+        "frameNumber": 5,
+        "schedulerUs": 33332,
+        "rawSchedulerUs": 141665,
+        "monotonicUs": 7043332,
+        "progress": 0.6666666666666666
+      },
+      {
+        "frameNumber": 6,
+        "schedulerUs": 41665,
+        "rawSchedulerUs": 149998,
+        "monotonicUs": 7051665,
+        "progress": 0.8333333333333334
+      }
+    ],
+    "frameOverflow": 0,
+    "motionOverflow": 0,
+    "reportsDuringDrain": 1,
+    "omittedOutsideMotion": 0,
+    "incompleteTrailingBatch": true,
+    "errors": [],
+    "aggregates": {
+      "scope": "engine_frame_number_matched_motion_frames_only",
+      "correlatedMotionFrames": 6,
+      "ui": {
+        "count": 6,
+        "p50Us": 9003,
+        "p95Us": 9005,
+        "p99Us": 9005,
+        "maxUs": 9005,
+        "over8333Us": 6
+      },
+      "raster": {
+        "count": 6,
+        "p50Us": 10003,
+        "p95Us": 10005,
+        "p99Us": 10005,
+        "maxUs": 10005,
+        "over8333Us": 6
+      },
+      "vsyncIntervals": {
+        "count": 5,
+        "p50Us": 8333,
+        "p95Us": 8333,
+        "p99Us": 8333,
+        "maxUs": 8333,
+        "atLeast12500Us": 0
+      },
+      "cadencePattern": "observed_near_120hz",
+      "cadenceInterpretation": "engine_observation_not_physical_presentation"
+    },
+    "physicalPresentation": "unverified"
+  },
+  "readerEvents": [
+    {
+      "sequence": 1,
+      "event": "inputReceived",
+      "monotonicUs": 7000000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 1,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 2,
+      "event": "pointerAdmitted",
+      "monotonicUs": 7001000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 1,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 3,
+      "event": "preparationStart",
+      "monotonicUs": 7001000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 1,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 4,
+      "event": "preparationHit",
+      "monotonicUs": 7001000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 1,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 5,
+      "event": "prepared",
+      "monotonicUs": 7002000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 1,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 6,
+      "event": "firstMotionSubmission",
+      "monotonicUs": 7010000,
+      "generation": 2,
+      "queueDepth": 0,
+      "inputId": 1,
+      "captureEpoch": 1,
+      "activeGeneration": 2,
+      "frameNumber": 1
+    },
+    {
+      "sequence": 7,
+      "event": "inputCommitted",
+      "monotonicUs": 7099999,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 1,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 8,
+      "event": "settleEnd",
+      "monotonicUs": 7100000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 1,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 9,
+      "event": "proofPassed",
+      "monotonicUs": 7100000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 1,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 10,
+      "event": "accepted",
+      "monotonicUs": 7100000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 1,
+      "captureEpoch": 1,
+      "activeGeneration": 1,
+      "destination": {
+        "sectionIndex": 0,
+        "pageIndex": 1,
+        "layoutGeneration": 1,
+        "pageIdentity": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    },
+    {
+      "sequence": 11,
+      "event": "inputReceived",
+      "monotonicUs": 7110000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 2,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 12,
+      "event": "admitted",
+      "monotonicUs": 7111000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 2,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 13,
+      "event": "firstMotionSubmission",
+      "monotonicUs": 7126000,
+      "generation": 2,
+      "queueDepth": 0,
+      "inputId": 2,
+      "captureEpoch": 1,
+      "activeGeneration": 2,
+      "frameNumber": 1
+    },
+    {
+      "sequence": 14,
+      "event": "inputCommitted",
+      "monotonicUs": 7179999,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 2,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 15,
+      "event": "settleEnd",
+      "monotonicUs": 7180000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 2,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 16,
+      "event": "proofPassed",
+      "monotonicUs": 7180000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 2,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 17,
+      "event": "accepted",
+      "monotonicUs": 7180000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 2,
+      "captureEpoch": 1,
+      "activeGeneration": 1,
+      "destination": {
+        "sectionIndex": 0,
+        "pageIndex": 2,
+        "layoutGeneration": 1,
+        "pageIdentity": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    },
+    {
+      "sequence": 18,
+      "event": "inputReceived",
+      "monotonicUs": 7200000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 3,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 19,
+      "event": "queued",
+      "monotonicUs": 7200000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 3,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 20,
+      "event": "admitted",
+      "monotonicUs": 7230000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 3,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 21,
+      "event": "inputCommitted",
+      "monotonicUs": 7269999,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 3,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 22,
+      "event": "proofPassed",
+      "monotonicUs": 7270000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 3,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 23,
+      "event": "accepted",
+      "monotonicUs": 7270000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 3,
+      "captureEpoch": 1,
+      "activeGeneration": 1,
+      "destination": {
+        "sectionIndex": 0,
+        "pageIndex": 3,
+        "layoutGeneration": 1,
+        "pageIdentity": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    },
+    {
+      "sequence": 24,
+      "event": "inputReceived",
+      "monotonicUs": 7300000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 4,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 25,
+      "event": "admitted",
+      "monotonicUs": 7301000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 4,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 26,
+      "event": "preparationStart",
+      "monotonicUs": 7301000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 4,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 27,
+      "event": "preparationMiss",
+      "monotonicUs": 7301000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 4,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 28,
+      "event": "sectionPreparationStart",
+      "monotonicUs": 7301000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": null,
+      "captureEpoch": 1,
+      "activeGeneration": 1,
+      "section": 0,
+      "cacheHit": false
+    },
+    {
+      "sequence": 29,
+      "event": "prepared",
+      "monotonicUs": 7341000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 4,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 30,
+      "event": "staticFallback",
+      "monotonicUs": 7342000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 4,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 31,
+      "event": "inputCommitted",
+      "monotonicUs": 7342999,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 4,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 32,
+      "event": "proofPassed",
+      "monotonicUs": 7343000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 4,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 33,
+      "event": "accepted",
+      "monotonicUs": 7343000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 4,
+      "captureEpoch": 1,
+      "activeGeneration": 1,
+      "destination": {
+        "sectionIndex": 0,
+        "pageIndex": 4,
+        "layoutGeneration": 1,
+        "pageIdentity": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    },
+    {
+      "sequence": 34,
+      "event": "sectionPreparationEnd",
+      "monotonicUs": 7351000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": null,
+      "captureEpoch": 1,
+      "activeGeneration": 1,
+      "section": 0,
+      "cacheHit": false
+    },
+    {
+      "sequence": 35,
+      "event": "inputReceived",
+      "monotonicUs": 7360000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 5,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 36,
+      "event": "rejected",
+      "monotonicUs": 7360000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 5,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 37,
+      "event": "generationInvalidated",
+      "monotonicUs": 7361000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": null,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    }
+  ],
+  "layoutCosts": [
+    {
+      "monotonicUs": 7000000,
+      "section": 0,
+      "layoutUs": 100,
+      "codeUnits": 10,
+      "lines": 2,
+      "sectionPageCount": 8
+    },
+    {
+      "monotonicUs": 7000000,
+      "section": 0,
+      "layoutUs": 200,
+      "codeUnits": 10,
+      "lines": 2,
+      "sectionPageCount": 8
+    },
+    {
+      "monotonicUs": 7000000,
+      "section": 0,
+      "layoutUs": 300,
+      "codeUnits": 10,
+      "lines": 2,
+      "sectionPageCount": 8
+    },
+    {
+      "monotonicUs": 7000000,
+      "section": 0,
+      "layoutUs": 1000,
+      "codeUnits": 10,
+      "lines": 2,
+      "sectionPageCount": 8
+    }
+  ],
+  "resources": [
+    {
+      "monotonicUs": 7000000,
+      "liveSurfaces": 3,
+      "pictureBytes": 1000,
+      "imageBytes": 2000,
+      "rssBytes": 10000
+    },
+    {
+      "monotonicUs": 8000000,
+      "liveSurfaces": 3,
+      "pictureBytes": 1100,
+      "imageBytes": 2000,
+      "rssBytes": 10000
+    },
+    {
+      "monotonicUs": 9000000,
+      "liveSurfaces": 3,
+      "pictureBytes": 1200,
+      "imageBytes": 2000,
+      "rssBytes": 10000
+    }
+  ],
+  "presentation": {
+    "available": true,
+    "evidence": "layer_commit_cadence_per_display_period",
+    "omission": null,
+    "inventory": {
+      "layerClass": "FlutterMetalLayer",
+      "FLTUseFlutterMetalLayer": null,
+      "maximumFramesPerSecond": 120,
+      "lowPowerMode": false,
+      "thermalState": 0,
+      "iosVersion": "26.0",
+      "ringCapacity": 16384
+    },
+    "samples": [
+      {
+        "kind": "display_link",
+        "timestamp": 10.0,
+        "targetTimestamp": 10.01
+      },
+      {
+        "kind": "display_link",
+        "timestamp": 10.01,
+        "targetTimestamp": 10.02
+      },
+      {
+        "kind": "display_link",
+        "timestamp": 10.02,
+        "targetTimestamp": 10.03
+      },
+      {
+        "kind": "layer_commit",
+        "timestamp": 10.01
+      },
+      {
+        "kind": "layer_commit",
+        "timestamp": 10.021
+      },
+      {
+        "kind": "layer_commit",
+        "timestamp": 10.025
+      },
+      {
+        "kind": "layer_commit",
+        "timestamp": 10.04
+      }
+    ],
+    "overflow": 0,
+    "contentionDrops": 0,
+    "clock": "native_monotonic_seconds; epoch not correlated with Dart",
+    "physicalPresentation": "unverified",
+    "touchToPhoton": "unverified",
+    "mode": "a2"
+  },
+  "aggregates": {
+    "eventCounts": {
+      "inputReceived": 5,
+      "pointerAdmitted": 1,
+      "preparationStart": 2,
+      "preparationHit": 1,
+      "prepared": 2,
+      "firstMotionSubmission": 2,
+      "inputCommitted": 4,
+      "settleEnd": 2,
+      "proofPassed": 4,
+      "accepted": 4,
+      "admitted": 3,
+      "queued": 1,
+      "preparationMiss": 1,
+      "sectionPreparationStart": 1,
+      "staticFallback": 1,
+      "sectionPreparationEnd": 1,
+      "rejected": 1,
+      "generationInvalidated": 1
+    },
+    "paragraphLayout": {
+      "count": 4,
+      "p50Us": 200,
+      "p95Us": 1000,
+      "p99Us": 1000,
+      "maxUs": 1000
+    },
+    "preparation": {
+      "count": 2,
+      "p50Us": 1000,
+      "p95Us": 40000,
+      "p99Us": 40000,
+      "maxUs": 40000
+    },
+    "coldSectionPreparation": {
+      "count": 1,
+      "p50Us": 50000,
+      "p95Us": 50000,
+      "p99Us": 50000,
+      "maxUs": 50000
+    },
+    "queueWait": {
+      "count": 1,
+      "p50Us": 30000,
+      "p95Us": 30000,
+      "p99Us": 30000,
+      "maxUs": 30000
+    },
+    "warmInputToFirstSubmission": {
+      "count": 2,
+      "p50Us": 10000,
+      "p95Us": 16000,
+      "p99Us": 16000,
+      "maxUs": 16000
+    },
+    "staticFallbacks": 1,
+    "acceptedTurns": 4,
+    "proofFailures": 0,
+    "staticFallbackRate": 0.25,
+    "resourceSnapshots": 3,
+    "rssDeltaBytes": 0,
+    "stageBudgetUs": 8333
+  },
+  "overflow": {
+    "events": 0,
+    "layoutCosts": 0,
+    "resources": 0,
+    "frames": 0,
+    "motion": 0,
+    "native": 0
+  },
+  "omissions": {
+    "native": null,
+    "trailingTimingBatch": true,
+    "manualMinimumMet": true,
+    "physicalPresentation": "unverified",
+    "touchToPhoton": "unverified"
+  }
+}

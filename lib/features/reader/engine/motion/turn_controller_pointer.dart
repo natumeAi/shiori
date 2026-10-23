@@ -27,25 +27,32 @@ extension _TurnControllerPointer on ReaderTurnController {
     bool mouse = false,
     int button = 0,
   }) => ReaderWorkGuard.callback(() {
+    final intent = TurnIntent(null);
+    _event(TurnTimingEvent.inputReceived, input: intent);
     if (_blocked ||
         !primary ||
         button != 0 ||
         _pointer != null ||
         _waitingPointer != null) {
+      _event(TurnTimingEvent.rejected, input: intent);
       return false;
     }
-    if (!mouse && (sample.x < 20 || sample.x > width - 20)) return false;
+    if (!mouse && (sample.x < 20 || sample.x > width - 20)) {
+      _event(TurnTimingEvent.rejected, input: intent);
+      return false;
+    }
     final waiting = _current != null || !_queue.isEmpty;
-    final intent = TurnIntent(null);
     if (waiting && !_queue.add(intent)) {
-      _post(() => _event(TurnTimingEvent.overflow));
+      _post(() => _event(TurnTimingEvent.overflow, input: intent));
       return false;
     }
     final engine = PageTurnEngine(_ruler(waiting: waiting))..begin(sample);
     final pointer = _TurnPointer(id, engine, sample, intent);
     if (waiting) {
+      _event(TurnTimingEvent.queued, input: intent);
       _waitingPointer = pointer;
     } else {
+      _event(TurnTimingEvent.pointerAdmitted, input: intent);
       _pointer = pointer;
       _current = intent;
       _post(() {
