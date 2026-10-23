@@ -1,4 +1,6 @@
 import 'reader_export_data.dart';
+import 'reader_display_periods.dart';
+import 'reader_drawable_gaps.dart';
 
 Json resourceTrends(List<Json> samples) {
   final ordered = samples.toList()
@@ -90,6 +92,8 @@ Json nativeAnalysis(Json presentation) {
   final samples = objects(presentation['samples'], 'presentation.samples');
   final commits = <double>[], presented = <double>[];
   final links = <Json>[];
+  final drawables = <Json>[];
+  final previousByKind = <String, double>{};
   var unpresented = 0;
   for (final sample in samples) {
     final timestamp = number(
@@ -97,6 +101,14 @@ Json nativeAnalysis(Json presentation) {
       'presentation.timestamp',
     ).toDouble();
     if (timestamp < 0) throw const FormatException('negative native timestamp');
+    final kind = string(sample['kind'], 'presentation.kind');
+    final previous = previousByKind[kind];
+    if (previous != null &&
+        (timestamp < previous ||
+            (kind == 'display_link' && timestamp == previous))) {
+      throw const FormatException('Unsorted native stream timestamps');
+    }
+    previousByKind[kind] = timestamp;
     switch (sample['kind']) {
       case 'layer_commit':
         if (mode != 'a1' && mode != 'a2') {
@@ -119,6 +131,10 @@ Json nativeAnalysis(Json presentation) {
           'presentedTime',
         ).toDouble();
         if (time < 0) throw const FormatException('negative presentedTime');
+        if (time > 0 && time < timestamp) {
+          throw const FormatException('presentation precedes acquisition');
+        }
+        drawables.add(sample);
         if (time == 0) {
           unpresented++;
         } else {
@@ -130,7 +146,6 @@ Json nativeAnalysis(Json presentation) {
         );
     }
   }
-  commits.sort();
   presented.sort();
   if (available &&
       ((mode == 'a1' && commits.isEmpty) ||
@@ -140,31 +155,6 @@ Json nativeAnalysis(Json presentation) {
       'Available native mode has no required raw stream',
     );
   }
-  links.sort((a, b) => (a['start'] as num).compareTo(b['start'] as num));
-  var zero = 0, one = 0, many = 0, outside = 0;
-  for (var i = 0; i < links.length; i++) {
-    final link = links[i];
-    if (i > 0 && (link['start'] as num) < (links[i - 1]['end'] as num)) {
-      throw const FormatException('Overlapping display-link periods');
-    }
-    final count = commits
-        .where((t) => t >= (link['start'] as num) && t < (link['end'] as num))
-        .length;
-    if (count == 0) {
-      zero++;
-    } else if (count == 1) {
-      one++;
-    } else {
-      many++;
-    }
-  }
-  outside = commits
-      .where(
-        (t) => !links.any(
-          (l) => t >= (l['start'] as num) && t < (l['end'] as num),
-        ),
-      )
-      .length;
   List<int> deltas(List<double> times) => [
     for (var i = 1; i < times.length; i++)
       ((times[i] - times[i - 1]) * 1e6).round(),
@@ -185,17 +175,14 @@ Json nativeAnalysis(Json presentation) {
         interval: true,
       ),
     if (mode == 'a2')
-      'commitsPerDisplayPeriod': {
-        'periods': links.length,
-        'zero': zero,
-        'one': one,
-        'atLeastTwo': many,
-        'outsideRecordedPeriods': outside,
-        'boundary':
-            '[timestamp, targetTimestamp); missing periods are not invented',
-      },
+      'commitsPerDisplayPeriod': displayPeriodAnalysis(links, commits),
     if (mode == 'b') 'presented': presented.length,
     if (mode == 'b') 'notPresentedByStop': unpresented,
+    if (mode == 'b')
+      'drawableGapClasses': drawableGapAnalysis(
+        drawables,
+        loss: overflow > 0 || unmatched > 0,
+      ),
     if (mode == 'b')
       'presentationIntervals': distribution(
         deltas(presented),

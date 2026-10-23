@@ -1991,3 +1991,30 @@ presentation or touch-to-photon latency.
     or engine defines (the Flutter tool injects them; see `diagnostics.md`
     §3). `integration_test/` in `index.md` is an intentional future layer.
 - Not verified locally: Swift compilation, both IPAs and all device evidence.
+
+## Push and CI build of Phases D-F
+
+- Pushed on the user's confirmation, 2026-10-23: `73835bb..862d999` to
+  `origin/ios-build/s2-reader-probe` (`git -c http.postBuffer=52428800 push`,
+  no HTTP 408 this time). Pre-push scan of the range: no EPUB, certificate or
+  IPA files; no keys, tokens, private IP addresses or proxy hosts in added
+  lines.
+- CI run 39923417215 (`https://github.com/natumeAi/shiori/actions/runs/39923417215`):
+  success. Build ID `862d999010fa-gha-7`; Xcode build 91.1 s with the Swift
+  presentation probe compiled (no `error:` lines); the reader fixture and
+  EPUB privacy guard passed on macOS before the build.
+- Both packages were produced from one validated `Runner.app`, each passing
+  the arm64 executable, Flutter/App framework and bundle (iphoneos,
+  `io.github.natumeai.shiori`, version 7) checks and `unzip -t`:
+  `shiori-probe-862d999010fa-gha-7.ipa` (Info.plist byte-identical to the
+  build, checked with `cmp`) and `shiori-probe-862d999010fa-gha-7-cametal.ipa`
+  (`FLTUseFlutterMetalLayer` read back as `false`, asserted under
+  `set -euo pipefail`). Artifact
+  `shiori-probe-862d999010faed720286727af14a5b909e9f94f0-gha-7` (ID
+  12488920398, 16,789,515 bytes, upload digest
+  `26c9cd5a13fccf93ce11be82b696f2bab16ae36e15a8c1dc8706b12da4f67f00`, 14-day
+  retention) holds both IPAs, `sha256.txt`, `provenance.json` and the
+  per-variant `bundle-info-*.txt`.
+- Now verified: Swift compilation and two-variant packaging. Still
+  unverified: signing and installation, hook behaviour on the device, and all
+  device evidence (NC7-NC9), which follow `device-runbook.md`.

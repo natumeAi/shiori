@@ -93,6 +93,7 @@ final class EngineAnalysis {
     bool inside(int time, Json w) =>
         time >= (w['startUs'] as int) && time <= (w['endUs'] as int);
     final engineStalls = <Json>[];
+    final candidates = <Json>[];
     for (final pair in intervalPairs) {
       final a = motionById[pair['previous']], b = motionById[pair['next']];
       if ((pair['us'] as int) >= ReaderGates.stallUs &&
@@ -100,6 +101,12 @@ final class EngineAnalysis {
           b != null &&
           windows.any((w) => inside(a, w) && inside(b, w))) {
         engineStalls.add(pair);
+        candidates.add({
+          'source': 'engineInterval',
+          ...pair,
+          'class': 'unresolved',
+          'reason': 'no recorded frame-demand or deliberate-hold interval',
+        });
       }
     }
     final submissionGaps = <int>[];
@@ -126,10 +133,20 @@ final class EngineAnalysis {
       for (var i = 1; i < times.length; i++) {
         if (times[i] - times[i - 1] >= ReaderGates.stallUs) {
           submissionGaps.add(times[i] - times[i - 1]);
+          candidates.add({
+            'source': 'submissionGap',
+            'captureEpoch': w['captureEpoch'],
+            'inputId': w['inputId'],
+            'startUs': times[i - 1],
+            'endUs': times[i],
+            'us': times[i] - times[i - 1],
+            'class': 'unresolved',
+            'reason': 'missing motion samples cannot prove idle or a requested frame; pointer moves and holds are not recorded',
+          });
         }
       }
     }
-    final longStages = active
+    final longStageFrames = active
         .where(
           (f) =>
               integer(f['buildFinishUs'], 'buildFinishUs') -
@@ -139,18 +156,35 @@ final class EngineAnalysis {
                       integer(f['rasterStartUs'], 'rasterStartUs') >=
                   ReaderGates.stallUs,
         )
-        .length;
+        .toList();
+    final longStages = longStageFrames.length;
+    for (final frame in longStageFrames) {
+      candidates.add({
+        'source': 'longStage',
+        'frameNumber': frame['frameNumber'],
+        'class': 'dueLateOrMissing',
+        'reason':
+            'recorded UI or raster execution took >=${ReaderGates.stallUs} us',
+      });
+    }
     return {
       'motionWindows': windows.length,
       'engineIntervals': distribution(engineStalls.map((p) => p['us'] as int)),
       'submissionGaps': distribution(submissionGaps),
       'longStageFrames': longStages,
       'brokenAdjacencyInsideWindows': brokenAdjacency,
+      'classes': {
+        'recordedDeliberateHold': 0,
+        'provenIdleNoFrameRequested': 0,
+        'dueLateOrMissing': longStages,
+        'unresolved': engineStalls.length + submissionGaps.length,
+      },
+      'candidates': candidates,
       'observed':
           engineStalls.isNotEmpty ||
           submissionGaps.isNotEmpty ||
           longStages > 0,
-      'interpretation': 'stall candidates; no explanation or cross-clock correlation inferred',
+      'interpretation': 'counts are candidate observations by source, not deduplicated episodes; unresolved candidates remain failed; no cross-clock correlation inferred',
     };
   }
 }

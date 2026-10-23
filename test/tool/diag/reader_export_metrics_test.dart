@@ -88,7 +88,7 @@ void main() {
     expect(missing.engine.unmatchedMotionIds, 1);
     expect(missing.mismatches, isNotEmpty);
   });
-  test('warm latency uses input receipt and opaque ID across generations', () {
+  test('informational warm receipt uses opaque ID across generations', () {
     final a = analyze();
     expect(a.readerAggregates['warmInputToFirstSubmission'], {
       'count': 2,
@@ -97,7 +97,7 @@ void main() {
       'p99Us': 16000,
       'maxUs': 16000,
     });
-    expect(gate(a, 'warm input to first submission'), 'pass');
+    expect(gate(a, 'warm admitted input to first submission'), 'unavailable');
     expect(a.readerAggregates['queueWait'], {
       'count': 1,
       'p50Us': 30000,

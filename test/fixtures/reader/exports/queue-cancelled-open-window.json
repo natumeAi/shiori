@@ -1,0 +1,511 @@
+{
+  "kind": "reader_feasibility",
+  "schemaVersion": 1,
+  "bookSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "fixtureId": "synthetic-export",
+  "scenarioId": "R04",
+  "repeatIndex": 1,
+  "repeatCount": 3,
+  "input": "synthetic_injected",
+  "engine": {
+    "schemaVersion": 1,
+    "scenarioId": "R01",
+    "runId": "synthetic-pass-1",
+    "buildId": "synthetic",
+    "startedAt": "2026-10-22T12:00:00.000Z",
+    "stoppedAt": "2026-10-22T12:00:03.000Z",
+    "startedMonotonicUs": 7000000,
+    "stoppedMonotonicUs": 10000000,
+    "finalizedMonotonicUs": 11200000,
+    "stopReason": "user_stop",
+    "declarations": {
+      "deviceModel": "",
+      "lowPowerMode": "unknown",
+      "limitFrameRate": "unknown",
+      "charging": "unknown",
+      "warm": "unknown",
+      "source": "user_provided"
+    },
+    "metadata": {
+      "os": "iOS 26",
+      "reportedRefreshRate": null,
+      "readerCorrectnessVersion": 1,
+      "captureEpoch": 1,
+      "resourceCaps": {
+        "liveSurfaceCap": 3,
+        "liveSurfaceReserve": 1,
+        "pictureCacheBytes": 16777216,
+        "imageCacheBytes": 50331648
+      }
+    },
+    "clocks": {
+      "correlation": "engine_frame_number_identity"
+    },
+    "frames": [
+      {
+        "frameNumber": 1,
+        "vsyncUs": 100000,
+        "buildStartUs": 100100,
+        "buildFinishUs": 101100,
+        "rasterStartUs": 101100,
+        "rasterFinishUs": 103100,
+        "rasterFinishWallUs": 1792670400103100,
+        "arrivalMonotonicUs": 9000000
+      },
+      {
+        "frameNumber": 2,
+        "vsyncUs": 108333,
+        "buildStartUs": 108433,
+        "buildFinishUs": 110433,
+        "rasterStartUs": 110433,
+        "rasterFinishUs": 113433,
+        "rasterFinishWallUs": 1792670400113433,
+        "arrivalMonotonicUs": 9000000
+      },
+      {
+        "frameNumber": 3,
+        "vsyncUs": 116666,
+        "buildStartUs": 116766,
+        "buildFinishUs": 119766,
+        "rasterStartUs": 119766,
+        "rasterFinishUs": 123766,
+        "rasterFinishWallUs": 1792670400123766,
+        "arrivalMonotonicUs": 9000000
+      },
+      {
+        "frameNumber": 4,
+        "vsyncUs": 124999,
+        "buildStartUs": 125099,
+        "buildFinishUs": 129099,
+        "rasterStartUs": 129099,
+        "rasterFinishUs": 134099,
+        "rasterFinishWallUs": 1792670400134099,
+        "arrivalMonotonicUs": 9000000
+      },
+      {
+        "frameNumber": 5,
+        "vsyncUs": 133332,
+        "buildStartUs": 133432,
+        "buildFinishUs": 138432,
+        "rasterStartUs": 138432,
+        "rasterFinishUs": 144432,
+        "rasterFinishWallUs": 1792670400144432,
+        "arrivalMonotonicUs": 9000000
+      },
+      {
+        "frameNumber": 6,
+        "vsyncUs": 141665,
+        "buildStartUs": 141765,
+        "buildFinishUs": 150098,
+        "rasterStartUs": 150098,
+        "rasterFinishUs": 158431,
+        "rasterFinishWallUs": 1792670400158431,
+        "arrivalMonotonicUs": 9000000
+      }
+    ],
+    "motion": [
+      {
+        "frameNumber": 1,
+        "schedulerUs": 0,
+        "rawSchedulerUs": 108333,
+        "monotonicUs": 7010000,
+        "progress": 0.0
+      },
+      {
+        "frameNumber": 2,
+        "schedulerUs": 8333,
+        "rawSchedulerUs": 116666,
+        "monotonicUs": 7018333,
+        "progress": 0.16666666666666666
+      },
+      {
+        "frameNumber": 3,
+        "schedulerUs": 16666,
+        "rawSchedulerUs": 124999,
+        "monotonicUs": 7026666,
+        "progress": 0.3333333333333333
+      },
+      {
+        "frameNumber": 4,
+        "schedulerUs": 24999,
+        "rawSchedulerUs": 133332,
+        "monotonicUs": 7034999,
+        "progress": 0.5
+      },
+      {
+        "frameNumber": 5,
+        "schedulerUs": 33332,
+        "rawSchedulerUs": 141665,
+        "monotonicUs": 7043332,
+        "progress": 0.6666666666666666
+      },
+      {
+        "frameNumber": 6,
+        "schedulerUs": 41665,
+        "rawSchedulerUs": 149998,
+        "monotonicUs": 7051665,
+        "progress": 0.8333333333333334
+      }
+    ],
+    "frameOverflow": 0,
+    "motionOverflow": 0,
+    "reportsDuringDrain": 1,
+    "omittedOutsideMotion": 0,
+    "incompleteTrailingBatch": true,
+    "errors": [],
+    "aggregates": {
+      "scope": "engine_frame_number_matched_motion_frames_only",
+      "correlatedMotionFrames": 6,
+      "ui": {
+        "count": 6,
+        "p50Us": 4000,
+        "p95Us": 8333,
+        "p99Us": 8333,
+        "maxUs": 8333,
+        "over8333Us": 0
+      },
+      "raster": {
+        "count": 6,
+        "p50Us": 5000,
+        "p95Us": 8333,
+        "p99Us": 8333,
+        "maxUs": 8333,
+        "over8333Us": 0
+      },
+      "vsyncIntervals": {
+        "count": 5,
+        "p50Us": 8333,
+        "p95Us": 8333,
+        "p99Us": 8333,
+        "maxUs": 8333,
+        "atLeast12500Us": 0
+      },
+      "cadencePattern": "observed_near_120hz",
+      "cadenceInterpretation": "engine_observation_not_physical_presentation"
+    },
+    "physicalPresentation": "unverified"
+  },
+  "readerEvents": [
+    {
+      "sequence": 1,
+      "event": "inputReceived",
+      "monotonicUs": 7000000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 1,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 2,
+      "event": "pointerAdmitted",
+      "monotonicUs": 7001000,
+      "generation": 1,
+      "queueDepth": 0,
+      "inputId": 1,
+      "captureEpoch": 1,
+      "activeGeneration": 1
+    },
+    {
+      "sequence": 6,
+      "event": "firstMotionSubmission",
+      "monotonicUs": 7010000,
+      "generation": 2,
+      "queueDepth": 0,
+      "inputId": 1,
+      "captureEpoch": 1,
+      "activeGeneration": 2,
+      "frameNumber": 1
+    },
+    {
+      "event": "queued",
+      "monotonicUs": 7020002,
+      "inputId": 2,
+      "captureEpoch": 1,
+      "generation": 1,
+      "activeGeneration": 1
+    },
+    {
+      "event": "queued",
+      "monotonicUs": 7020003,
+      "inputId": 3,
+      "captureEpoch": 1,
+      "generation": 1,
+      "activeGeneration": 1
+    },
+    {
+      "event": "queued",
+      "monotonicUs": 7020004,
+      "inputId": 4,
+      "captureEpoch": 1,
+      "generation": 1,
+      "activeGeneration": 1
+    },
+    {
+      "event": "queued",
+      "monotonicUs": 7020005,
+      "inputId": 5,
+      "captureEpoch": 1,
+      "generation": 1,
+      "activeGeneration": 1
+    },
+    {
+      "event": "queued",
+      "monotonicUs": 7020006,
+      "inputId": 6,
+      "captureEpoch": 1,
+      "generation": 1,
+      "activeGeneration": 1
+    },
+    {
+      "event": "queued",
+      "monotonicUs": 7020007,
+      "inputId": 7,
+      "captureEpoch": 1,
+      "generation": 1,
+      "activeGeneration": 1
+    },
+    {
+      "event": "queued",
+      "monotonicUs": 7020008,
+      "inputId": 8,
+      "captureEpoch": 1,
+      "generation": 1,
+      "activeGeneration": 1
+    },
+    {
+      "event": "queued",
+      "monotonicUs": 7020009,
+      "inputId": 9,
+      "captureEpoch": 1,
+      "generation": 1,
+      "activeGeneration": 1
+    },
+    {
+      "event": "overflow",
+      "monotonicUs": 7020010,
+      "inputId": 10,
+      "captureEpoch": 1,
+      "generation": 1,
+      "activeGeneration": 1
+    },
+    {
+      "event": "overflow",
+      "monotonicUs": 7020011,
+      "inputId": 11,
+      "captureEpoch": 1,
+      "generation": 1,
+      "activeGeneration": 1
+    },
+    {
+      "event": "overflow",
+      "monotonicUs": 7020012,
+      "inputId": 12,
+      "captureEpoch": 1,
+      "generation": 1,
+      "activeGeneration": 1
+    },
+    {
+      "event": "overflow",
+      "monotonicUs": 7020013,
+      "inputId": 13,
+      "captureEpoch": 1,
+      "generation": 1,
+      "activeGeneration": 1
+    },
+    {
+      "event": "overflow",
+      "monotonicUs": 7020014,
+      "inputId": 14,
+      "captureEpoch": 1,
+      "generation": 1,
+      "activeGeneration": 1
+    },
+    {
+      "event": "overflow",
+      "monotonicUs": 7020015,
+      "inputId": 15,
+      "captureEpoch": 1,
+      "generation": 1,
+      "activeGeneration": 1
+    },
+    {
+      "event": "overflow",
+      "monotonicUs": 7020016,
+      "inputId": 16,
+      "captureEpoch": 1,
+      "generation": 1,
+      "activeGeneration": 1
+    },
+    {
+      "event": "generationInvalidated",
+      "monotonicUs": 7050000,
+      "inputId": 1,
+      "captureEpoch": 1,
+      "generation": 3,
+      "activeGeneration": 3
+    }
+  ],
+  "layoutCosts": [
+    {
+      "monotonicUs": 7000000,
+      "section": 0,
+      "layoutUs": 100,
+      "codeUnits": 10,
+      "lines": 2,
+      "sectionPageCount": 8
+    },
+    {
+      "monotonicUs": 7000000,
+      "section": 0,
+      "layoutUs": 200,
+      "codeUnits": 10,
+      "lines": 2,
+      "sectionPageCount": 8
+    },
+    {
+      "monotonicUs": 7000000,
+      "section": 0,
+      "layoutUs": 300,
+      "codeUnits": 10,
+      "lines": 2,
+      "sectionPageCount": 8
+    },
+    {
+      "monotonicUs": 7000000,
+      "section": 0,
+      "layoutUs": 1000,
+      "codeUnits": 10,
+      "lines": 2,
+      "sectionPageCount": 8
+    }
+  ],
+  "resources": [
+    {
+      "monotonicUs": 7000000,
+      "liveSurfaces": 3,
+      "pictureBytes": 1000,
+      "imageBytes": 2000,
+      "rssBytes": 10000
+    },
+    {
+      "monotonicUs": 8000000,
+      "liveSurfaces": 3,
+      "pictureBytes": 1100,
+      "imageBytes": 2000,
+      "rssBytes": 10000
+    },
+    {
+      "monotonicUs": 9000000,
+      "liveSurfaces": 3,
+      "pictureBytes": 1200,
+      "imageBytes": 2000,
+      "rssBytes": 10000
+    }
+  ],
+  "presentation": {
+    "available": true,
+    "evidence": "layer_commit_cadence",
+    "omission": null,
+    "inventory": {
+      "layerClass": "FlutterMetalLayer",
+      "FLTUseFlutterMetalLayer": null,
+      "maximumFramesPerSecond": 120,
+      "lowPowerMode": false,
+      "thermalState": 0,
+      "iosVersion": "26.0",
+      "ringCapacity": 16384
+    },
+    "samples": [
+      {
+        "kind": "layer_commit",
+        "timestamp": 10.0
+      },
+      {
+        "kind": "layer_commit",
+        "timestamp": 10.008333
+      },
+      {
+        "kind": "layer_commit",
+        "timestamp": 10.016666
+      },
+      {
+        "kind": "layer_commit",
+        "timestamp": 10.024999
+      }
+    ],
+    "overflow": 0,
+    "contentionDrops": 0,
+    "clock": "native_monotonic_seconds; epoch not correlated with Dart",
+    "physicalPresentation": "unverified",
+    "touchToPhoton": "unverified",
+    "mode": "a1"
+  },
+  "aggregates": {
+    "eventCounts": {
+      "inputReceived": 1,
+      "pointerAdmitted": 1,
+      "firstMotionSubmission": 1,
+      "queued": 8,
+      "overflow": 7,
+      "generationInvalidated": 1
+    },
+    "paragraphLayout": {
+      "count": 4,
+      "p50Us": 200,
+      "p95Us": 1000,
+      "p99Us": 1000,
+      "maxUs": 1000
+    },
+    "preparation": {
+      "count": 0,
+      "p50Us": null,
+      "p95Us": null,
+      "p99Us": null,
+      "maxUs": null
+    },
+    "coldSectionPreparation": {
+      "count": 0,
+      "p50Us": null,
+      "p95Us": null,
+      "p99Us": null,
+      "maxUs": null
+    },
+    "queueWait": {
+      "count": 0,
+      "p50Us": null,
+      "p95Us": null,
+      "p99Us": null,
+      "maxUs": null
+    },
+    "warmInputToFirstSubmission": {
+      "count": 1,
+      "p50Us": 10000,
+      "p95Us": 10000,
+      "p99Us": 10000,
+      "maxUs": 10000
+    },
+    "staticFallbacks": 0,
+    "acceptedTurns": 0,
+    "proofFailures": 0,
+    "staticFallbackRate": null,
+    "resourceSnapshots": 3,
+    "rssDeltaBytes": 0,
+    "stageBudgetUs": 8333
+  },
+  "overflow": {
+    "events": 0,
+    "layoutCosts": 0,
+    "resources": 0,
+    "frames": 0,
+    "motion": 0,
+    "native": 0
+  },
+  "omissions": {
+    "native": null,
+    "trailingTimingBatch": true,
+    "manualMinimumMet": true,
+    "physicalPresentation": "unverified",
+    "touchToPhoton": "unverified"
+  }
+}

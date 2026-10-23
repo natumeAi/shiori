@@ -1,12 +1,13 @@
 # Synthetic reader exports
 
-These twelve deterministic JSON files are test artifacts for the independent
+These nineteen deterministic JSON files are test artifacts for the independent
 pure Dart analyzer. They contain a synthetic SHA-256 identity (`a` repeated
 64 times) and `synthetic-export` fixture ID, with no book text or filenames.
 They are not device measurements or evidence of physical presentation.
 
-Raw samples are hand-built in `test/helpers/reader_analyzer_exports.dart`.
-That helper constructs the production `ReaderFeasibilityRecord` and computes
+Raw samples are hand-built in `test/helpers/reader_analyzer_exports.dart` and
+`test/helpers/reader_device_analysis_exports.dart`. These helpers construct
+and serialize the production `ReaderFeasibilityRecord` and compute
 its expected aggregates with production `ReaderProbeSummary.aggregate` and
 `DiagnosticSummary.aggregate`. It never imports the analyzer. Serialization
 uses the production record's JSON encoder, including nested S1 frames/motion.
@@ -42,6 +43,13 @@ No fixture files are rewritten during ordinary tests.
 | `double-acceptance.json` | One committed input accepts twice; correctness fails despite aggregate parity |
 | `cap-breach.json` | 100 turns with picture bytes above the declared cap; resource gate fails despite aggregate parity |
 | `unknown-schema.json` | Unsupported top-level version 2; CLI refuses it |
+| `latency-release-after-motion.json` | Legacy admission after first motion: recognized admission remains unavailable, receipt aggregate stays informational |
+| `stall-script-intent-unresolved.json` | R03 identity alone cannot explain a gap; all ambiguous candidates remain visible and failed |
+| `stall-long-stage.json` | Inclusive 50000 us execution-stage stall: proven late frame |
+| `display-phase-and-epsilon.json` | Recorded phase and epsilon overlaps, clipped half-open periods without double counting |
+| `queue-cancelled-open-window.json` | Eight queued, seven queue overflows, invalidation without commit or settlement: unavailable gates |
+| `rss-cold-growth.json` | Cold resource growth remains failed under the unchanged 5% rule |
+| `drawable-gap-classes.json` | Native pipeline: acquisition activity versus endpoint cadence, pending and internal zero presentations |
 
 Run the analyzer with:
 
@@ -92,7 +100,22 @@ or samples stay unavailable; any observed breach fails even with overflow.
 
 Trailing-batch omissions and all overflow counts remain explicit. Native
 contention loss is a subset, not an extra loss.
-A2 bins only recorded `[timestamp, targetTimestamp)` periods. B zero means
+A2 bins `[timestamp, min(targetTimestamp, next link timestamp))`; the last
+ends at its target. Holes remain outside and boundary ties go to the next
+period. All overlaps are reported; <=1 us is an informational epsilon class,
+not a tolerance that hides data. Per-kind unsorted streams still reject.
+B reports acquisition activity inside each >=12500 us presentation gap and
+whether endpoint acquisitions are <12500 us apart. Pending pipeline work
+means no interior acquisition alone cannot prove idle; slower acquisition
+alone cannot prove a presentation deadline miss. B zero means
 no presentation observed by stop, including pending/lost callbacks. All native
 metrics stay in native time and never establish product-path physical
 presentation or touch-to-photon latency.
+
+The legacy App `warmInputToFirstSubmission` aggregate is receipt-based and
+retained for parity, explicitly informational in reports. `pointerAdmitted`
+occurs at pointer down, while `admitted` starts release settlement for a drag.
+Neither records recognized admission consistently. The unchanged 16700 us
+admission gate is unavailable until the App records that event. Ambiguous
+stall gaps have no recorded request/hold proof and remain unresolved; script
+identity never grants an idle/hold exemption.

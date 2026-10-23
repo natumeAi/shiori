@@ -6,11 +6,15 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../../tool/diag/reader_export_analysis.dart';
 import '../../../tool/diag/reader_export_data.dart';
 import '../../helpers/reader_analyzer_exports.dart';
+import '../../helpers/reader_device_analysis_exports.dart';
 
 const exportDirectory = 'test/fixtures/reader/exports';
 
 void main() {
-  final exports = readerAnalyzerExports();
+  final exports = {
+    ...readerAnalyzerExports(),
+    ...readerDeviceAnalysisExports(),
+  };
   for (final entry in exports.entries) {
     test('NC6 app-produced aggregates reproduce ${entry.key}', () {
       final file = File('$exportDirectory/${entry.key}');

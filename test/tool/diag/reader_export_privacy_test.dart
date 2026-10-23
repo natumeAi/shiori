@@ -55,7 +55,7 @@ void main() {
       }
     }
     expect(sentencesChecked, greaterThan(0));
-    expect(files, hasLength(12));
+    expect(files, hasLength(19));
     for (final text in texts) {
       expect(text.contains('epubcfi('), false);
       expect(text.contains('.epub'), false);

@@ -116,25 +116,12 @@ final class ReaderExportAnalysis {
             : 'retained engine-matched motion samples; trailing batch may be incomplete',
       );
     }
-    final warm = object(
-      readerAggregates['warmInputToFirstSubmission'],
-      'warm latency',
-    );
-    final p95 = warm['p95Us'] as int?;
     gate(
-      'warm input to first submission',
-      p95,
+      'warm admitted input to first submission',
+      null,
       'P95 <=${ReaderGates.warmSubmissionP95Us} us',
-      p95 != null && p95 > ReaderGates.warmSubmissionP95Us
-          ? false
-          : p95 == null || lost('events') || inputs.incompleteWarmInputs > 0
-          ? null
-          : true,
-      p95 == null
-          ? 'no complete warm unqueued admitted input'
-          : lost('events') || inputs.incompleteWarmInputs > 0
-          ? 'event overflow or incomplete admitted warm inputs=${inputs.incompleteWarmInputs}'
-          : 'input receipt to submission proxy; capture-local input identity',
+      null,
+      'requires App change: pointerAdmitted is pointer down; admitted is release settlement for drags; recognized admission is not recorded',
     );
     gate(
       'motion stalls',

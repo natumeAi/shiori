@@ -55,7 +55,7 @@ void main() {
       );
     },
   );
-  test('overlapping A2 periods are rejected rather than double-counted', () {
+  test('overlapping A2 periods are recorded rather than double-counted', () {
     final p = object(
       raw('failing-budgets-a2.json')['presentation'],
       'presentation',
@@ -65,7 +65,10 @@ void main() {
       'samples',
     ).where((s) => s['kind'] == 'display_link').toList();
     links[1]['timestamp'] = 10.005;
-    expect(() => nativeAnalysis(p), throwsFormatException);
+    final bins = object(nativeAnalysis(p)['commitsPerDisplayPeriod'], 'bins');
+    expect(object(bins['anomalies'], 'anomalies')['overlapCount'], 1);
+    expect(bins['one'], 1);
+    expect(bins['atLeastTwo'], 1);
   });
   test('native epoch shifts do not change intervals or join Dart clocks', () {
     final export = raw('stall-b.json');

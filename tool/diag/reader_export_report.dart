@@ -52,9 +52,10 @@ String renderReaderReport(List<ReaderExportAnalysis> runs) {
         'preparation',
         'coldSectionPreparation',
         'queueWait',
-        'warmInputToFirstSubmission',
       ])
         name: run.readerAggregates[name],
+      'warm receipt to first submission (informational; legacy App aggregate)':
+          run.readerAggregates['warmInputToFirstSubmission'],
       'stall engine intervals': run.stalls['engineIntervals'],
       'stall submission gaps': run.stalls['submissionGaps'],
       'coldInputPreparation': run.inputs.coldInputPreparation,
@@ -87,6 +88,10 @@ String renderReaderReport(List<ReaderExportAnalysis> runs) {
           run.engine.unavailableFrameNumbers,
         ],
         ['engine cadence pattern', run.engine.aggregates['cadencePattern']],
+        [
+          'capture declarations',
+          jsonEncode(object(run.raw['engine'], 'engine')['declarations']),
+        ],
         ['eventCounts', jsonEncode(run.inputs.counts)],
         for (final key in [
           'staticFallbacks',
@@ -98,6 +103,11 @@ String renderReaderReport(List<ReaderExportAnalysis> runs) {
           [key, run.readerAggregates[key]],
         ['correctness', jsonEncode(run.correctness)],
         ['longStageFrames >=50 ms', run.stalls['longStageFrames']],
+        ['stall classes', jsonEncode(run.stalls['classes'])],
+        [
+          'stall candidates (all retained)',
+          jsonEncode(run.stalls['candidates']),
+        ],
         ['incompleteWarmInputs', run.inputs.incompleteWarmInputs],
         ['omissions (verbatim fields)', jsonEncode(run.omissions)],
         ['overflow (retained samples only)', jsonEncode(run.overflow)],
@@ -149,6 +159,7 @@ String renderReaderReport(List<ReaderExportAnalysis> runs) {
           'presented',
           'notPresentedByStop',
           'presentationIntervals',
+          'drawableGapClasses',
           'interpretation',
         ])
           if (run.native.containsKey(key)) [key, jsonEncode(run.native[key])],

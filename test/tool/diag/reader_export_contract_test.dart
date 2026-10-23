@@ -84,7 +84,7 @@ void main() {
       expect(result(a, 'raster motion budget'), 'pass');
     }
   });
-  test('warm gate includes 16.7 ms boundary and fails above it', () {
+  test('receipt timing cannot establish the 16.7 ms admission gate', () {
     for (final latency in [16700, 16701]) {
       final raw = fixture();
       final events = objects(raw['readerEvents'], 'events');
@@ -92,8 +92,11 @@ void main() {
         (e) => e['event'] == 'firstMotionSubmission' && e['inputId'] == 2,
       )['monotonicUs'] = 7110000 + latency;
       expect(
-        result(ReaderExportAnalysis(raw), 'warm input to first submission'),
-        latency == 16700 ? 'pass' : 'fail',
+        result(
+          ReaderExportAnalysis(raw),
+          'warm admitted input to first submission',
+        ),
+        'unavailable',
       );
     }
   });
@@ -112,7 +115,7 @@ void main() {
       )['count'],
       1,
     );
-    expect(result(a, 'warm input to first submission'), 'unavailable');
+    expect(result(a, 'warm admitted input to first submission'), 'unavailable');
   });
   test('capture epochs and opaque IDs are never joined across input files', () {
     final first = fixture(), second = fixture('passing-120hz-a1-2.json');
@@ -135,7 +138,7 @@ void main() {
     );
     expect(
       renderReaderReport([a, b]),
-      contains('no complete warm unqueued admitted input'),
+      contains('recognized admission is not recorded'),
     );
   });
   test(
