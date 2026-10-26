@@ -28,17 +28,27 @@ lib/
     router.dart                  # routerProvider (+ router.g.dart)
     theme.dart                   # AppTheme.light / AppTheme.dark
   core/
-    config/env.dart              # build identity flags; legacy endpoint define
+    config/env.dart              # build identity flags only
     config/server_endpoint.dart  # pure Dart deployment root and resource resolution
     config/server_endpoint_validation.dart # hand-written part: validation result/reasons
     config/server_key.dart       # canonical root + SHA-256 namespace identity
     config/book_key.dart         # server-scoped positive JS-safe book identity
     diagnostics/                 # storage-free bounded recorder, models, summary
-    storage/                     # injectable Application Support/Documents/Caches resolver
+    storage/                     # directories and private product SQLite owner
+      sqlite_store.dart          # async owner + generated keep-alive provider
+      sqlite_store_protocol.dart # private typed requests/replies (hand-written part)
+      sqlite_store_worker.dart   # isolated connection/event loop (hand-written part)
+      sqlite_store_schema.dart   # versioned DDL/migrations/preflight (hand-written part)
+      sqlite_store_commands.dart # bound SQL/transactions (hand-written part)
+      server_record.dart         # local canonical identity/timestamps
+      stored_snapshot.dart       # opaque validated wire payload/validator metadata
+      storage_exception.dart     # content-free storage failure classification
+      sqlite_store_test_hooks.dart # fixed fault points; no arbitrary SQL/callbacks
     errors/app_exception.dart    # sealed AppException hierarchy
     errors/error_messages.dart   # AppException -> localized message
     logging/logging.dart         # setupLogging()
-    network/dio_provider.dart    # configured Dio + dioProvider
+    network/session_transport.dart # private session-owned Dio + generated family
+    network/bounded_response_adapter.dart # bound source before Dio buffering
     network/guard_dio.dart       # DioException -> AppException
     network/retry_policy.dart    # Riverpod retry policy
     widgets/                     # widgets shared by 2+ features (ErrorView, ...)
@@ -112,6 +122,7 @@ replaces or extends it.
 | Colors, typography | `app/theme.dart` |
 | Reusable timing samples/records and aggregation | `core/diagnostics/` (no feature or storage imports) |
 | Platform app-directory resolution | `core/storage/` (no marker/export formats) |
+| Product SQLite lifecycle, schema/migrations and persistence commands | `core/storage/sqlite_store*.dart`; configuration/snapshot values stay feature-independent |
 | Deployment root validation/resolution and shared ServerKey/BookKey identities | `core/config/` (pure Dart, no feature or provider imports) |
 | Probe marker, saved record and export files | `features/diagnostics/data/` |
 | Synthetic capture animation and declaration form | `features/diagnostics/presentation/` |
@@ -133,6 +144,14 @@ replaces or extends it.
   may use `dart:ui`; widgets belong only in `reader/engine/surface/`. Neither
   reader layer declares providers. See [Reader Engine](./reader-engine.md).
 - `core/**` must not import `features/**` or `app/**`.
+- `SqliteStore` owns `<Application Support>/shiori/v1/state.db` in one background
+  isolate. Its hand-written parts share private protocol/SQL types; callers
+  import only the owner and detached value/error files. Feature DTO validation
+  stays outside storage. The generated provider retains one owner per scope,
+  drains on disposal and waits for exit before invalidation creates its successor.
+  See [Data Layer](./data-layer.md) for migration, refusal and cache ownership.
+  S4 extends this owner with explicit migrations; diagnostic storage/self-check
+  stays independent. Documents/Caches never hold the durable product database.
 - Library and reader share `core/config/{server_endpoint,server_key,book_key}.dart`.
   Import `server_endpoint.dart` for its validation types; the hand-written
   `server_endpoint_validation.dart` part keeps the result and endpoint in one

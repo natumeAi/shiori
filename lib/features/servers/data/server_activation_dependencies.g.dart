@@ -8,12 +8,12 @@ part of 'server_activation_dependencies.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// App composition must override this port with the SQLite adapter.
+/// Production uses the container-owned SQLite worker; tests may override the port.
 
 @ProviderFor(serverSelectionStore)
 final serverSelectionStoreProvider = ServerSelectionStoreProvider._();
 
-/// App composition must override this port with the SQLite adapter.
+/// Production uses the container-owned SQLite worker; tests may override the port.
 
 final class ServerSelectionStoreProvider
     extends
@@ -23,7 +23,7 @@ final class ServerSelectionStoreProvider
           ServerSelectionStore
         >
     with $Provider<ServerSelectionStore> {
-  /// App composition must override this port with the SQLite adapter.
+  /// Production uses the container-owned SQLite worker; tests may override the port.
   ServerSelectionStoreProvider._()
     : super(
         from: null,
@@ -59,15 +59,17 @@ final class ServerSelectionStoreProvider
 }
 
 String _$serverSelectionStoreHash() =>
-    r'c1d9032019ce592aae8e81f0fc50d0add35fb3f9';
+    r'047beb4a610ae47d936a69abc38abae526c0e21a';
 
-/// App composition must override this port with the Phase C validator.
+/// Phase C supplies validation. Until configured, activation fails recoverably
+/// as an incompatible snapshot without dispatching a commit.
 
 @ProviderFor(candidateSnapshotValidator)
 final candidateSnapshotValidatorProvider =
     CandidateSnapshotValidatorProvider._();
 
-/// App composition must override this port with the Phase C validator.
+/// Phase C supplies validation. Until configured, activation fails recoverably
+/// as an incompatible snapshot without dispatching a commit.
 
 final class CandidateSnapshotValidatorProvider
     extends
@@ -77,7 +79,8 @@ final class CandidateSnapshotValidatorProvider
           CandidateSnapshotValidator
         >
     with $Provider<CandidateSnapshotValidator> {
-  /// App composition must override this port with the Phase C validator.
+  /// Phase C supplies validation. Until configured, activation fails recoverably
+  /// as an incompatible snapshot without dispatching a commit.
   CandidateSnapshotValidatorProvider._()
     : super(
         from: null,
@@ -113,7 +116,7 @@ final class CandidateSnapshotValidatorProvider
 }
 
 String _$candidateSnapshotValidatorHash() =>
-    r'c6f65d1d1b1d36819b76ee6b2c56ac8201b73c51';
+    r'a15c5d735839f28d4098a2d2b6c95b1c2e9c3b1e';
 
 /// Temporary transports have no active-session provider identity.
 
@@ -272,3 +275,52 @@ final class SessionPublicationGuardProvider
 
 String _$sessionPublicationGuardHash() =>
     r'06525b24dd0f7a7cde2992f2c6d8b1c98f303707';
+
+@ProviderFor(serverActivationSerializer)
+final serverActivationSerializerProvider =
+    ServerActivationSerializerProvider._();
+
+final class ServerActivationSerializerProvider
+    extends
+        $FunctionalProvider<
+          ServerActivationSerializer,
+          ServerActivationSerializer,
+          ServerActivationSerializer
+        >
+    with $Provider<ServerActivationSerializer> {
+  ServerActivationSerializerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'serverActivationSerializerProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$serverActivationSerializerHash();
+
+  @$internal
+  @override
+  $ProviderElement<ServerActivationSerializer> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  ServerActivationSerializer create(Ref ref) {
+    return serverActivationSerializer(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ServerActivationSerializer value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ServerActivationSerializer>(value),
+    );
+  }
+}
+
+String _$serverActivationSerializerHash() =>
+    r'95f442aa92d33d39367acc42914e6a14e22c5212';

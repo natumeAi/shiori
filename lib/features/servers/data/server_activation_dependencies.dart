@@ -1,21 +1,39 @@
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shiori/core/config/server_selection_store.dart';
 import 'package:shiori/core/config/server_session.dart';
 import 'package:shiori/core/config/session_publication_guard.dart';
+import 'package:shiori/core/config/validated_snapshot.dart';
 import 'package:shiori/core/network/session_transport.dart';
+import 'package:shiori/core/storage/sqlite_server_selection_store.dart';
+import 'package:shiori/core/storage/sqlite_store.dart';
 import 'package:shiori/features/servers/data/candidate_snapshot_validator.dart';
+import 'package:shiori/features/servers/data/snapshot_validation_exception.dart';
 
 part 'server_activation_dependencies.g.dart';
 
-/// App composition must override this port with the SQLite adapter.
+/// Production uses the container-owned SQLite worker; tests may override the port.
 @Riverpod(keepAlive: true)
 ServerSelectionStore serverSelectionStore(Ref ref) =>
-    throw UnimplementedError('Supply the selection store adapter');
+    SqliteServerSelectionStore(() => ref.read(sqliteStoreProvider.future));
 
-/// App composition must override this port with the Phase C validator.
+/// Phase C supplies validation. Until configured, activation fails recoverably
+/// as an incompatible snapshot without dispatching a commit.
 @Riverpod(keepAlive: true)
 CandidateSnapshotValidator candidateSnapshotValidator(Ref ref) =>
-    throw UnimplementedError('Supply the snapshot validator');
+    const _UnconfiguredSnapshotValidator();
+
+final class _UnconfiguredSnapshotValidator
+    implements CandidateSnapshotValidator {
+  const _UnconfiguredSnapshotValidator();
+
+  @override
+  Future<ValidatedSnapshot> validate(SessionTransport transport) async =>
+      throw const SnapshotValidationException(
+        SnapshotValidationIssue.incompatible,
+      );
+}
 
 typedef CandidateTransportFactory = SessionTransport Function(ServerSession);
 
@@ -36,3 +54,29 @@ SessionPublicationGuard sessionPublicationGuard(Ref ref) {
   ref.onDispose(guard.retire);
   return guard;
 }
+
+/// Outlives controller rebuilds so restoration cannot read ahead of a commit.
+final class ServerActivationSerializer {
+  Completer<void>? _pending;
+
+  Future<void> waitForIdle() async {
+    while (_pending != null) {
+      await _pending!.future;
+    }
+  }
+
+  Completer<void> begin() {
+    if (_pending != null) throw StateError('Activation already committing');
+    return _pending = Completer<void>();
+  }
+
+  void finish(Completer<void> pending) {
+    if (!identical(_pending, pending)) return;
+    _pending = null;
+    pending.complete();
+  }
+}
+
+@Riverpod(keepAlive: true)
+ServerActivationSerializer serverActivationSerializer(Ref ref) =>
+    ServerActivationSerializer();

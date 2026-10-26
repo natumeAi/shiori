@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shiori/core/config/server_session.dart';
 import 'package:shiori/core/errors/app_exception.dart';
+import 'package:shiori/core/network/bounded_response_adapter.dart';
 import 'package:shiori/core/network/guard_dio.dart';
 import 'package:shiori/core/network/redacted_request_log.dart';
 import 'package:shiori/core/network/redacting_interceptor.dart';
@@ -18,6 +19,14 @@ part 'session_transport.g.dart';
 
 /// Owns one Dio and all in-flight requests for exactly one activation.
 final class SessionTransport {
+  // Snapshot contains the complete library; detail can include a description.
+  // Keep small health/file JSON and HTTP errors on the same envelope budget.
+  static const _smallJsonLimit = 64 * 1024;
+  static const _detailJsonLimit = 256 * 1024;
+  static const _snapshotJsonLimit = 8 * 1024 * 1024;
+  static const _bodyLimitKey = 'shiori.responseByteLimit';
+  static const _jsonBodyKey = 'shiori.jsonResponse';
+
   SessionTransport(this.session, {HttpClientAdapter? adapter})
     : _dio = Dio(
         BaseOptions(
@@ -28,7 +37,10 @@ final class SessionTransport {
           validateStatus: (_) => true,
         ),
       ) {
-    if (adapter != null) _dio.httpClientAdapter = adapter;
+    _dio.httpClientAdapter = BoundedResponseAdapter(
+      adapter ?? _dio.httpClientAdapter,
+      limitFor: _responseLimit,
+    );
     _dio.interceptors.add(RedactingInterceptor());
   }
 
@@ -54,12 +66,19 @@ final class SessionTransport {
       throw ArgumentError('Invalid terminal statuses for route');
     }
     final uri = session.endpoint.api(segments);
+    final maxBytes = switch (route) {
+      ServerRoute.snapshot => _snapshotJsonLimit,
+      ServerRoute.book => _detailJsonLimit,
+      _ => _smallJsonLimit,
+    };
     return _run(route, (tokens, log) async {
       final response = await _openValidatedResponse(
         uri,
         route,
         tokens,
         log,
+        maxBytes: maxBytes,
+        json: true,
         headers: {
           'If-None-Match': ?ifNoneMatch,
           'If-Modified-Since': ?ifModifiedSince,
@@ -68,8 +87,9 @@ final class SessionTransport {
       final status = response.statusCode!;
       if (!allowed.contains(status)) await _throwStatus(response);
       if (status == 304) return _result(response, null);
-      final bytes = await _read(response);
-      final body = _decodeJson(bytes, response.headers);
+      _validateJsonContentType(response.headers);
+      final bytes = await _read(response, maxBytes: maxBytes);
+      final body = _decodeJson(bytes);
       if (body is Map<String, Object?> && body.containsKey('error')) {
         throw ServerException(status, null, serverErrorCode(body));
       }
@@ -90,6 +110,7 @@ final class SessionTransport {
         ServerRoute.cover,
         tokens,
         log,
+        maxBytes: maxBytes,
       );
       if (response.statusCode != 200) await _throwStatus(response);
       return _result(response, await _read(response, maxBytes: maxBytes));
@@ -103,6 +124,8 @@ final class SessionTransport {
     ServerRoute route,
     Set<CancelToken> tokens,
     RedactedRequestLog log, {
+    required int maxBytes,
+    bool json = false,
     Map<String, Object?> headers = const {},
   }) async {
     final redirects = RedirectPolicy(session.endpoint, initial);
@@ -118,7 +141,11 @@ final class SessionTransport {
         cancelToken: token,
         options: Options(
           headers: headers,
-          extra: {RedactedRequestLog.extraKey: hopLog},
+          extra: {
+            RedactedRequestLog.extraKey: hopLog,
+            _bodyLimitKey: maxBytes,
+            _jsonBodyKey: json,
+          },
         ),
       );
       _ensureActive();
@@ -138,7 +165,7 @@ final class SessionTransport {
 
   Future<Uint8List> _read(
     Response<ResponseBody> response, {
-    int? maxBytes,
+    required int maxBytes,
   }) async {
     final builder = BytesBuilder(copy: false);
     var received = 0;
@@ -146,7 +173,10 @@ final class SessionTransport {
       _ensureActive();
       received += chunk.length;
       // Enforced before accumulation, regardless of Content-Length/chunking.
-      if (maxBytes != null && received > maxBytes) {
+      if (received > maxBytes) {
+        // Cancel the upstream response before await-for cancels its consumer;
+        // Dio's intermediate stream may otherwise keep draining the source.
+        response.requestOptions.cancelToken?.cancel();
         throw const ParseException();
       }
       builder.add(chunk);
@@ -155,7 +185,27 @@ final class SessionTransport {
     return builder.takeBytes();
   }
 
-  Object? _decodeJson(Uint8List bytes, Headers headers) {
+  int? _responseLimit(RequestOptions options, ResponseBody response) {
+    final status = response.statusCode;
+    if (RedirectPolicy.isRedirect(status) ||
+        status == 304 ||
+        status == 401 ||
+        status == 403) {
+      return null;
+    }
+    if (options.extra[_jsonBodyKey] == true || status != 200) {
+      try {
+        _validateJsonContentType(Headers.fromMap(response.headers));
+      } on ParseException {
+        return null;
+      }
+    }
+    return status == 200
+        ? options.extra[_bodyLimitKey] as int
+        : _smallJsonLimit;
+  }
+
+  void _validateJsonContentType(Headers headers) {
     final contentTypes = headers['content-type'];
     if (contentTypes != null && contentTypes.length != 1) {
       throw const ParseException();
@@ -171,6 +221,9 @@ final class SessionTransport {
             .hasMatch(mediaType)) {
       throw const ParseException();
     }
+  }
+
+  Object? _decodeJson(Uint8List bytes) {
     try {
       return jsonDecode(utf8.decode(bytes));
     } on FormatException {
@@ -185,9 +238,10 @@ final class SessionTransport {
     if (status == 304) throw const ServerException(304);
     Object? code;
     try {
+      _validateJsonContentType(response.headers);
       // Inspect only bounded error envelopes. HTML/error text is never retained.
-      final bytes = await _read(response, maxBytes: 64 * 1024);
-      final body = _decodeJson(bytes, response.headers);
+      final bytes = await _read(response, maxBytes: _smallJsonLimit);
+      final body = _decodeJson(bytes);
       code = serverErrorCode(body);
     } on ParseException {
       // An HTTP failure keeps its status even when its error body is not JSON.

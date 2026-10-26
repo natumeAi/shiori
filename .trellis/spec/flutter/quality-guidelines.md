@@ -35,7 +35,7 @@ claim. The SDK pin is Flutter 3.47.7 / Dart 3.13.5.
 | `logging` | 1.3.0 | BSD-3-Clause | Structured application logging |
 | `intl` | 0.20.3 | BSD-3-Clause | Localization |
 | `path_provider` | 2.1.6 | BSD-3-Clause | Injectable Application Support/Documents directories |
-| `sqlite3` | 3.8.0 | MIT | Isolated diagnostic SQLite self-check; product storage and iPhone packaging proof remain pending |
+| `sqlite3` | 3.8.0 | MIT | Product SQLite isolate/store and diagnostic self-check; hosted iPhone packaging/storage gate passed 2026-10-26; product store host-tested |
 | `crypto` | 3.0.7 | BSD-3-Clause | SHA-256 for streamed publication bytes |
 | `archive` | 4.5.2 | MIT | EPUB ZIP access via app-owned raw-directory index with metadata bounds, last-wins duplicates, exact length/CRC-32 checks, bounded native decode and file-backed open |
 | `xml` | 7.0.1 | MIT | XHTML/HTML4 entity table only; strict XML parser is project code |

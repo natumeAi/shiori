@@ -20,6 +20,8 @@ part 'server_activation_controller.g.dart';
 class ServerActivationController extends _$ServerActivationController {
   late ServerSelectionStore _store;
   late SessionPublicationGuard _guard;
+  late ServerActivationSerializer _serializer;
+  late Future<ServerActivationState> _restoration;
   int _requestSerial = 0;
   Object _lifetime = Object();
   _CandidateAttempt? _attempt;
@@ -27,9 +29,10 @@ class ServerActivationController extends _$ServerActivationController {
   SessionTransport? _activeTransport;
 
   @override
-  Future<ServerActivationState> build() async {
+  Future<ServerActivationState> build() {
     _store = ref.watch(serverSelectionStoreProvider);
     _guard = ref.watch(sessionPublicationGuardProvider);
+    _serializer = ref.watch(serverActivationSerializerProvider);
     final activeTransport = ref.watch(activeSessionTransportFactoryProvider);
     final lifetime = _lifetime = Object();
     ref.onDispose(() {
@@ -38,6 +41,17 @@ class ServerActivationController extends _$ServerActivationController {
       _activeTransport?.dispose();
       _guard.retire();
     });
+    return _restoration = _restore(lifetime, activeTransport);
+  }
+
+  Future<ServerActivationState> _restore(
+    Object lifetime,
+    CandidateTransportFactory activeTransport,
+  ) async {
+    await _serializer.waitForIdle();
+    if (!ref.mounted || lifetime != _lifetime) {
+      return const ServerActivationState();
+    }
     final key = await _store.readActiveServer();
     if (!ref.mounted || lifetime != _lifetime) {
       return const ServerActivationState();
@@ -66,12 +80,13 @@ class ServerActivationController extends _$ServerActivationController {
   Future<void> activate(String text) async {
     final serial = ++_requestSerial;
     final lifetime = _lifetime;
-    await future;
+    // Reentrant .future reads during a state notification can retain old data.
+    // Admission must await this build's actual storage restoration instead.
+    await _restoration;
     if (!ref.mounted || lifetime != _lifetime) return;
     // Transactions cannot be undone through this port. Admission waits for
     // commit+publication; only the latest waiting request starts validation.
-    final committing = _commitDone;
-    if (committing != null) await committing.future;
+    await _serializer.waitForIdle();
     if (!ref.mounted || lifetime != _lifetime || serial != _requestSerial) {
       return;
     }
@@ -116,6 +131,7 @@ class ServerActivationController extends _$ServerActivationController {
       !attempt.cancelled;
 
   Future<void> _validateAndCommit(_CandidateAttempt attempt) async {
+    final serializer = _serializer;
     Completer<void>? commitDone;
     try {
       await attempt.wait(HealthRepository(attempt.transport).validate());
@@ -125,13 +141,15 @@ class ServerActivationController extends _$ServerActivationController {
         validator.validate(attempt.transport),
       );
       if (!_owns(attempt)) return;
-      commitDone = _commitDone = Completer<void>();
+      commitDone = _commitDone = serializer.begin();
       state = AsyncData(
         ServerActivationState(
           session: _guard.current,
           phase: CandidatePhase.committing,
         ),
       );
+      // A synchronous state listener may retire this owner before dispatch.
+      if (!_owns(attempt)) return;
       final endpoint = attempt.transport.session.endpoint;
       await _store.commitActivation(
         endpoint: endpoint,
@@ -155,7 +173,7 @@ class ServerActivationController extends _$ServerActivationController {
       if (identical(_attempt, attempt)) _attempt = null;
       if (commitDone != null) {
         _commitDone = null;
-        commitDone.complete();
+        serializer.finish(commitDone);
       }
     }
   }

@@ -97,8 +97,8 @@ void main() {
   }
 
   for (final input in [
-    'http://[fe80::7%25en0]/',
-    'http://[fe80::7%25eth0]:8080/reader',
+    'http://[2001:db8::7%25en0]/',
+    'http://[2001:db8::7%25eth0]:8080/reader',
   ]) {
     test('zone identifiers have a dedicated content-free reason: $input', () {
       final result = ServerEndpoint.parse(input);

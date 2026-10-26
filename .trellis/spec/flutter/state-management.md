@@ -137,14 +137,22 @@ the five-method store port live in core/config with no provider dependencies.
 Future<ServerActivationState> ServerActivationController.build();
 Future<void> activate(String deploymentRoot);
 void cancelCandidate();
+Future<void> ServerActivationSerializer.waitForIdle();
 bool SessionPublicationGuard.isCurrent(ServerSession captured);
 bool publish(ServerSession captured, void Function() synchronousPublication);
 void Function() onRetire(ServerSession captured, void Function() cancel);
 ```
 
-Override `serverSelectionStoreProvider` with the SQLite adapter and
-`candidateSnapshotValidatorProvider` with Phase C's unconditional snapshot
-validator. `candidateTransportFactoryProvider` creates temporary transports;
+`serverSelectionStoreProvider` binds to `SqliteServerSelectionStore` by default.
+It is keep-alive; its lazy resolver reads `sqliteStoreProvider.future` inside
+port calls so open failures become typed selection errors. The underlying
+keep-alive provider owns worker disposal; tests can still override the port.
+Override `candidateSnapshotValidatorProvider` with Phase C's unconditional
+snapshot validator. Until configured, its default validator throws
+`SnapshotValidationException(incompatible)` from `validate`, producing typed
+feedback without committing. Throwing during provider construction would wrap
+the error in `ProviderException` before the coordinator can classify it.
+`candidateTransportFactoryProvider` creates temporary transports;
 active requests share `sessionTransportProvider(session)`. The generated
 `activeSessionTransportFactoryProvider` reads that family dynamically: the
 coordinator must not watch a family it will invalidate while switching.
@@ -165,6 +173,16 @@ coordinator must not watch a family it will invalidate while switching.
   noncancelable serial section. Requests received during it wait; only the
   newest queued request is admitted afterwards. Cancel during commit cancels
   queued admission; the dispatched transaction still finishes.
+- `serverActivationSerializerProvider` is keep-alive and container-scoped,
+  independent of controller lifetime. Register the section before notifying
+  `committing`, re-check candidate ownership after that synchronous notification
+  and before calling the store, and release it in `finally` on every outcome.
+  A replacement build awaits this shared section before reading active selection:
+  it restores B after a successful retired commit, or A after rollback. A rebuild
+  before dispatch cancels B entirely. No compensation write or store API change.
+- Admission awaits the controller's actual restoration future, then the shared
+  serializer. Reentrant provider `.future` reads inside state notifications may
+  still expose retained data; they cannot authorize a candidate to bypass restore.
 - After successful commit, invalidate the guard, synchronously cancel registered
   work, dispose/invalidate the old transport family, create a fresh generation,
   then publish the new immutable session through the guard. Cleanup callbacks
@@ -192,6 +210,7 @@ coordinator must not watch a family it will invalidate while switching.
 | TLS / 401 or 403 / connection or timeout / unsafe redirect / other HTTP | Distinct transport-derived feedback |
 | Snapshot incompatible / malformed | Distinct failure kinds, no commit |
 | Commit storage failure | Typed storage feedback; previous session/work remain current |
+| Rebuild during dispatched commit | Restore waits, then publishes the durable selection (B on success, A on failure) |
 | Missing, noncanonical or key-mismatched restored row | `SelectionStorageException(invalidSelection)`, no reset/traffic |
 | Cancellation, supersession, late result, disposed owner | Silent completion; no error publication or retry |
 
@@ -214,6 +233,16 @@ ignored cancellation, commit serialization/failure, queued admission/cancel,
 restore with/without/corrupt selection, switching after restore, disposal and
 A -> B -> A. Assert both final state and actual commit/request counts; retain
 both servers' records and reject every unknown store command, including delete.
+Real temporary-directory SQLite tests also exercise the production binding,
+container disposal/reopen without HTTP, atomic commit failure preserving active
+work and both snapshots, A -> B -> A retention, and typed future-schema/open
+refusal with byte-identical retained files. Generations restart in a new scope;
+they are not expected to increase across process/container lifetimes.
+Reproduce synchronous invalidation plus immediate restore from `validating` and
+`committing` listeners, including a queued replacement candidate. Gate an actual
+production SQLite adapter commit, rebuild while pending, and release success or
+the worker's rollback fault. Assert durable active key equals the published key,
+the guard owns that generation, and previous rows/snapshots survive.
 
 ### Wrong vs Correct
 
@@ -222,6 +251,9 @@ it then rebuilds its owner. Correct: watch the dynamic factory and let ordinary
 session consumers watch the family. Wrong: publish after an await using a
 previous `isCurrent` check. Correct: check inside `publish` immediately before
 the synchronous write and use `onRetire` to stop pending work.
+Wrong: keep commit serialization only on the notifier, or check ownership only
+before publishing. Correct: share the commit barrier across rebuilds, check after
+synchronous notifications before dispatch, and restore after outstanding commits.
 
 ---
 

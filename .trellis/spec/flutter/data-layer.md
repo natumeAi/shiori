@@ -109,10 +109,9 @@ Rules:
   origin-relative URLs discard deployment prefixes and are forbidden.
 - Cover query strings are preserved by `ServerEndpoint.cover`, never rebuilt
   with string interpolation. B1b's JSON routes do not need query parameters.
-- Provider state is the scaffold's in-memory cache. S3 authorizes runtime
-  configuration and scoped persistence; B1a/B1b implement immutable identities,
-  Caches access and session transport. Product storage is deferred until
-  the hosted iPhone SQLite gate passes.
+- Provider state is the in-memory view; durable S3 configuration and snapshots
+  use `SqliteStore` below. B1a/B1b own identities and transport. The hosted
+  iPhone SQLite gate passed on 2026-10-26; B2's product store is host-tested.
 
 ---
 
@@ -179,6 +178,17 @@ Future<Directory> AppDirectories.caches();
   exactly. Allowed terminal statuses are a per-call copy/subset of `{200,304}`;
   only snapshot/file may opt into 304, which bypasses body decoding. Default
   304 and all unexpected statuses fail. Cache recovery is caller-owned.
+- JSON source limits are 64 KiB for health/file JSON and HTTP error envelopes,
+  256 KiB for book detail, and 8 MiB for the complete library snapshot. Count
+  actual emitted bytes before accumulation, regardless of Content-Length.
+  `BoundedResponseAdapter` enforces the limit before Dio's eager subscription
+  can buffer the source; `_read` also checks its own accumulation. A successful
+  response overflow cancels upstream and throws content-free `ParseException`;
+  an oversized HTTP failure retains `ServerException(status)` with no code.
+  Validate JSON Content-Type at the adapter boundary before consuming the body;
+  missing type still requires valid JSON. Status precedence and 304 are unchanged.
+  These are wire-byte ceilings, not decoded-memory/RSS guarantees. Section 7's
+  disk/worker budgets do not authorize unbounded JSON on the UI isolate.
 - `getBytes` accepts only `endpoint.cover` resources and HTTP 200. It checks
   actual received chunk totals before accumulating, ignoring Content-Length
   as an authority; overflow cancels the remaining response and is a parse failure.
@@ -222,7 +232,7 @@ Future<Directory> AppDirectories.caches();
 - Good: ` HTTPS://EXAMPLE.TEST:443/a/../Reader ` ->
   `https://example.test/Reader/`; encoded `a%2Fb` stays one segment.
 - Bad: `https://user@example.test`, `https://example.test/?`,
-  `http://[fe80::7%25en0]` yield validation issues and cannot produce traffic.
+  `http://[2001:db8::7%25en0]` yield validation issues and cannot produce traffic.
 - Good: snapshot `{200,304}` plus exact `If-None-Match` accepts a bodyless 304;
   the caller must prove a usable cached representation before reuse.
 - Bad: health `{200,304}` is a caller contract error; covers exceeding their
@@ -247,6 +257,131 @@ Correct: `endpoint.cover('/covers/a.webp')` retains `/Reader/covers/a.webp`.
 Wrong: `BookKey` based only on `bookId`; correct: compare both server and ID.
 Wrong: `Image.network` or a second Dio for covers. Correct: reuse the captured
 session transport, enforce byte/pixel bounds and check identity before publishing.
+
+## Private SQLite persistence
+
+### Scope / Trigger
+
+`core/storage/sqlite_store.dart` owns schema/migrations and the product database
+at `<Application Support>/shiori/v1/state.db`. Documents is exports only;
+Caches is removable bytes only. The diagnostic self-check stays independent.
+
+### Signatures
+
+```dart
+Future<SqliteStore> SqliteStore.open(AppDirectories directories,
+    {SqliteStoreTestHooks? testHooks});
+Future<void> upsertServer(ServerRecord record);
+Future<ServerRecord?> readServer(ServerKey key);
+Future<ServerRecord?> readActiveServer();
+Future<void> setActiveServer(ServerKey? key);
+Future<void> commitActivation(ServerRecord record, StoredSnapshot snapshot);
+Future<StoredSnapshot?> readSnapshot(ServerKey key);
+Future<void> replaceSnapshot(ServerKey key, StoredSnapshot snapshot);
+Future<void> touchLastUsed(ServerKey key, DateTime at);
+Future<void> close();
+sqliteStoreProvider; // generated keep-alive FutureProvider
+```
+
+### Contracts
+
+- One long-lived worker owns the connection. Private typed operations/replies
+  carry request IDs and detached values; no SQL, handles, statements or callbacks
+  cross ports. Every command checks worker/root isolate identity. All reads and
+  writes execute serially; write transactions use `BEGIN IMMEDIATE` and bound
+  values. Opening, migrations and all SQLite calls run off the root isolate.
+- `ServerRecord` carries `ServerKey`, `createdAt`, `lastUsedAt`. Upsert retains
+  original creation time. Every namespace lookup compares its stored canonical
+  endpoint to `ServerKey.canonicalRoot`; active restore also checks its digest.
+- `StoredSnapshot` carries raw `payload`, positive `schemaVersion`, nullable
+  opaque `etag`, nonnegative JS-safe `revision`, and `fetchedAt`. Feature DTO code
+  validates wire semantics before writing and revalidates cached payloads when
+  reading; storage does not interpret JSON. UTC timestamps persist as epoch
+  microseconds. Revisions may decrease after server restore.
+- Activation commits server metadata, snapshot/validator and active selection
+  together. Failure preserves the previous rows. Snapshot replacement never
+  changes selection. Nullable reads mean absent records, never swallowed errors.
+- `core/storage/sqlite_server_selection_store.dart` implements the five-method
+  `ServerSelectionStore` port in core/config without feature imports. The servers
+  dependency provider binds it to the scope-owned SQLite provider by default;
+  tests may override the port. Its lazy resolver keeps open and command failures
+  inside the same typed boundary. It maps server canonical endpoint/timestamps
+  and all snapshot fields verbatim (`payload` <-> `payloadText`, schema version,
+  opaque nullable ETag, revision, fetched-at), without decoding or re-encoding.
+  Commit compares endpoint/key (including canonical text) before dispatching one
+  activation transaction. Local creation/last-use values use UTC now; the store
+  retains original creation time on reactivation. Touch changes only last-use.
+- Schema v1: `servers`, singleton `app_state`, one `library_snapshots` row per
+  server, `cached_publications` keyed by server/book/digest, `book_cache_heads`
+  keyed by server/book. Cache generation columns include relative path, actual
+  bytes, ETag/Last-Modified, parser version, validation status and access time.
+  Foreign keys restrict parent deletion and heads to validated generations;
+  an access-time index supports future cross-server LRU. No cache commands or
+  `cache_operations` table are added in B2.
+- Ordered migrations must connect adjacent versions. Each DDL step, metadata
+  update and `user_version` bump share one transaction. Verify foreign keys,
+  DELETE journal and FULL synchronous settings on open. S4 adds checkpoint/outbox
+  tables through explicit migrations owned here; never edit shipped v1 DDL.
+- Check schema before persistent settings or writes to the original database.
+  WAL mode and retained WAL/rollback journals are inspected using a private
+  disposable copy (without copying shared memory); SQLite recovers that copy.
+  Ordinary DELETE files use read-only inspection. Refusal preserves original
+  database/sidecar bytes and never deletes, resets or renames them. Only the
+  disposable inspection directory is cleaned up.
+- Scope retains the provider owner between listeners. Invalidation/disposal
+  rejects new calls, drains accepted commands, closes SQLite and awaits exit.
+  A private scope-local gate waits for the retired worker to exit before a
+  replacement opens. Disposal during initialization also closes the owner.
+  Explicit callers must await `close()` before reopening the same path.
+- Future cache eviction may touch only cache-owned rows/files. Never delete
+  a server, whole database or future durable reader state to recover cache.
+
+### Validation & Error Matrix
+
+All failures are content-free `StorageException` values with `failure`:
+
+| Condition | Failure |
+| --- | --- |
+| Newer recovered `user_version` | `newerSchema`, observed `schemaVersion` |
+| Directory/native open/corrupt or malformed current schema | `open` |
+| Failed migration/check/version step | `migration`, transaction rolled back |
+| Stored endpoint/digest mismatch | `canonicalMismatch` |
+| Missing server required by write | `invalidRecord` |
+| SQL constraint or transaction failure | `command` |
+| New call after close/disposal | `closed` |
+| Fatal worker error or unannounced exit | `workerExit`, all waiters completed |
+
+These are local storage failures, never retryable `NetworkException`s.
+The selection adapter maps `newerSchema` to
+`SelectionStorageException(newerSchema)`, `canonicalMismatch`/`invalidRecord`
+to `invalidSelection`, and every other storage failure (including open) to
+`unavailable`. It retains no driver cause, SQL, path or observed schema version.
+Localized recovery presentation remains Phase E.
+
+### Good / Base / Bad Cases
+
+- Base: fresh v0 creates v1 and reopens the committed selection.
+- Good: failed B activation retains A plus B's previous snapshot; v0 sentinel
+  tables survive migration. Uncommitted future versions in journals roll back.
+- Bad: future committed schema returns `newerSchema` with identical original
+  bytes; corrupt files return `open`. Neither path resets application state.
+
+### Tests Required
+
+Use real SQLite and temporary `AppDirectories`. Assert migration DDL/version
+rollback, unrelated rows, DELETE/WAL/hot-journal refusal byte equality, recovery,
+activation atomicity, canonical mismatch, opaque bound strings, cache FK/head
+constraints, ordered concurrent commands, off-root checks, close/exit waiters,
+provider retention/invalidation and disposal during lookup.
+The adapter/activation integration tests verify exact field round trips,
+canonical/key mismatch rejection, typed open/command failures, scope-owned
+disposal and restart restore without HTTP through the default production binding.
+
+### Wrong vs Correct
+
+Wrong: set `journal_mode=DELETE` before checking a retained future WAL database,
+or delete it on error. Correct: inspect recovered private copies, refuse future
+schemas without altering originals, and expose typed retry/recovery state.
 
 ### Local diagnostic storage
 
