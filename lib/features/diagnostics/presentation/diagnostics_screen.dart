@@ -14,7 +14,10 @@ import 'package:shiori/core/diagnostics/diagnostic_summary.dart';
 import 'package:shiori/core/diagnostics/probe_declarations.dart';
 import 'package:shiori/core/errors/app_exception.dart';
 import 'package:shiori/features/diagnostics/data/diagnostic_export_repository.dart';
+import 'package:shiori/features/diagnostics/data/probe_sqlite_repository.dart';
+import 'package:shiori/features/diagnostics/data/probe_sqlite_result.dart';
 import 'package:shiori/features/diagnostics/presentation/probe_storage_controller.dart';
+import 'package:shiori/features/diagnostics/presentation/widgets/probe_sqlite_panel.dart';
 import 'package:shiori/l10n/l10n.dart';
 
 class DiagnosticsScreen extends ConsumerStatefulWidget {
@@ -37,6 +40,8 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen>
   bool _capturing = false;
   bool _draining = false;
   bool _exporting = false;
+  bool _sqliteRunning = false;
+  ProbeSqliteResult? _sqliteResult;
   int _sequence = 0;
   int _captureGeneration = 0;
   DiagnosticRecorder? _recorder;
@@ -209,6 +214,26 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen>
   ) async {
     setState(() => _exporting = true);
     try {
+      final latestSqlite =
+          _sqliteResult ??
+          ProbeSqliteResult.fromMetadata(
+            ref
+                    .read(probeStorageControllerProvider)
+                    .asData
+                    ?.value
+                    .lastRecord
+                    ?.metadata ??
+                const {},
+          );
+      if (latestSqlite case final result?) {
+        record = record.copyWith(
+          metadata: {
+            ...record.metadata,
+            ProbeSqliteResult.metadataKey: result.toJson(),
+          },
+        );
+        _record = record;
+      }
       final path = await exports.export(record);
       if (!mounted) return;
       setState(() => _exportPath = path);
@@ -219,6 +244,25 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen>
       );
     } finally {
       if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  Future<void> _runSqlite() async {
+    setState(() => _sqliteRunning = true);
+    try {
+      final result = await ref.read(probeSqliteRepositoryProvider).run();
+      if (!mounted) return;
+      setState(() {
+        _sqliteResult = result;
+        _exportPath = null;
+      });
+    } on AppException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.diagnosticsStorageError)),
+      );
+    } finally {
+      if (mounted) setState(() => _sqliteRunning = false);
     }
   }
 
@@ -324,7 +368,9 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen>
                     spacing: 8,
                     children: [
                       FilledButton(
-                        onPressed: _capturing || _exporting ? null : _start,
+                        onPressed: _capturing || _exporting || _sqliteRunning
+                            ? null
+                            : _start,
                         child: Text(l10n.diagnosticsStart),
                       ),
                       OutlinedButton(
@@ -365,7 +411,7 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen>
                       spacing: 8,
                       children: [
                         OutlinedButton(
-                          onPressed: _capturing || _exporting
+                          onPressed: _capturing || _exporting || _sqliteRunning
                               ? null
                               : () => _export(
                                   record,
@@ -374,7 +420,7 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen>
                           child: Text(l10n.diagnosticsExport),
                         ),
                         OutlinedButton(
-                          onPressed: _capturing || _exporting
+                          onPressed: _capturing || _exporting || _sqliteRunning
                               ? null
                               : () => _copy(record),
                           child: Text(l10n.diagnosticsCopy),
@@ -382,6 +428,19 @@ class _DiagnosticsScreenState extends ConsumerState<DiagnosticsScreen>
                       ],
                     ),
                   ],
+                  const Divider(),
+                  ProbeSqlitePanel(
+                    result:
+                        _sqliteResult ??
+                        ProbeSqliteResult.fromMetadata(
+                          storage.asData?.value.lastRecord?.metadata ??
+                              const {},
+                        ),
+                    running: _sqliteRunning,
+                    onRun: _capturing || _exporting || _sqliteRunning
+                        ? null
+                        : _runSqlite,
+                  ),
                   const Divider(),
                   storage.when(
                     data: (saved) => _MarkerEditor(

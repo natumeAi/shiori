@@ -11,6 +11,10 @@
     },
     {
       "differences": [],
+      "fixtureId": "duplicate-entries"
+    },
+    {
+      "differences": [],
       "fixtureId": "html-fallback"
     },
     {

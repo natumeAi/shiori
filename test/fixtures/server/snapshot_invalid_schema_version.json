@@ -1,0 +1,52 @@
+{
+  "snapshot": {
+    "schemaVersion": 99,
+    "version": 42,
+    "books": [
+      {
+        "id": 1,
+        "folderId": null,
+        "title": "Fixture Book 1",
+        "author": "Fixture Author 1",
+        "identifier": "urn:fixture:book:1",
+        "fileName": "fixture-book-1.epub",
+        "fileSize": 4096,
+        "coverPath": null,
+        "coverUrl": null,
+        "coverThumbnailUrl": null,
+        "coverThumbnail2xUrl": null,
+        "coverThumbnailVersion": null,
+        "sortOrder": 1000,
+        "createdAt": "2026-01-01 00:00:00",
+        "updatedAt": "2026-01-02 03:04:05",
+        "readingProgress": null,
+        "readingUpdatedAt": null
+      }
+    ],
+    "folders": [
+      {
+        "id": 7,
+        "name": "Fixture Folder 7",
+        "sortOrder": 2000,
+        "bookCount": 0,
+        "bookIds": [],
+        "previewBookIds": [],
+        "createdAt": "2026-01-01 00:00:00",
+        "updatedAt": "2026-01-02 03:04:05"
+      }
+    ],
+    "shelf": [
+      {
+        "type": "book",
+        "id": 1,
+        "sortOrder": 1000
+      },
+      {
+        "type": "folder",
+        "id": 7,
+        "sortOrder": 2000
+      }
+    ],
+    "recent": []
+  }
+}

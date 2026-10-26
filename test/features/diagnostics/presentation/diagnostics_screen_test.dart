@@ -13,6 +13,8 @@ import 'package:shiori/core/diagnostics/probe_declarations.dart';
 import 'package:shiori/core/errors/app_exception.dart';
 import 'package:shiori/features/diagnostics/data/diagnostic_export_repository.dart';
 import 'package:shiori/features/diagnostics/data/probe_marker_repository.dart';
+import 'package:shiori/features/diagnostics/data/probe_sqlite_repository.dart';
+import 'package:shiori/features/diagnostics/data/probe_sqlite_result.dart';
 import 'package:shiori/features/diagnostics/presentation/diagnostics_screen.dart';
 import 'package:shiori/l10n/app_localizations.dart';
 
@@ -24,12 +26,14 @@ void main() {
   final l10n = lookupAppLocalizations(const Locale('zh'));
   late MockMarkerRepository marker;
   late MockExportRepository exports;
+  late MockSqliteRepository sqlite;
   late DiagnosticRecorder recorder;
   late List<Override> overrides;
   setUpAll(() => registerFallbackValue(storageRecord()));
   setUp(() {
     marker = MockMarkerRepository();
     exports = MockExportRepository();
+    sqlite = MockSqliteRepository();
     when(marker.load).thenAnswer((_) async => 'retained-marker');
     when(() => marker.save(any())).thenAnswer((_) async {});
     when(exports.loadLast).thenAnswer((_) async => null);
@@ -44,17 +48,28 @@ void main() {
     overrides = [
       probeMarkerRepositoryProvider.overrideWith((ref) => marker),
       diagnosticExportRepositoryProvider.overrideWith((ref) => exports),
+      probeSqliteRepositoryProvider.overrideWith((ref) => sqlite),
       diagnosticRecorderProvider.overrideWith((ref) => recorder),
     ];
   });
   tearDown(() => recorder.dispose());
   Future<void> scrollTo(WidgetTester tester, String text) async {
+    // The SQLite details make the list long enough to evict earlier controls.
+    // Search from the top so this helper also supports returning to capture.
+    tester
+        .state<ScrollableState>(find.byType(Scrollable).first)
+        .position
+        .jumpTo(0);
+    await tester.pump();
     await tester.scrollUntilVisible(
       find.text(text),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.ensureVisible(find.text(text));
+    await Scrollable.ensureVisible(
+      tester.element(find.text(text)),
+      alignment: .5,
+    );
     await tester.pump();
   }
 
@@ -64,13 +79,163 @@ void main() {
     await tester.pump(const Duration(milliseconds: 16));
   }
 
+  testWidgets('SQLite check disables overlapping work and exports its result', (
+    tester,
+  ) async {
+    final pending = Completer<ProbeSqliteResult>();
+    when(sqlite.run).thenAnswer((_) => pending.future);
+    await tester.pumpApp(const DiagnosticsScreen(), overrides: overrides);
+    await tester.pumpAndSettle();
+    await scrollTo(tester, l10n.diagnosticsSqliteRun);
+    expect(find.text(l10n.diagnosticsSqliteNotRun), findsOneWidget);
+    await tester.tap(find.text(l10n.diagnosticsSqliteRun));
+    await tester.pump();
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.widgetWithText(OutlinedButton, l10n.diagnosticsSqliteRunning),
+          )
+          .onPressed,
+      isNull,
+    );
+    await scrollTo(tester, l10n.diagnosticsStart);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, l10n.diagnosticsStart),
+          )
+          .onPressed,
+      isNull,
+    );
+    final result = sqliteResult();
+    pending.complete(result);
+    await tester.pumpAndSettle();
+    await scrollTo(
+      tester,
+      l10n.diagnosticsSqliteOutcome(l10n.diagnosticsSqlitePass),
+    );
+    expect(
+      find.text(
+        l10n.diagnosticsSqliteStep(
+          l10n.diagnosticsSqliteFutureSchema,
+          l10n.diagnosticsSqlitePass,
+        ),
+      ),
+      findsOneWidget,
+    );
+    await start(tester);
+    await tester.tap(find.text(l10n.diagnosticsStop));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpAndSettle();
+    final record =
+        verify(() => exports.export(captureAny())).captured.single
+            as DiagnosticRecord;
+    expect(ProbeSqliteResult.fromMetadata(record.metadata), result);
+  });
+
+  testWidgets(
+    'SQLite saved result survives new capture and failed rerun is exportable',
+    (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final saved = sqliteResult();
+      when(exports.loadLast).thenAnswer(
+        (_) async => storageRecord().copyWith(
+          metadata: {
+            ...storageRecord().metadata,
+            ProbeSqliteResult.metadataKey: saved.toJson(),
+          },
+        ),
+      );
+      await tester.pumpApp(const DiagnosticsScreen(), overrides: overrides);
+      await tester.pumpAndSettle();
+      await scrollTo(
+        tester,
+        l10n.diagnosticsSqliteOutcome(l10n.diagnosticsSqlitePass),
+      );
+      await start(tester);
+      await tester.tap(find.text(l10n.diagnosticsStop));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
+      var record =
+          verify(() => exports.export(captureAny())).captured.single
+              as DiagnosticRecord;
+      expect(ProbeSqliteResult.fromMetadata(record.metadata), saved);
+      final failed = saved.copyWith(
+        steps: {...saved.steps, 'rollback': false},
+        failure: 'check_failed',
+      );
+      when(sqlite.run).thenAnswer((_) async => failed);
+      await scrollTo(tester, l10n.diagnosticsSqliteRun);
+      await tester.tap(find.text(l10n.diagnosticsSqliteRun));
+      await tester.pumpAndSettle();
+      await scrollTo(
+        tester,
+        l10n.diagnosticsSqliteOutcome(l10n.diagnosticsSqliteFail),
+      );
+      await scrollTo(tester, l10n.diagnosticsExport);
+      expect(
+        find.text(l10n.diagnosticsExported('/documents/export.json')),
+        findsNothing,
+      );
+      await tester.tap(find.text(l10n.diagnosticsExport));
+      await tester.pumpAndSettle();
+      record =
+          verify(() => exports.export(captureAny())).captured.single
+              as DiagnosticRecord;
+      expect(ProbeSqliteResult.fromMetadata(record.metadata), failed);
+      when(sqlite.run).thenAnswer((_) async => saved);
+      await scrollTo(tester, l10n.diagnosticsSqliteRun);
+      await tester.tap(find.text(l10n.diagnosticsSqliteRun));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(l10n.diagnosticsSqliteOutcome(l10n.diagnosticsSqlitePass)),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'SQLite storage errors allow retry and disposal ignores late result',
+    (tester) async {
+      when(sqlite.run).thenThrow(const ParseException());
+      await tester.pumpApp(const DiagnosticsScreen(), overrides: overrides);
+      await tester.pumpAndSettle();
+      await scrollTo(tester, l10n.diagnosticsSqliteRun);
+      await tester.tap(find.text(l10n.diagnosticsSqliteRun));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.diagnosticsStorageError), findsOneWidget);
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.widgetWithText(OutlinedButton, l10n.diagnosticsSqliteRun),
+            )
+            .onPressed,
+        isNotNull,
+      );
+      final pending = Completer<ProbeSqliteResult>();
+      when(sqlite.run).thenAnswer((_) => pending.future);
+      await tester.tap(find.text(l10n.diagnosticsSqliteRun));
+      await tester.pump();
+      await tester.pumpWidget(const SizedBox());
+      pending.complete(sqliteResult());
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('shows loading then retained marker and saves edits', (
     tester,
   ) async {
     final pending = Completer<String>();
     when(marker.load).thenAnswer((_) => pending.future);
     await tester.pumpApp(const DiagnosticsScreen(), overrides: overrides);
-    await scrollTo(tester, l10n.diagnosticsStop);
+    await tester.scrollUntilVisible(
+      find.byType(CircularProgressIndicator),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     pending.complete('retained-marker');
     await tester.pumpAndSettle();
@@ -400,3 +565,20 @@ void main() {
     );
   });
 }
+
+class MockSqliteRepository extends Mock implements ProbeSqliteRepository {}
+
+ProbeSqliteResult sqliteResult() => ProbeSqliteResult(
+  checkedAt: DateTime.utc(2026, 10, 26),
+  buildId: 'fixture-build',
+  buildNumber: '42',
+  packageVersion: '3.8.0',
+  ranOffRootIsolate: true,
+  steps: {for (final step in ProbeSqliteResult.stepNames) step: true},
+  elapsedUs: 1234,
+  libraryVersion: 'fixture-library',
+  sourceId: 'fixture-source',
+  compileOptions: ['THREADSAFE=1'],
+  journalMode: 'delete',
+  synchronous: 2,
+);

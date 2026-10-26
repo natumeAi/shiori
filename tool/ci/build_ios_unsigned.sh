@@ -94,7 +94,7 @@ flutter build ios --release --no-codesign --no-pub \
 readonly APP="$PWD/build/ios/iphoneos/Runner.app"
 plist_value() { plutil -extract "$1" raw -o - "$2/Info.plist"; }
 validate_bundle() {
-  local app="$1" executable framework
+  local app="$1" executable framework sqlite_binary
   [[ "$(plist_value DTPlatformName "$app")" == iphoneos ]]
   [[ "$(plist_value CFBundleIdentifier "$app")" == io.github.natumeai.shiori ]]
   [[ "$(plist_value CFBundleVersion "$app")" == "$BUILD_NUMBER" ]]
@@ -109,6 +109,18 @@ validate_bundle() {
     lipo "$app/Frameworks/$framework.framework/$framework" -verify_arch arm64
     printf 'Validated arm64 framework: %s.framework\n' "$framework"
   done
+  for framework in "$app"/Frameworks/*; do
+    [[ -d "$framework" ]] || continue
+    case "$(basename "$framework" | tr '[:upper:]' '[:lower:]')" in
+      *sqlite*.framework)
+        sqlite_binary="$(plist_value CFBundleExecutable "$framework")"
+        [[ -n "$sqlite_binary" && "$sqlite_binary" != */* ]]
+        test -s "$framework/$sqlite_binary"
+        lipo "$framework/$sqlite_binary" -verify_arch arm64
+        printf 'Validated arm64 SQLite framework: %s\n' "$(basename "$framework")"
+        ;;
+    esac
+  done
   printf 'Validated bundle: iphoneos, io.github.natumeai.shiori, version %s\n' "$BUILD_NUMBER"
 }
 metal_value() {
@@ -122,6 +134,11 @@ metal_value() {
     printf null
   fi
 }
+LC_ALL=C ls -1A "$APP/Frameworks" > "$OUTPUT_DIR/frameworks.txt"
+jq --rawfile frameworks "$OUTPUT_DIR/frameworks.txt" \
+  '.packagedFrameworks = ($frameworks | split("\n") | map(select(length > 0))) | .packagedFrameworksFile = "frameworks.txt"' \
+  "$OUTPUT_DIR/provenance.json" > "$OUTPUT_DIR/provenance-frameworks.json"
+mv "$OUTPUT_DIR/provenance-frameworks.json" "$OUTPUT_DIR/provenance.json"
 validate_bundle "$APP"
 plutil -p "$APP/Info.plist" > "$OUTPUT_DIR/bundle-info.txt"
 DEFAULT_METAL="$(metal_value "$APP")"

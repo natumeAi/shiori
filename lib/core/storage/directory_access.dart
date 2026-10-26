@@ -12,17 +12,21 @@ abstract final class DirectoryAccess {
   static Future<Directory> resolve(Future<Directory> Function() lookup) async {
     try {
       return await lookup();
-    } on MissingPlatformDirectoryException catch (error, stack) {
-      _fail(error, stack);
-    } on PlatformException catch (error, stack) {
-      _fail(error, stack);
-    } on MissingPluginException catch (error, stack) {
-      _fail(error, stack);
+    } on FileSystemException {
+      // Preserve the filesystem type for repositories with their own mapping.
+      _log.warning('directory_filesystem_unavailable');
+      throw const FileSystemException('directory_filesystem_unavailable');
+    } on MissingPlatformDirectoryException {
+      _fail('directory_platform_unavailable');
+    } on PlatformException {
+      _fail('directory_platform_unavailable');
+    } on MissingPluginException {
+      _fail('directory_plugin_unavailable');
     }
   }
 
-  static Never _fail(Object error, StackTrace stack) {
-    _log.warning('App directory lookup failed', error, stack);
-    throw ParseException(error);
+  static Never _fail(String classification) {
+    _log.warning(classification);
+    throw ParseException(FormatException(classification));
   }
 }

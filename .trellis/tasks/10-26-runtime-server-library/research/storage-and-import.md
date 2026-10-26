@@ -48,7 +48,7 @@ line 82 calls readBytes before checking the returned length.
 
 However, the locally resolved archive 4.5.2 source already has partial
 protections. The inspected package root is
-`C:/Users/H3C/AppData/Local/Pub/Cache/hosted/pub.dev/archive-4.5.2`:
+`%PUB_CACHE%/hosted/pub.dev/archive-4.5.2`:
 
 - `lib/src/codecs/zip/zip_file.dart:239` uses decodeLimited against declared
   uncompressedSize; getStream preallocation is bounded by a compressed-size

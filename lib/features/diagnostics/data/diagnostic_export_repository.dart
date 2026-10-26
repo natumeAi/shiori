@@ -8,6 +8,7 @@ import 'package:shiori/core/diagnostics/diagnostic_record.dart';
 import 'package:shiori/core/errors/app_exception.dart';
 import 'package:shiori/core/storage/app_directories.dart';
 import 'package:shiori/core/storage/directory_access.dart';
+import 'package:shiori/features/diagnostics/data/probe_sqlite_result.dart';
 part 'diagnostic_export_repository.g.dart';
 
 class DiagnosticExportRepository {
@@ -57,7 +58,9 @@ class DiagnosticExportRepository {
       if (json['schemaVersion'] is! int || json['schemaVersion'] != 1) {
         throw const FormatException('Unsupported diagnostic schema version');
       }
-      return DiagnosticRecord.fromJson(json);
+      final record = DiagnosticRecord.fromJson(json);
+      ProbeSqliteResult.fromMetadata(record.metadata);
+      return record;
     } on FileSystemException catch (e, stack) {
       _log.warning('Last diagnostic load failed', e, stack);
       throw ParseException(e);

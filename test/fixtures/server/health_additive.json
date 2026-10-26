@@ -1,0 +1,8 @@
+{
+  "status": "ok",
+  "service": "epub-reader-server",
+  "database": "ok",
+  "fixtureCapability": {
+    "enabled": true
+  }
+}

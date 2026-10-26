@@ -274,6 +274,82 @@ class AppLocalizationsZh extends AppLocalizations {
   String get diagnosticsMarkerSaved => '标记已保存';
 
   @override
+  String get diagnosticsSqliteTitle => 'SQLite 存储自检';
+
+  @override
+  String get diagnosticsSqliteHelp =>
+      '在后台隔离区使用 Application Support 临时数据库，完成后删除。自检后请开始并停止采集，或重新导出已有记录，以保存最新结果。';
+
+  @override
+  String get diagnosticsSqliteRun => '运行 SQLite 自检';
+
+  @override
+  String get diagnosticsSqliteRunning => 'SQLite 自检运行中…';
+
+  @override
+  String get diagnosticsSqlitePass => '通过';
+
+  @override
+  String get diagnosticsSqliteFail => '失败';
+
+  @override
+  String get diagnosticsSqliteNotRun => '未运行';
+
+  @override
+  String diagnosticsSqliteOutcome(String status) {
+    return 'SQLite 自检结果：$status';
+  }
+
+  @override
+  String diagnosticsSqliteCheckedAt(String time) {
+    return '自检时间（UTC）：$time';
+  }
+
+  @override
+  String get diagnosticsSqliteOpen => '新建并打开数据库';
+
+  @override
+  String get diagnosticsSqliteCommit => '提交事务';
+
+  @override
+  String get diagnosticsSqliteReopen => '关闭、重开并读取提交内容';
+
+  @override
+  String get diagnosticsSqliteRollback => '失败事务回滚数据、结构与版本';
+
+  @override
+  String get diagnosticsSqliteFutureSchema => '拒绝未来版本且文件未变';
+
+  @override
+  String get diagnosticsSqliteCleanup => '删除临时数据库';
+
+  @override
+  String diagnosticsSqliteStep(String step, String status) {
+    return '$step：$status';
+  }
+
+  @override
+  String diagnosticsSqliteRuntime(
+    String packageVersion,
+    String libraryVersion,
+    String journalMode,
+    String synchronous,
+    int elapsedUs,
+  ) {
+    return 'sqlite3 包：$packageVersion；SQLite 库：$libraryVersion；journal：$journalMode；synchronous：$synchronous；耗时：$elapsedUs 微秒';
+  }
+
+  @override
+  String diagnosticsSqliteSource(String sourceId) {
+    return 'SQLite 源码标识：$sourceId';
+  }
+
+  @override
+  String diagnosticsSqliteOptions(String options) {
+    return 'SQLite 编译选项：$options';
+  }
+
+  @override
   String get appTitle => 'Shiori';
 
   @override

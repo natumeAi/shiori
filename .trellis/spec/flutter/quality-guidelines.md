@@ -18,7 +18,7 @@ paths:
 ## Approved Dependencies
 
 Snapshot verified against `pubspec.yaml`, `pubspec.lock` and the resolved
-packages' cached `LICENSE` files after S2. Hosted direct constraints are `^`
+packages' cached `LICENSE` files through S3 Phase A. Hosted direct constraints are `^`
 the resolved version shown here; SDK packages use `sdk: flutter`. Update this
 table with the lockfile when changing dependencies; this is not a latest-version
 claim. The SDK pin is Flutter 3.47.7 / Dart 3.13.5.
@@ -35,7 +35,9 @@ claim. The SDK pin is Flutter 3.47.7 / Dart 3.13.5.
 | `logging` | 1.3.0 | BSD-3-Clause | Structured application logging |
 | `intl` | 0.20.3 | BSD-3-Clause | Localization |
 | `path_provider` | 2.1.6 | BSD-3-Clause | Injectable Application Support/Documents directories |
-| `archive` | 4.5.2 | MIT | Pure Dart EPUB ZIP access; declared/post-expansion limits, not bounded inflation |
+| `sqlite3` | 3.8.0 | MIT | Isolated diagnostic SQLite self-check; product storage and iPhone packaging proof remain pending |
+| `crypto` | 3.0.7 | BSD-3-Clause | SHA-256 for streamed publication bytes |
+| `archive` | 4.5.2 | MIT | EPUB ZIP access via app-owned raw-directory index with metadata bounds, last-wins duplicates, exact length/CRC-32 checks, bounded native decode and file-backed open |
 | `xml` | 7.0.1 | MIT | XHTML/HTML4 entity table only; strict XML parser is project code |
 | `html` | 0.15.7 | MIT | HTML5 tree builder for HTML media and XHTML fallback |
 | `csslib` | 1.0.2 | BSD-3-Clause | CSS parsing; cascade/reader overrides are project code |
@@ -226,9 +228,12 @@ the implementation validates both payloads against their separate manifest.
   Separate/remove diagnostic fixture assets before a product build; merely
   selecting `lib/main.dart` does not exclude shared assets.
 
-Container limits do not bound peak inflation allocation. S3 must add bounded/
-streamed ZIP inflation and worker-isolate parsing before opening downloaded
-books. See [Reader Engine](./reader-engine.md) for font/session resource limits.
+S3 Phase A added bounded ZIP directory admission, emitted-byte limits and a
+worker-isolate protocol prototype. Before downloaded books are opened, S3
+Phase D must still integrate the worker with the preloaded source/resource
+adapter, cache/lease accounting and near-limit worker memory evidence. See
+[Reader Engine](./reader-engine.md) for archive guarantees and font/session
+resource limits.
 
 ## Unsigned iPhone CI and build identity
 

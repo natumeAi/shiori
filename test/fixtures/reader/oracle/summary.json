@@ -20,6 +20,13 @@
     },
     {
       "differences": 0,
+      "id": "duplicate-entries",
+      "samples": 115,
+      "sections": 1,
+      "sha256": "9b681950634971400b12cbf64e1036748a5948b8e816ae414e51c858c68a689b"
+    },
+    {
+      "differences": 0,
       "id": "html-fallback",
       "samples": 108,
       "sections": 5,

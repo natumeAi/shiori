@@ -1,0 +1,199 @@
+{
+  "accepted": [
+    {
+      "name": "root",
+      "input": "https://example.test",
+      "canonicalRoot": "https://example.test/",
+      "requests": {
+        "api/health": "https://example.test/api/health",
+        "api/library/snapshot": "https://example.test/api/library/snapshot",
+        "api/books/7": "https://example.test/api/books/7",
+        "api/books/7/file": "https://example.test/api/books/7/file",
+        "/covers/fixture%20cover%2Fpart%237.webp?v=fixture%2B1&size=2": "https://example.test/covers/fixture%20cover%2Fpart%237.webp?v=fixture%2B1&size=2"
+      }
+    },
+    {
+      "name": "prefix",
+      "input": "https://example.test/reader",
+      "canonicalRoot": "https://example.test/reader/",
+      "requests": {
+        "api/health": "https://example.test/reader/api/health",
+        "api/library/snapshot": "https://example.test/reader/api/library/snapshot",
+        "api/books/7": "https://example.test/reader/api/books/7",
+        "api/books/7/file": "https://example.test/reader/api/books/7/file",
+        "/covers/fixture%20cover%2Fpart%237.webp?v=fixture%2B1&size=2": "https://example.test/reader/covers/fixture%20cover%2Fpart%237.webp?v=fixture%2B1&size=2"
+      }
+    },
+    {
+      "name": "prefix_trailing_slash",
+      "input": "https://example.test/reader/",
+      "canonicalRoot": "https://example.test/reader/",
+      "requests": {
+        "api/health": "https://example.test/reader/api/health",
+        "api/library/snapshot": "https://example.test/reader/api/library/snapshot",
+        "api/books/7": "https://example.test/reader/api/books/7",
+        "api/books/7/file": "https://example.test/reader/api/books/7/file",
+        "/covers/fixture%20cover%2Fpart%237.webp?v=fixture%2B1&size=2": "https://example.test/reader/covers/fixture%20cover%2Fpart%237.webp?v=fixture%2B1&size=2"
+      }
+    },
+    {
+      "name": "explicit_port",
+      "input": "http://192.0.2.7:8080/reader",
+      "canonicalRoot": "http://192.0.2.7:8080/reader/",
+      "requests": {
+        "api/health": "http://192.0.2.7:8080/reader/api/health",
+        "api/library/snapshot": "http://192.0.2.7:8080/reader/api/library/snapshot",
+        "api/books/7": "http://192.0.2.7:8080/reader/api/books/7",
+        "api/books/7/file": "http://192.0.2.7:8080/reader/api/books/7/file",
+        "/covers/fixture%20cover%2Fpart%237.webp?v=fixture%2B1&size=2": "http://192.0.2.7:8080/reader/covers/fixture%20cover%2Fpart%237.webp?v=fixture%2B1&size=2"
+      }
+    },
+    {
+      "name": "default_https_port",
+      "input": "https://example.test:443/reader",
+      "canonicalRoot": "https://example.test/reader/",
+      "requests": {
+        "api/health": "https://example.test/reader/api/health",
+        "api/library/snapshot": "https://example.test/reader/api/library/snapshot",
+        "api/books/7": "https://example.test/reader/api/books/7",
+        "api/books/7/file": "https://example.test/reader/api/books/7/file",
+        "/covers/fixture%20cover%2Fpart%237.webp?v=fixture%2B1&size=2": "https://example.test/reader/covers/fixture%20cover%2Fpart%237.webp?v=fixture%2B1&size=2"
+      }
+    },
+    {
+      "name": "default_http_port",
+      "input": "http://example.test:80",
+      "canonicalRoot": "http://example.test/",
+      "requests": {
+        "api/health": "http://example.test/api/health",
+        "api/library/snapshot": "http://example.test/api/library/snapshot",
+        "api/books/7": "http://example.test/api/books/7",
+        "api/books/7/file": "http://example.test/api/books/7/file",
+        "/covers/fixture%20cover%2Fpart%237.webp?v=fixture%2B1&size=2": "http://example.test/covers/fixture%20cover%2Fpart%237.webp?v=fixture%2B1&size=2"
+      }
+    },
+    {
+      "name": "ipv6",
+      "input": "http://[2001:db8::7]:8080/reader",
+      "canonicalRoot": "http://[2001:db8::7]:8080/reader/",
+      "requests": {
+        "api/health": "http://[2001:db8::7]:8080/reader/api/health",
+        "api/library/snapshot": "http://[2001:db8::7]:8080/reader/api/library/snapshot",
+        "api/books/7": "http://[2001:db8::7]:8080/reader/api/books/7",
+        "api/books/7/file": "http://[2001:db8::7]:8080/reader/api/books/7/file",
+        "/covers/fixture%20cover%2Fpart%237.webp?v=fixture%2B1&size=2": "http://[2001:db8::7]:8080/reader/covers/fixture%20cover%2Fpart%237.webp?v=fixture%2B1&size=2"
+      }
+    },
+    {
+      "name": "encoded_prefix",
+      "input": "https://example.test/fixture%20library/a%2Fb",
+      "canonicalRoot": "https://example.test/fixture%20library/a%2Fb/",
+      "requests": {
+        "api/health": "https://example.test/fixture%20library/a%2Fb/api/health",
+        "api/library/snapshot": "https://example.test/fixture%20library/a%2Fb/api/library/snapshot",
+        "api/books/7": "https://example.test/fixture%20library/a%2Fb/api/books/7",
+        "api/books/7/file": "https://example.test/fixture%20library/a%2Fb/api/books/7/file",
+        "/covers/fixture%20cover%2Fpart%237.webp?v=fixture%2B1&size=2": "https://example.test/fixture%20library/a%2Fb/covers/fixture%20cover%2Fpart%237.webp?v=fixture%2B1&size=2"
+      }
+    },
+    {
+      "name": "case_and_dot_segments",
+      "input": "  HTTPS://EXAMPLE.TEST/a/../Reader/./  ",
+      "canonicalRoot": "https://example.test/Reader/",
+      "requests": {
+        "api/health": "https://example.test/Reader/api/health",
+        "api/library/snapshot": "https://example.test/Reader/api/library/snapshot",
+        "api/books/7": "https://example.test/Reader/api/books/7",
+        "api/books/7/file": "https://example.test/Reader/api/books/7/file",
+        "/covers/fixture%20cover%2Fpart%237.webp?v=fixture%2B1&size=2": "https://example.test/Reader/covers/fixture%20cover%2Fpart%237.webp?v=fixture%2B1&size=2"
+      }
+    }
+  ],
+  "rejected": [
+    {
+      "reason": "userinfo",
+      "input": "https://fixture:fixture@example.test/",
+      "expectedRequests": 0
+    },
+    {
+      "reason": "empty_userinfo",
+      "input": "https://@example.test/",
+      "expectedRequests": 0
+    },
+    {
+      "reason": "query",
+      "input": "https://example.test/reader?fixture=1",
+      "expectedRequests": 0
+    },
+    {
+      "reason": "empty_query",
+      "input": "https://example.test/?",
+      "expectedRequests": 0
+    },
+    {
+      "reason": "fragment",
+      "input": "https://example.test/reader#fixture",
+      "expectedRequests": 0
+    },
+    {
+      "reason": "empty_fragment",
+      "input": "https://example.test/#",
+      "expectedRequests": 0
+    },
+    {
+      "reason": "non_http_scheme",
+      "input": "ftp://example.test/reader",
+      "expectedRequests": 0
+    },
+    {
+      "reason": "missing_scheme",
+      "input": "example.test/reader",
+      "expectedRequests": 0
+    },
+    {
+      "reason": "missing_host",
+      "input": "https:///reader",
+      "expectedRequests": 0
+    },
+    {
+      "reason": "malformed_host",
+      "input": "https://exa mple.test/",
+      "expectedRequests": 0
+    },
+    {
+      "reason": "malformed_ipv6",
+      "input": "https://[2001:db8::7/",
+      "expectedRequests": 0
+    },
+    {
+      "reason": "invalid_port_large",
+      "input": "https://example.test:65536/",
+      "expectedRequests": 0
+    },
+    {
+      "reason": "invalid_port_zero",
+      "input": "https://example.test:0/",
+      "expectedRequests": 0
+    },
+    {
+      "reason": "invalid_port_text",
+      "input": "https://example.test:fixture/",
+      "expectedRequests": 0
+    },
+    {
+      "reason": "backslash",
+      "input": "https://example.test/reader\\fixture",
+      "expectedRequests": 0
+    },
+    {
+      "reason": "invalid_percent_escape",
+      "input": "https://example.test/fixture%2G",
+      "expectedRequests": 0
+    },
+    {
+      "reason": "truncated_percent_escape",
+      "input": "https://example.test/fixture%2",
+      "expectedRequests": 0
+    }
+  ]
+}

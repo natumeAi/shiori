@@ -1,5 +1,93 @@
 # Diagnostic capture and export contract
 
+## SQLite self-check (S3 Phase A)
+
+### 1. Scope / Trigger
+
+The existing synthetic diagnostics screen exposes a probe-only SQLite check.
+Diagnostics owns the direct `sqlite3` dependency usage; product/reader code
+must not import it. This is a driver/packaging observation, not Phase B's
+product database or migration owner.
+
+### 2. Signatures
+
+- `ProbeSqliteRepository(AppDirectories).run() -> Future<ProbeSqliteResult>`
+  resolves Application Support, then uses `Isolate.run` with only its path
+  and the root control port. All SQLite and scratch-file work runs off root.
+- `ProbeSqliteResult.fromMetadata(Map<String, Object?>)` returns null for an
+  absent extension and validates a present versioned result.
+
+### 3. Contracts
+
+`DiagnosticRecord.schemaVersion` remains 1. Its optional
+`metadata.sqliteSelfCheck` is a JSON object with its own `schemaVersion: 1`:
+
+- Required: UTC `checkedAt`, compile-time `buildId` / `buildNumber`,
+  `packageVersion`, `packageVersionSource`, `ranOffRootIsolate`, `elapsedUs`
+  (nonnegative), and `steps`.
+- `steps` has exactly `open`, `commit`, `reopen`, `rollback`, `futureSchema`,
+  `cleanup`: true means pass, false means fail, null means not reached.
+- Runtime facts: nullable `libraryVersion`, `sourceId`, `journalMode`,
+  `synchronous`; `compileOptions` is a sorted string list. Missing facts stay
+  unavailable. `packageVersionSource=resolved_pubspec_lock_snapshot` marks
+  the Dart package version snapshot, tested against the lockfile; it is not
+  the native library version. Source ID/options do not prove bundle origin.
+- Nullable `failure` contains only a bounded diagnostic code, never exception
+  text, paths, SQL or stacks. Native-loader failures become failed evidence.
+
+Each run creates a fresh `probe-sqlite-self-check/run-*` directory under
+Application Support. It opens a fresh DB, commits DDL/data/user_version=1,
+closes/reopens and reads it. A real duplicate-key failure rolls back earlier
+DDL/data/version writes, checked before close and after reopen. A separate
+version-2 DB is refused by a probe-only version guard before any write;
+sentinel/version, exact file bytes and directory entries must stay unchanged.
+Handles close in `finally`; scratch databases/sidecars are deleted in final
+cleanup. The empty dedicated parent may remain. Documents holds exports only.
+
+Capture/export and self-check are mutually disabled in the UI. Export merges
+the latest result into the record; persisted results retain their original
+build identity/time when reused. Running a check invalidates the displayed
+export path; capture/stop or re-export is needed to persist the new result.
+Old exports omit the extension and remain readable. Clipboard stays bounded
+and retains the existing capture summary contract.
+
+Hosted CI writes sorted `Runner.app/Frameworks` entries to `frameworks.txt`
+and `provenance.json.packagedFrameworks` (with `packagedFrameworksFile`).
+Each case-insensitive `*sqlite*.framework` uses its `CFBundleExecutable` for
+the same arm64 slice verification as Flutter/App, including staged variants.
+This adds no build mode or platform proof to Windows syntax validation.
+
+### 4. Validation & Error Matrix
+
+| Condition | Behavior |
+| --- | --- |
+| Unsupported/missing extension version, malformed shape | Saved-record load logs once and throws `ParseException` |
+| Directory lookup / isolate spawn fails | Typed storage error; localized retry |
+| SQL, native load, scratch I/O or invariant fails | Current step false; later steps null; cleanup attempted; failed result exportable |
+| Cleanup fails | `cleanup=false`, bounded failure code; overall fail |
+| Accidental root runner call | Refused before SQLite/disk access |
+
+### 5. Good/Base/Bad Cases
+
+Good: six true steps and runtime facts exported from the installed build.
+Base: an old schema-1 record loads without SQLite evidence. Bad: treating a
+Windows pass, source ID, or framework inventory as successful iPhone signing.
+
+### 6. Tests Required
+
+Use fake `AppDirectories` and fresh temp roots with actual SQLite: isolation,
+transactions/refusal, version snapshot, cleanup/repeat runs, untouched marker
+and no Documents access, failure evidence and export/old-record round-trip.
+Widget tests cover running/disabled, saved/pass/fail, retry, export attachment,
+disposal and 200% text scale. Run the full suite and Git Bash `bash -n`.
+
+### 7. Wrong vs Correct
+
+Wrong: `sqlite3.open` on root, scratch files in Documents, or silently promoting
+host evidence into the hosted gate. Correct: probe repository + isolated
+scratch run, explicit versioned facts, then authorized hosted build and actual
+selected-route signing/install/run/export evidence before Phase B.
+
 ## 1. Scope / Trigger
 
 Applies to `core/diagnostics`, `core/storage`, diagnostics-feature file

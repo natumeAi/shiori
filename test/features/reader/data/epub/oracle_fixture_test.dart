@@ -8,6 +8,7 @@ import 'oracle_comparison.dart';
 const _fixtureIds = [
   'cfi-structure',
   'chapters',
+  'duplicate-entries',
   'html-fallback',
   'images',
   'inert-content',

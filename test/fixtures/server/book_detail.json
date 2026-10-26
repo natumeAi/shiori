@@ -1,0 +1,24 @@
+{
+  "book": {
+    "id": 7,
+    "folderId": null,
+    "title": "Fixture Book 7",
+    "author": "Fixture Author 7",
+    "identifier": "urn:fixture:book:7",
+    "fileName": "fixture-book-7.epub",
+    "fileSize": 4096,
+    "coverPath": "data/covers/fixture cover #7.webp",
+    "coverUrl": "/covers/fixture%20cover%20%237.webp",
+    "coverThumbnailUrl": "/covers/thumbnails/fixture-7-small.webp",
+    "coverThumbnail2xUrl": "/covers/thumbnails/fixture-7-large.webp",
+    "coverThumbnailVersion": "fixture-v1",
+    "sortOrder": 1000,
+    "createdAt": "2026-01-01 00:00:00",
+    "updatedAt": "2026-01-02 03:04:05",
+    "description": "Synthetic fixture description.",
+    "publisher": "Fixture Publisher",
+    "language": "en",
+    "coverThumbnailSmallPath": "data/covers/thumbnails/fixture-7-small.webp",
+    "coverThumbnailLargePath": "data/covers/thumbnails/fixture-7-large.webp"
+  }
+}

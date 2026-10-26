@@ -48,9 +48,52 @@ extend layout or connect product UI. Paths below are relative to
 
 ### EPUB loading and inert source projection
 
-`epub_archive.dart` uses exact ZIP entry names (last duplicate wins), lazy entry
-reads and `EpubLimits`. Text is always UTF-8 with replacement, ignoring declared
-encodings; the decoder removes one leading BOM. `epub_package.dart` reads the
+`epub_archive.dart` validates ZIP framing with an app-owned bounded reader before
+hydrating any package `ZipFileHeader`, then indexes exact names (last duplicate
+wins at distinct local offsets). `EpubLimits.maxDirectoryBytes` defaults to
+16 MiB for the central directory; `maxMetadataBytes` defaults to 8 MiB for the
+sum of central/local names and extras, entry comments, the archive comment and
+the ZIP64 EOCD extensible sector.
+Both are injectable and independent of expanded-content limits. At the default
+20,000 physical entries, fixed central headers cost 920,000 bytes and the
+variable budget permits about 419 bytes per entry across both headers; the
+16 MiB cap also bounds directories when callers raise the entry count.
+EOCD search reads at most 65,557 tail bytes and requires the declared comment
+to end at EOF. Physical counts must match both EOCD counts. Every local offset
+must be unique, inside the archive and before the central directory. Local
+headers, compressed data and any data descriptors must form disjoint ranges
+that cannot cross the central directory. Local variable lengths are charged
+before reading extras. Aliases, overlaps, invalid ranges and budget violations
+fail as content-free `ParseException` before package hydration; do not rely on
+`ZipDirectory.read` followed by admission checks. ZIP64 is supported within the
+same bounds: resolve the locator/EOCD record and extra-field ID 1 before
+admission, reading extra values in APPNOTE order only for corresponding
+32-bit/16-bit sentinels. ID 1 without any required values is valid. Reject
+missing/truncated fields, inconsistent counts or legacy/ZIP64 end values,
+out-of-archive offsets, signed-integer overflow and multi-disk archives. The
+ZIP64 record must fit before its locator; central data cannot overlap it.
+Retain admitted sizes/offsets for hydration: decode central metadata without
+local I/O, apply the validated values, then restrict `ZipFile.read` to the
+admitted local range, including signed/unsigned 32-bit or ZIP64 descriptors.
+`EpubLimits` counts every physical entry and its declared size before hydration
+and expansion, including overwritten duplicates. Opening never decompresses
+entries or reads symlink targets; link mode bits leave ordinary entry bytes.
+Only stored/deflate entries are supported; encryption and other methods fail.
+Lazy native reads use `ZipFile.decompress` -> `decodeLimited` ->
+`NativeChunkDecoder` (platform zlib), with an app-owned sink checking emitted
+bytes before accumulation. Returned length must equal the declared size and
+CRC-32 must match; corruption fails as content-free `ParseException`. These
+bounds cover one expansion of all physical entries, not repeated reads or
+caller-retained copies. Native decoding may accept a missing zero-output final
+byte when exact length and CRC still pass, unlike fflate's EOF rejection; the
+generated prefix regression also requires byte-identical output. Do not use the
+package's block inflater, which rejects valid level-1 deflate. `openFile(String,
+{EpubLimits limits})` retains a shared file handle until synchronous, idempotent
+`close()`; `open(Uint8List)` remains available and its close is a no-op. This
+closes the S3 bounded-inflation carry-forward below; the worker protocol
+prototype exists, and its reader-preparation integration remains Phase D work
+(see the carry-forward list). Text is always UTF-8 with replacement, ignoring declared encodings;
+the decoder removes one leading BOM. `epub_package.dart` reads the
 container/OPF, manifest, ordered itemrefs including `linear="no"`, and nav/NCX.
 `EpubBook.sections` drops itemrefs without manifest items. Preserve the original
 itemref `sectionIndex`; do not confuse it with the filtered sections-list index.
@@ -243,9 +286,13 @@ release-mode scheduler or an isolation guarantee for unguarded future APIs.
 
 ### Carry-forward and code/design boundaries
 
-- S3: ZIP limits check declared sizes and post-expansion length; an entry can
-  allocate past the bound before rejection. Add bounded/streamed inflation and
-  isolate parsing before opening downloaded publications.
+- S3 Phase A: archive reads now use the bounded raw-directory index, native
+  emitted-byte limits, exact length/CRC-32 checks and file-backed open described
+  above. The worker protocol prototype keeps archive/source work off root.
+  Phase D still owns the bounded preloaded source/resource adapter for reader
+  preparation, cache/lease accounting and near-limit worker memory evidence.
+  Host archive measurements do not establish total worker RSS or iPhone limits;
+  downloaded-publication integration and device validation remain required.
 - S4: `FontRegistry` caps each font at 32 MiB but cannot unload engine fonts or
   bound their cross-book count. Add a session/restart policy. Font mappings and
   fallback availability require device evidence, not host Ahem results.

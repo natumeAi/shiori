@@ -53,6 +53,38 @@ function sourceFiles(directory, prefix = '') {
   }
   return output;
 }
+// zipSync's object input coalesces names. Assemble its single-entry records
+// instead, preserving its normal headers (including the first stored mimetype).
+// Existing fixtures still use the original zipSync call below, byte for byte.
+function zipWithRawEntries(entries, rawEntries) {
+  for (const entry of rawEntries) {
+    if (entry.name === 'mimetype' || !Object.hasOwn(entries, entry.name) || typeof entry.text !== 'string') {
+      throw new Error('Raw entries must repeat an existing non-mimetype name with UTF-8 text');
+    }
+  }
+  const local = [], central = [];
+  let offset = 0, count = 0;
+  for (const [name, [data, options]] of Object.entries(entries)) {
+    const copies = [...rawEntries.filter(entry => entry.name === name).map(entry => strToU8(entry.text)), data];
+    for (const copy of copies) {
+      const single = Buffer.from(zipSync({ [name]: [copy, options] }));
+      const start = single.readUInt32LE(single.length - 6);
+      const header = Buffer.from(single.subarray(start, single.length - 22));
+      header.writeUInt32LE(offset, 42);
+      local.push(single.subarray(0, start));
+      central.push(header);
+      offset += start;
+      count++;
+    }
+  }
+  const directory = Buffer.concat(central);
+  const end = Buffer.from(zipSync({}));
+  end.writeUInt16LE(count, 8);
+  end.writeUInt16LE(count, 10);
+  end.writeUInt32LE(directory.length, 12);
+  end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...local, directory, end]);
+}
 mkdirSync(assetRoot, { recursive: true });
 const manifest = [];
 for (const id of readdirSync(fixtureRoot).sort()) {
@@ -80,7 +112,7 @@ for (const id of readdirSync(fixtureRoot).sort()) {
   // date keeps archive bytes identical across host timezones.
   const entries = { mimetype: [strToU8('application/epub+zip'), { level: 0, mtime: new Date(2000, 0, 1, 0, 0, 0) }] };
   for (const name of Object.keys(files).sort()) entries[name] = [files[name], { level: 0, mtime: new Date(2000, 0, 1, 0, 0, 0) }];
-  const bytes = zipSync(entries);
+  const bytes = spec.rawEntries?.length ? zipWithRawEntries(entries, spec.rawEntries) : zipSync(entries);
   writeFileSync(path.join(assetRoot, `${id}.epub`), bytes);
   manifest.push({ id, file: `${id}.epub`, sha256: sha256(bytes), bytes: bytes.length, source: `tool/oracle/fixtures/${id}` });
   console.log(`${id}: ${bytes.length} bytes`);

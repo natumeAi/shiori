@@ -1,0 +1,162 @@
+{
+  "snapshot": {
+    "schemaVersion": 1,
+    "version": 42,
+    "books": [
+      {
+        "id": 7,
+        "folderId": null,
+        "title": "Fixture Book 7",
+        "author": "Fixture Author 7",
+        "identifier": "urn:fixture:book:7",
+        "fileName": "fixture-book-7.epub",
+        "fileSize": 4096,
+        "coverPath": null,
+        "coverUrl": null,
+        "coverThumbnailUrl": null,
+        "coverThumbnail2xUrl": null,
+        "coverThumbnailVersion": null,
+        "sortOrder": 1000,
+        "createdAt": "2026-01-01 00:00:00",
+        "updatedAt": "2026-01-02 03:04:05",
+        "readingProgress": null,
+        "readingUpdatedAt": null
+      },
+      {
+        "id": 8,
+        "folderId": null,
+        "title": "Fixture Book 8",
+        "author": "Fixture Author 8",
+        "identifier": "urn:fixture:book:8",
+        "fileName": "fixture-book-8.epub",
+        "fileSize": 4096,
+        "coverPath": null,
+        "coverUrl": null,
+        "coverThumbnailUrl": null,
+        "coverThumbnail2xUrl": null,
+        "coverThumbnailVersion": null,
+        "sortOrder": 3000,
+        "createdAt": "2026-01-01 00:00:00",
+        "updatedAt": "2026-01-02 03:04:05",
+        "readingProgress": 0,
+        "readingUpdatedAt": "2026-01-02 03:04:05"
+      },
+      {
+        "id": 9,
+        "folderId": 7,
+        "title": "Fixture Book 9",
+        "author": "Fixture Author 9",
+        "identifier": "urn:fixture:book:9",
+        "fileName": "fixture-book-9.epub",
+        "fileSize": 4096,
+        "coverPath": null,
+        "coverUrl": null,
+        "coverThumbnailUrl": null,
+        "coverThumbnail2xUrl": null,
+        "coverThumbnailVersion": null,
+        "sortOrder": 2000,
+        "createdAt": "2026-01-01 00:00:00",
+        "updatedAt": "2026-01-02 03:04:05",
+        "readingProgress": 0.375,
+        "readingUpdatedAt": "2026-01-02 03:04:05"
+      },
+      {
+        "id": 10,
+        "folderId": 7,
+        "title": "Fixture Book 10",
+        "author": "Fixture Author 10",
+        "identifier": "urn:fixture:book:10",
+        "fileName": "fixture-book-10.epub",
+        "fileSize": 4096,
+        "coverPath": null,
+        "coverUrl": null,
+        "coverThumbnailUrl": null,
+        "coverThumbnail2xUrl": null,
+        "coverThumbnailVersion": null,
+        "sortOrder": 1000,
+        "createdAt": "2026-01-01 00:00:00",
+        "updatedAt": "2026-01-02 03:04:05",
+        "readingProgress": null,
+        "readingUpdatedAt": null
+      }
+    ],
+    "folders": [
+      {
+        "id": 7,
+        "name": "Fixture Folder 7",
+        "sortOrder": 2000,
+        "bookCount": 2,
+        "bookIds": [
+          10,
+          9
+        ],
+        "previewBookIds": [
+          10,
+          9
+        ],
+        "createdAt": "2026-01-01 00:00:00",
+        "updatedAt": "2026-01-02 03:04:05"
+      },
+      {
+        "id": 20,
+        "name": "Fixture Folder 20",
+        "sortOrder": 4000,
+        "bookCount": 0,
+        "bookIds": [],
+        "previewBookIds": [],
+        "createdAt": "2026-01-01 00:00:00",
+        "updatedAt": "2026-01-02 03:04:05"
+      }
+    ],
+    "shelf": [
+      {
+        "type": "book",
+        "id": 7,
+        "sortOrder": 1000
+      },
+      {
+        "type": "folder",
+        "id": 7,
+        "sortOrder": 2000
+      },
+      {
+        "type": "book",
+        "id": 8,
+        "sortOrder": 3000
+      },
+      {
+        "type": "folder",
+        "id": 20,
+        "sortOrder": 4000
+      }
+    ],
+    "recent": [
+      {
+        "bookId": 9,
+        "progress": {
+          "bookId": 9,
+          "cfi": null,
+          "progress": 0.375,
+          "chapterHref": null,
+          "chapterLabel": null,
+          "chapterCount": null,
+          "chapterIndex": null,
+          "updatedAt": "2026-01-02 03:04:05"
+        }
+      },
+      {
+        "bookId": 8,
+        "progress": {
+          "bookId": 8,
+          "cfi": null,
+          "progress": 0,
+          "chapterHref": null,
+          "chapterLabel": null,
+          "chapterCount": null,
+          "chapterIndex": null,
+          "updatedAt": "2026-01-02 03:04:05"
+        }
+      }
+    ]
+  }
+}

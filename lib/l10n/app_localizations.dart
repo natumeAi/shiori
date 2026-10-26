@@ -490,6 +490,126 @@ abstract class AppLocalizations {
   /// **'标记已保存'**
   String get diagnosticsMarkerSaved;
 
+  /// No description provided for @diagnosticsSqliteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'SQLite 存储自检'**
+  String get diagnosticsSqliteTitle;
+
+  /// No description provided for @diagnosticsSqliteHelp.
+  ///
+  /// In zh, this message translates to:
+  /// **'在后台隔离区使用 Application Support 临时数据库，完成后删除。自检后请开始并停止采集，或重新导出已有记录，以保存最新结果。'**
+  String get diagnosticsSqliteHelp;
+
+  /// No description provided for @diagnosticsSqliteRun.
+  ///
+  /// In zh, this message translates to:
+  /// **'运行 SQLite 自检'**
+  String get diagnosticsSqliteRun;
+
+  /// No description provided for @diagnosticsSqliteRunning.
+  ///
+  /// In zh, this message translates to:
+  /// **'SQLite 自检运行中…'**
+  String get diagnosticsSqliteRunning;
+
+  /// No description provided for @diagnosticsSqlitePass.
+  ///
+  /// In zh, this message translates to:
+  /// **'通过'**
+  String get diagnosticsSqlitePass;
+
+  /// No description provided for @diagnosticsSqliteFail.
+  ///
+  /// In zh, this message translates to:
+  /// **'失败'**
+  String get diagnosticsSqliteFail;
+
+  /// No description provided for @diagnosticsSqliteNotRun.
+  ///
+  /// In zh, this message translates to:
+  /// **'未运行'**
+  String get diagnosticsSqliteNotRun;
+
+  /// No description provided for @diagnosticsSqliteOutcome.
+  ///
+  /// In zh, this message translates to:
+  /// **'SQLite 自检结果：{status}'**
+  String diagnosticsSqliteOutcome(String status);
+
+  /// No description provided for @diagnosticsSqliteCheckedAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'自检时间（UTC）：{time}'**
+  String diagnosticsSqliteCheckedAt(String time);
+
+  /// No description provided for @diagnosticsSqliteOpen.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建并打开数据库'**
+  String get diagnosticsSqliteOpen;
+
+  /// No description provided for @diagnosticsSqliteCommit.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交事务'**
+  String get diagnosticsSqliteCommit;
+
+  /// No description provided for @diagnosticsSqliteReopen.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭、重开并读取提交内容'**
+  String get diagnosticsSqliteReopen;
+
+  /// No description provided for @diagnosticsSqliteRollback.
+  ///
+  /// In zh, this message translates to:
+  /// **'失败事务回滚数据、结构与版本'**
+  String get diagnosticsSqliteRollback;
+
+  /// No description provided for @diagnosticsSqliteFutureSchema.
+  ///
+  /// In zh, this message translates to:
+  /// **'拒绝未来版本且文件未变'**
+  String get diagnosticsSqliteFutureSchema;
+
+  /// No description provided for @diagnosticsSqliteCleanup.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除临时数据库'**
+  String get diagnosticsSqliteCleanup;
+
+  /// No description provided for @diagnosticsSqliteStep.
+  ///
+  /// In zh, this message translates to:
+  /// **'{step}：{status}'**
+  String diagnosticsSqliteStep(String step, String status);
+
+  /// No description provided for @diagnosticsSqliteRuntime.
+  ///
+  /// In zh, this message translates to:
+  /// **'sqlite3 包：{packageVersion}；SQLite 库：{libraryVersion}；journal：{journalMode}；synchronous：{synchronous}；耗时：{elapsedUs} 微秒'**
+  String diagnosticsSqliteRuntime(
+    String packageVersion,
+    String libraryVersion,
+    String journalMode,
+    String synchronous,
+    int elapsedUs,
+  );
+
+  /// No description provided for @diagnosticsSqliteSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'SQLite 源码标识：{sourceId}'**
+  String diagnosticsSqliteSource(String sourceId);
+
+  /// No description provided for @diagnosticsSqliteOptions.
+  ///
+  /// In zh, this message translates to:
+  /// **'SQLite 编译选项：{options}'**
+  String diagnosticsSqliteOptions(String options);
+
   /// Application name shown by the OS task switcher and window title.
   ///
   /// In zh, this message translates to:

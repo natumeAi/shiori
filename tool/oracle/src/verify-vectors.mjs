@@ -10,7 +10,7 @@ assert.ok(!readdirSync(vectorRoot).some(name => name.endsWith('.chromium.json'))
 // Full Chromium output exists only after `npm run vectors` in this checkout.
 const engines = existsSync(chromiumRoot) ? ['webkit', 'chromium'] : ['webkit'];
 const manifest = JSON.parse(readFileSync(path.join(assetRoot, 'manifest.json'), 'utf8'));
-const expected = ['cfi-structure','chapters','html-fallback','images','inert-content','long-content',
+const expected = ['cfi-structure','chapters','duplicate-entries','html-fallback','images','inert-content','long-content',
   'one-page','opf-variants','styles','unicode','unsupported-fixed','unsupported-rtl','unsupported-vertical'];
 assert.deepEqual(manifest.fixtures.map(item => item.id), expected);
 let sections = 0, samples = 0;
