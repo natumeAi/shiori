@@ -6,4 +6,4 @@
 {"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/reference-audit.md", "reason": "Reference architecture, API inventory and known compatibility constraints."}
 {"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/ui-parity-plan.md", "reason": "UI01-UI14 behavior, source timing and evidence inventory."}
 {"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/performance-acceptance.md", "reason": "Device performance gates and separation of evidence levels."}
-{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/ios-device-workflow.md", "reason": "Accepted free Windows/iPhone installation route and build constraints."}
+{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/fixed-layout-expansion.md", "reason": "User-approved simple/complex fixed-layout expansion, fit-page/pinch/pan interaction, S3 handoff and S4 capability gates."}

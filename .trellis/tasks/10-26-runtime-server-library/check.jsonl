@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/flutter/error-handling.md", "reason": "Cancellation, parsing, storage and redacted error boundaries."}
+{"file": ".trellis/spec/flutter/reader-engine.md", "reason": "Source/CFI invariants, bounded resources and worker handoff."}
+{"file": ".trellis/spec/flutter/quality-guidelines.md", "reason": "Dependency pins, fixture privacy and iOS build identity."}
+{"file": ".trellis/spec/flutter/testing.md", "reason": "Meaningful fixture/repository/widget checks and device evidence limits."}
+{"file": ".trellis/tasks/10-26-runtime-server-library/research/contracts.md", "reason": "Re-audited S3 endpoints, exact envelopes, prefix/304 and identity semantics."}
+{"file": ".trellis/tasks/10-26-runtime-server-library/research/storage-and-import.md", "reason": "SQLite/isolate evidence, archive audit qualifications and S2 carry-forward."}

@@ -1,0 +1,33 @@
+{
+  "id": "runtime-server-library",
+  "name": "runtime-server-library",
+  "title": "S3: Runtime server and library foundation",
+  "description": "Plan runtime NAS configuration, server-isolated typed reads and durable EPUB cache/import foundation for S4-S6; remain in planning.",
+  "status": "planning",
+  "dev_type": null,
+  "scope": "flutter",
+  "package": null,
+  "priority": "P2",
+  "creator": "shiroha",
+  "assignee": "shiroha",
+  "createdAt": "2026-10-26",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "master",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "10-22-flutter-lan-reader-parity",
+  "relatedFiles": [
+    "prd.md",
+    "design.md",
+    "implement.md",
+    "research/contracts.md",
+    "research/storage-and-import.md",
+    "research/planning-readiness.md"
+  ],
+  "notes": "S3 planning requested on 2026-10-26. PRD/design/implementation plan and curated manifests prepared; renewed user review pending after the parent fixed-layout expansion. S3-R7/AC7 preserve valid fixed/mixed source metadata without S2 blanket rejection; rendering and whole-page interaction remain S4. Depends on archived S1 build/storage and merged S2 source model/bounded-import carry-forward. No task start, product edit, NAS access, dependency install or push in planning.",
+  "meta": {}
+}

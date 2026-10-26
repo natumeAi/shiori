@@ -1,8 +1,9 @@
 # Native reader options and EPUB coverage
 
-Researched on 2026-10-22. No dependency was installed, selected, or tested by
-this research. The user subsequently accepted the novel-oriented first-release
-content scope described below.
+Originally researched on 2026-10-22. No dependency was installed, selected,
+or tested by this research. The coverage section was revised on 2026-10-26
+after the user added simple and complex static fixed layout to S4. Historical
+package observations below are dated evidence, not a fresh package review.
 
 ## Required boundary
 
@@ -66,12 +67,14 @@ Relative anchors below refer to `D:/Projects/lan-reader`.
 
 ## Accepted first-release coverage
 
-The first complete release focuses on ordinary horizontal, left-to-right,
-reflowable novel/light-novel EPUBs with illustrations and normal text styling.
-Fixed-page publications and vertical/right-to-left reading are deferred to
-later compatibility work.
+The first complete release includes ordinary horizontal, left-to-right,
+reflowable novel/light-novel EPUBs with illustrations and normal text styling,
+single-image fixed pages, complex static fixed-layout books and mixed
+publications. The user approved the fixed-layout expansion on 2026-10-26;
+`fixed-layout-expansion.md` records its evidence and required capability
+matrix. Vertical/right-to-left reading remains deferred.
 
-This is the user's accepted first-release scope split, not an inference that
+This is the user's revised first-release scope, not an inference that
 special layouts are absent from the reference. It does not reduce the
 home/bookshelf/statistics UI and interaction parity requirements.
 

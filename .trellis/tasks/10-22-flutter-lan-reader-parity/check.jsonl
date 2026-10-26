@@ -1,7 +1,6 @@
 {"file": ".trellis/spec/flutter/quality-guidelines.md", "reason": "Full repository quality and dependency requirements."}
 {"file": ".trellis/spec/flutter/testing.md", "reason": "Meaningful repository/controller/widget tests and no live network in unit tests."}
 {"file": ".trellis/spec/flutter/directory-structure.md", "reason": "Architecture/import boundaries."}
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Trace DTO, source mapping, persistence and UI boundaries."}
 {"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/ui-parity-plan.md", "reason": "Full visual and interaction parity coverage."}
 {"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/performance-acceptance.md", "reason": "Do not turn incomplete or proxy metrics into performance acceptance."}
-{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/reader-fidelity.md", "reason": "Accepted reflow boundary and real local corpus facts."}
+{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/fixed-layout-expansion.md", "reason": "Verify complex fixed-layout scope, whole-page pinch/pan, mixed-book/source correctness and unchanged performance requirements."}

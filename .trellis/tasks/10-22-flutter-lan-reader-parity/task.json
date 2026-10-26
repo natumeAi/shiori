@@ -2,7 +2,7 @@
   "id": "flutter-lan-reader-parity",
   "name": "flutter-lan-reader-parity",
   "title": "Flutter parity with lan-reader",
-  "description": "Plan an iPhone-first native Flutter client matching lan-reader UI/interactions, using a user-configured NAS, free Windows/cloud sideloading, reflowable novel EPUB support and a verified 120 FPS target. Deliver a separate backend handoff.",
+  "description": "Plan an iPhone-first native Flutter client matching lan-reader UI/interactions, using a user-configured NAS, free Windows/cloud sideloading, reflowable novels plus simple/complex static fixed-layout and mixed EPUBs, and a verified 120 FPS target. Deliver a separate backend handoff.",
   "status": "planning",
   "dev_type": null,
   "scope": null,
@@ -20,10 +20,11 @@
   "subtasks": [],
   "children": [
     "10-22-ios-free-device-bootstrap",
-    "10-22-native-reader-feasibility"
+    "10-22-native-reader-feasibility",
+    "10-26-runtime-server-library"
   ],
   "parent": null,
   "relatedFiles": [],
-  "notes": "Parent planning artifacts and first-child plan prepared; revised 2026-10-22 after plan review (GitHub Actions primary build host, fixed app identifier, file-based diagnostic export, refresh-limit evidence). Await explicit approval of the latest final planning summary; no implementation has started.",
+  "notes": "Parent requirements/integration owner. S1/S2 archived; S2 conditional S4 GO retains failed/unverified gates. On 2026-10-26 the user included single-image/complex static fixed layout and selected whole-page fit/pinch/pan. R11/AC10 updated; AC11-AC12 added. Proposed S4a-S4c boundaries have explicit dependencies; detailed child feasibility/design review remains before implementation. S3 source-readiness handoff is aligned and awaits renewed review. Parent remains planning; no child activation.",
   "meta": {}
 }

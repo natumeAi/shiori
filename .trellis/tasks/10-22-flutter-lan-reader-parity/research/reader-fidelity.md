@@ -4,6 +4,12 @@ Inspected on 2026-10-22. The user subsequently accepted native line/page-break
 differences while preserving app UI, settings, interactions, and content-based
 cross-client resume. That decision does not reduce EPUB content support.
 
+Scope update, 2026-10-26: simple, complex static and mixed fixed layout are
+now included in S4 (`fixed-layout-expansion.md`). Native text reflow tolerance
+applies to reflowable sections; it does not authorize rearranging authored
+fixed-page geometry. The corpus below remains the original four-book corpus,
+not evidence that the new fixed-layout scope has passed.
+
 ## Current web behavior
 
 All reference anchors in this section are relative to
@@ -73,6 +79,7 @@ trade-off was explained:
 
 Exact browser line/page-break equivalence is therefore not an acceptance
 requirement. Unsupported or silently omitted content is not covered by this
-permission. The user separately accepted the ordinary horizontal reflowable
-novel scope in `native-reader-options.md`; the parent design combines these
-four local books with generated source/style/Unicode/image/stress fixtures.
+permission. Current scope is recorded in `native-reader-options.md` and the
+parent PRD. The parent combines these four local books with generated
+source/style/Unicode/image/stress fixtures and, after the scope expansion,
+fixed/mixed-layout fixtures plus the private fixed-page regression sample.

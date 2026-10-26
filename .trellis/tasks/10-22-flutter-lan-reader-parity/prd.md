@@ -55,7 +55,14 @@ are indexed by the implementation/check context manifests.
   same content location, not by equal page numbers.
 - First release covers ordinary horizontal, left-to-right, reflowable
   novel/light-novel EPUBs with TOC, illustrations and normal text styling.
-  Fixed-layout publications, vertical writing and RTL reading are deferred.
+  On 2026-10-26, the user expanded S4 to include both single-image fixed
+  pages and complex static fixed-layout EPUBs, including publications that
+  mix fixed pages with reflowable sections. Vertical writing and RTL reading
+  remain deferred; adding fixed layout does not change those boundaries.
+- For fixed pages, the user chose initial fit-page display plus whole-page
+  pinch zoom and panning on 2026-10-26. Complex-page text can therefore be
+  enlarged without changing authored geometry. Image-viewer parity remains
+  available separately; zoomed-page gestures must not cause accidental turns.
 - `D:/Projects/lan-reader` is read-only for this work. Required changes there
   are described for the user to implement/deploy separately.
 
@@ -73,7 +80,7 @@ are indexed by the implementation/check context manifests.
 | R8 | Preserve reader/app behavior across supported lifecycle, viewport, resource and network changes. No skipped/duplicated pages, stale callbacks or unbounded resource growth. |
 | R9 | Deliver a free build/install/update/refresh/diagnostic workflow using Windows, hosted macOS and the iPhone; no local Mac, Android phone, paid membership or unapproved cloud charge is a prerequisite. |
 | R10 | Permit native reflow while preserving content, order, visual settings, app UI and interactions. Different pagination does not authorize missing content or inaccurate cross-client resume. |
-| R11 | Support the accepted first-release EPUB scope. Detect known unsupported layout classes and explain them recoverably without changing saved progress or silently dropping content. |
+| R11 | Support reflowable novels, single-image fixed pages, complex static fixed-layout publications and mixed-layout EPUBs. Preserve authored fixed-page geometry and content order, with initial fit-page display and whole-page pinch zoom/pan. Detect remaining unsupported features and explain them recoverably without changing saved progress or silently dropping content. |
 
 ## Acceptance Criteria
 
@@ -83,8 +90,9 @@ are indexed by the implementation/check context manifests.
   or pending writes. Root and prefixed deployment URLs are covered.
 - **AC2 (R2, R10):** UI01–UI14 have matched iPhone screen/interaction evidence
   and appropriate automated checks, including loading/empty/error states.
-  Approved differences are native text reflow, necessary server setup UI and
-  platform-owned file/permission/share dialogs.
+  Approved differences are native text reflow, necessary server setup UI,
+  platform-owned file/permission/share dialogs and the selected whole-page
+  fixed-layout fit/pinch/pan interaction specified in AC12.
 - **AC3 (R3):** The shipping app and reader execute Dart/Flutter; no embedded
   browser reader supplies parsing-driven rendering, pagination or gestures.
 - **AC4 (R4, R8):** Three-repeat physical-device scenario results include
@@ -116,16 +124,37 @@ are indexed by the implementation/check context manifests.
   independently launched, updated/refreshed with retained test state, and
   exports diagnostics through the selected Windows/iPhone flow. Validate this
   early, before relying on it for full product implementation.
-- **AC10 (R11):** Fixed-layout/vertical/RTL fixtures are clearly identified as
-  outside the first release; unsupported content never becomes an empty or
-  partly discarded successful read and does not overwrite saved position.
+- **AC10 (R11):** Vertical/RTL fixtures and remaining unsupported features are
+  clearly identified with an explanation and recovery path. A fixed-layout
+  declaration alone does not reject an otherwise supported publication.
+  Unsupported content never becomes an empty or partly discarded successful
+  read and does not overwrite saved position.
+- **AC11 (R3-R6, R8, R10, R11):** Generated single-image, complex static
+  fixed-layout and mixed-layout fixtures preserve authored page geometry,
+  visible text/images, layering, clipping, fonts and reading order. Tests
+  cover page dimensions, spread/orientation metadata, reflowable/fixed
+  boundaries, TOC navigation, settings, lifecycle and web/native source-anchor
+  restore. The local mixed-layout regression sample opens through all 23
+  sections, including its six fixed image pages, without altering its source
+  or omitting pages. Fixed-page text has correct canonical coverage; image
+  pixels are not counted as text. The same AC4 performance thresholds and
+  bounded-resource requirements apply to this corpus; S2's earlier success
+  on other books does not establish these new results.
+- **AC12 (R2, R5, R6, R8, R11):** Fixed pages initially fit the reading area
+  without cropping, support pinch zoom and bounded panning, and can return to
+  fit-page display. A drag while enlarged pans content instead of turning
+  pages; normal page gestures resume at fit. Image-viewer and explicit
+  navigation remain coordinated. Accepted source position and actual-visible
+  text coverage are proven after view changes, with no speculative writes
+  during gestures. Viewport/lifecycle interruption and page changes cannot
+  apply an obsolete transform to a different source page or lose content.
 
 ## Out of Scope
 
 - Editing/deploying lan-reader, replacing its backend or database, or requiring
   a backend rewrite merely because the client changes.
-- First-release fixed-layout, vertical and RTL reading; Android/iPad/desktop
-  release acceptance; new reading formats or unrelated product redesign.
+- First-release vertical and RTL reading; Android/iPad/desktop release
+  acceptance; new reading formats or unrelated product redesign.
 - A WebView fallback, paid developer distribution or paid cloud usage.
 - New app account systems/product cloud backends, synchronized reader
   appearance, a complete offline download manager, or stronger simultaneous-writer guarantees than
@@ -152,6 +181,12 @@ are indexed by the implementation/check context manifests.
 - Account connection, actual iOS version, signing setup, NAS endpoint and
   device-run evidence are operational inputs collected at their relevant
   stages; none is invented in this plan.
+- Fixed-layout evidence and required capability coverage are recorded in
+  `research/fixed-layout-expansion.md`. Source/CFI compatibility, authored
+  geometry, actual-visible text coverage and device resource/performance
+  acceptance apply to the expanded scope; the archived S2 gate is not proof
+  of this new capability. Scripted/interactive content remains inert under
+  the existing source-model contract.
 
 ## Artifacts and Delivery Map
 
@@ -159,8 +194,16 @@ are indexed by the implementation/check context manifests.
 - `implement.md`: S1–S7 ordering, validation and stop/rollback points.
 - `backend-handoff.md`: separately implementable backend recommendations.
 - `implement.jsonl` / `check.jsonl`: curated real spec/research context.
-- First child: `../10-22-ios-free-device-bootstrap` (planning). Later children
-  are mapped in `implement.md` and are planned just before their execution.
+- S1: `../archive/2026-10/10-22-ios-free-device-bootstrap` (completed).
+- S2: `../archive/2026-10/10-22-native-reader-feasibility` (completed with
+  conditional S4 GO; failed/unverified performance gates remain open).
+- S3: `../10-26-runtime-server-library` (planning, 2026-10-26): runtime server,
+  typed reads, cache/worker foundation and minimal read-only verification UI.
+- S4–S7 remain mapped in `implement.md` and are planned before their execution.
 
-No product implementation or benchmark has been performed in this planning
-phase. Final plan review is the next gate; no task is started by this document.
+Current planning status was refreshed on 2026-10-26. S1/S2 code and evidence
+exist; the parent is not complete. R11/AC10 were revised and AC11-AC12 added for
+the user-approved fixed-layout expansion; other requirements remain in
+force. S3's import handoff is aligned and awaits renewed review. Fixed-page
+viewing is decided; S4 requires detailed child feasibility/design plans and
+review before activation.

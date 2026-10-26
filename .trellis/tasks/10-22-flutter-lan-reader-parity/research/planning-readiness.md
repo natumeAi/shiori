@@ -1,6 +1,42 @@
 # Planning readiness record
 
-Date: 2026-10-22. Status: final plan review pending; no implementation started.
+## Current scope revision: 2026-10-26
+
+Status: parent scope/interaction revision recorded, detailed S4 child planning
+pending. S1/S2 are archived; S3 remains planned and awaits renewed review.
+
+- The user explicitly included both simple fixed image pages and complex
+  static fixed layout plus whole-page fit/pinch/pan. PRD R11/AC10 were revised
+  and AC11-AC12 added; vertical/RTL reading and scripted content were not added.
+- PRD, design and implementation plan agree on per-section routing, authored
+  geometry, mixed-book behavior, source/activity correctness and unchanged
+  performance requirements. Research records primary specification/source
+  evidence without including private book identity or content.
+- S4a/S4b/S4c are proposed independent deliverables with explicit dependency
+  and acceptance ownership. No new child has been created or activated.
+- S3-R7/AC7 and its worker handoff preserve valid fixed/mixed sources without
+  making a rendering-support claim. S3's revised plan awaits review; S4's
+  page-viewing behavior does not expand S3 into a renderer.
+- Q-FXL-1 is resolved by the user's explicit fit-page plus pinch/pan choice.
+  The PRD has no remaining scope/interaction question from this expansion.
+  Final S4 child review still requires its detailed capability/renderer/
+  geometry/resource plan; the parent decision is not implementation approval.
+- Parent context manifests have 9 implementation and 6 check entries,
+  including the new fixed-layout research. To stay within the 131072-byte
+  injection cap, historical `ios-device-workflow.md` and detailed
+  `reader-fidelity.md`, plus the general cross-layer thinking guide, remain
+  available for phase-specific loading instead of unconditional parent
+  injection. Their requirements remain in the parent artifacts; the documents
+  were not removed. S3 retains 8 and 7 entries.
+- `task.py validate` passes for both tasks. Product code, global specs,
+  dependencies, reference checkout and archived S2 evidence remain unchanged.
+  Planning consistency checks are not a native fidelity/device test result.
+
+## Historical planning review: 2026-10-22
+
+Status at that time: final plan review pending; no implementation started.
+The coverage and counts below describe that earlier review, not the current
+expanded scope or task status.
 
 - Parent PRD was rewritten through the required convergence pass and read
   top to bottom. It retains R1–R11, AC1–AC10, source anchors, accepted device,

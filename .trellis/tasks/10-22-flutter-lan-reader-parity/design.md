@@ -1,7 +1,10 @@
 # Design: native Flutter client for lan-reader
 
-Status: final planning proposal, awaiting the user's subsequent implementation
-approval. Primary target: iPhone 14 Pro Max, built from a Windows workflow.
+Status: planning revision on 2026-10-26. S1/S2 are archived and S3 remains
+planned. The user expanded S4 to include simple and complex static fixed
+layout with initial fit-page display plus whole-page pinch zoom/pan. Detailed
+S4 child feasibility/design review remains before implementation. Primary
+target: iPhone 14 Pro Max, built from a Windows workflow.
 The requirements and acceptance ownership remain in `prd.md`.
 
 ## 1. Architecture
@@ -135,11 +138,14 @@ and recovery. A whole-library offline guarantee is outside this release.
 
 ## 5. EPUB/source model and native pagination
 
-First-release content: ordinary horizontal LTR reflowable novel/light-novel
-EPUB 2/3, TOC, illustrations and normal text styling. Detect explicit fixed
-layout, vertical writing and RTL before enabling reading; show an explanatory
-return/retry path and preserve server progress. Do not label an unsupported
-publication a successful empty book.
+First-release content includes ordinary horizontal LTR reflowable
+novel/light-novel EPUB 2/3, TOC, illustrations and normal text styling, plus
+single-image fixed pages, complex static fixed-layout publications and mixed
+publications. Vertical writing and RTL reading remain outside this release.
+Classify layout per section; a fixed-layout declaration is routing metadata,
+not by itself a reason to reject the book. Remaining unsupported features
+need an explanatory recovery path that preserves accepted position. Do not
+label an unsupported publication a successful empty book.
 
 Preserve package/spine order, original XHTML/HTML node identity, namespaces and
 UTF-16 text offsets. Keep three related representations:
@@ -155,9 +161,10 @@ ruby/superscript/subscript and embedded-font cases as normal prose fixtures;
 never discard their text to simplify pagination. Resolve packaged styles and
 relative resources, then apply the same reader-setting override semantics.
 The supported CSS mapping is documented and fixture-backed during the reader
-milestone; it is not a claim of full browser CSS conformance. If an ordinary
-novel fixture cannot be represented correctly, fix or escalate it rather than
-silently narrowing the accepted scope.
+milestone; it is not a claim of full browser CSS conformance. If an accepted
+reflowable or fixed-layout fixture cannot be represented correctly, fix or
+escalate it rather than silently narrowing the accepted scope. The accepted
+native reflow difference does not permit rearranging authored fixed pages.
 
 Use native Flutter text/paragraph layout and paint APIs. Archive parsing,
 resource indexing, hashing and other transferable pure Dart work can run in
@@ -183,6 +190,89 @@ SVG wrappers around a single full-size raster image may use a verified
 lossless image fast path while keeping the SVG source anchor. General static
 SVG still needs correct native rendering; the generated vector fixture tests
 that the optimization does not silently discard non-wrapper graphics.
+
+### 5.1 Fixed-layout rendering and mixed publications
+
+`research/fixed-layout-expansion.md` records the evidence, required feature
+matrix and accepted interaction decision. S4 uses two preparation paths
+behind one accepted-position and motion lifecycle:
+
+- Reflowable sections keep native text pagination and user typography.
+- Fixed sections retain an authored coordinate space and produce one source
+  page per spine item. Resolve package defaults and per-item overrides,
+  XHTML viewport/SVG dimensions, orientation and spread metadata. Scale the
+  completed page into its display slot; do not feed its positioned content
+  through ordinary block pagination or apply reflow typography/margins.
+- Complex pages need native positioned XHTML/CSS and static SVG preparation,
+  including authored text/font metrics, painting order, transformations,
+  clipping and image resources. Extending the current image shortcut alone
+  does not satisfy this requirement. Prove the required matrix and visual
+  tolerances before broad product integration; a missing required feature
+  keeps the gate open instead of becoming an accepted partial rendering.
+- Preserve source node/UTF-16 identity through fixed display transforms.
+  Maintain source geometry independently from paint caching so text/image
+  hit testing, CFI proof and actual-visible coverage remain possible. A
+  flattened page bitmap is not a substitute for source geometry.
+- Spread composition may own two source pages and synthetic blank slots.
+  Each real page retains its own section identity, source mapping and active
+  side; a blank slot never creates an EPUB section or reading coverage.
+  Reflowable/fixed boundaries cannot combine incompatible source pages.
+- Reference fixed-page spread placement and portrait/landscape behavior are
+  the parity baseline. Validate per-item overrides explicitly; the browser
+  wrapper's `max-column-count=1` is not proof of a single-page fixed renderer.
+  Whole-page fit, pinch zoom and pan are user-approved additions to the
+  reference image-viewer behavior; their arbitration is specified below.
+
+S3 must deliver preserved rendition/spine metadata and source/resource
+snapshots without rejecting valid fixed layout by the S2 whole-book rule.
+S3 establishes import readiness only; the S4 renderer establishes visual
+support. Keep malformed content, resource limits and remaining unsupported
+features distinct from layout classification.
+
+### 5.2 Fixed-page source, statistics and resource gates
+
+Text remains indexed by canonical v1. Credit only proven foreground visible
+source ranges after placement, clipping and any accepted display transform;
+do not count offscreen/occluded content merely because its page was loaded.
+SVG text retains the reference canonical exclusion until a separately
+reviewed cross-client contract changes it. Image-only pages may have a source
+anchor and reading time without acquiring invented text coverage. Test the
+reference's completion behavior for zero-canonical-text publications before
+publishing completion/activity writes; do not infer it from reaching the last
+physical image.
+
+Fixed page and spread surfaces share the existing motion controller and
+lease lifecycle. Resource accounting must include every constituent image,
+font, paragraph, vector and source page, including both sides of a spread.
+Decode, resolve fonts and construct paint content before animation. Fixed
+layout does not waive AC4 or S2's retained failed/unverified conditions.
+Missing fidelity, CFI, resource or device evidence stops the owning S4 gate;
+it cannot silently turn complex fixed layout back into image-only support.
+
+### 5.3 Whole-page pinch zoom and panning
+
+Start each newly opened fixed page/spread at fit-page scale without cropping.
+Pinch changes the display transform of authored content; one-finger dragging
+while enlarged pans within bounded content extents. Page-turn drags and tap
+zones must not compete with an active pinch/pan or an enlarged-page pan.
+Returning to fit restores ordinary page gestures; keep a reachable reset-to-
+fit action and coordinate explicit TOC/page navigation and the image viewer.
+Do not add implicit edge-drag page turns to the enlarged state.
+
+Use page/spread-local view state keyed by content, source-page identity and
+generation. Inverse-transform hit tests into authored coordinates. After a
+stable view change, prove the visible source anchor before committing a new
+position or eligible text coverage; gesture previews and offscreen content
+do not gain activity. Resize, backgrounding, navigation and disposal cancel
+the old gesture/generation and restore a verified view. An old pan/zoom
+transform cannot be applied to another page. Preserve content-position
+restoration independently of whether a transient zoom factor is retained.
+
+Zoom/pan transforms use already prepared content. If additional-resolution
+images are needed, prepare them outside the motion callback under the same
+lease/budget policy; suppress stale results. Include zoom/pan interruption,
+fit restoration, spread source visibility and transition-to-turn tests in
+AC12, with device frame/resource measurements for the admitted interaction.
 
 ## 6. Reader motion, lifecycle and acceptance
 
@@ -238,6 +328,8 @@ Use explicit colors, geometry, icon shapes, labels, sheets and transitions
 from the reference. Golden tests and side-by-side iPhone checks complement
 behavior tests. The user-approved reflow difference applies to book content,
 not to arbitrary changes in app chrome, reading settings or interaction.
+Whole-page fixed-layout fit/pinch/pan is the separately approved extension
+in section 5.3 and AC12; use the reference visual language for its controls.
 
 Native file pickers and OS permission/share sheets remain native. Library
 upload remains serialized and non-idempotent; never retry a known committed
