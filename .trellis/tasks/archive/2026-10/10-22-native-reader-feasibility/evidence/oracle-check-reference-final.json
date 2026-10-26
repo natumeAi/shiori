@@ -1,0 +1,9 @@
+{
+  "command": "npm.cmd run check-reference",
+  "cwd": "tool/oracle",
+  "timeoutSeconds": 180,
+  "exitCode": 0,
+  "timedOut": false,
+  "durationSeconds": 0.293,
+  "outputTail": "\n> shiori-reader-oracle@1.0.0 check-reference\n> node src/check-reference.mjs\n\nPASS client/src/utils/canonicalText.ts 6eb746b7fe90914094f08fe6ac3616e9f8ba3321547285ea483f317e6e72eeff\nPASS client/src/reader/contentSecurity.ts 9e49bd543b4261dd689ca0efb8fd61981624fe3c6d7d11d28cfca0b33fcd43ca\nPASS client/src/reader/visiblePageAnchor.ts 14870e5b4848bf85d9c085cf2c1b6486e41b998d09487d2957c6a97cad5f7bc8\nPASS shared/src/readingStats.ts c48fad4df03ec20d96f3caf40650c558fe49218afc8dcd0021ee68e87b75325d"
+}

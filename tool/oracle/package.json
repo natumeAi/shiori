@@ -1,0 +1,23 @@
+{
+  "name": "shiori-reader-oracle",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "check-reference": "node src/check-reference.mjs",
+    "build-fixtures": "node src/build-fixtures.mjs",
+    "vectors": "node src/run-oracle.mjs vectors",
+    "verify-vectors": "node src/verify-vectors.mjs",
+    "vectors-local": "node src/run-oracle.mjs vectors-local",
+    "resolve": "node src/run-oracle.mjs resolve"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "fflate": "0.8.2",
+    "foliate-js": "https://codeload.github.com/johnfactotum/foliate-js/tar.gz/78914aef4466eb960965702401634c2cb348e9b1",
+    "playwright": "1.64.1"
+  }
+}

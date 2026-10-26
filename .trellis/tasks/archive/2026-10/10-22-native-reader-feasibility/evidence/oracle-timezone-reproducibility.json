@@ -1,0 +1,26 @@
+{
+  "commands": [
+    {
+      "TZ": "UTC",
+      "exitCode": 0,
+      "timeoutSeconds": 180,
+      "outputTail": [
+        "unsupported-fixed: 2327 bytes",
+        "unsupported-rtl: 2239 bytes",
+        "unsupported-vertical: 2338 bytes"
+      ]
+    },
+    {
+      "TZ": "Asia/Hong_Kong",
+      "exitCode": 0,
+      "timeoutSeconds": 180,
+      "outputTail": [
+        "unsupported-fixed: 2327 bytes",
+        "unsupported-rtl: 2239 bytes",
+        "unsupported-vertical: 2338 bytes"
+      ]
+    }
+  ],
+  "byteIdentical": true,
+  "files": 14
+}

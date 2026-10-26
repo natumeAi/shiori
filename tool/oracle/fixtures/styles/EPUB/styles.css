@@ -1,0 +1,8 @@
+@font-face { font-family: FixtureRoboto; src: url("fonts/Roboto-Regular.ttf"); font-weight: normal; }
+body { font-family: FixtureRoboto, serif; font-size: 18px; color: #202030; background-color: #fffdf4; }
+p { margin: .5em 4px; padding: 2px 1%; text-indent: 2em; line-height: 1.6; letter-spacing: .02em; }
+section p { text-align: justify; } .accent { color: #a02020; font-weight: bold; } p.accent { color: #2040a0 !important; }
+.illust:not(:last-child) { margin-bottom: 1rem; } .hidden { display: none; } .block {display:block;} .inline {display:inline;}
+.pre {white-space:pre;} .pre-wrap {white-space:pre-wrap;} .normal {white-space:normal;}
+.small-keyword {font-size:small;} .large-keyword {font-size:large;} .percent {font-size:120%;} .rem {font-size:1.25rem;} .em {font-size:1.1em;}
+blockquote { margin-left:2em; padding:4px; background-color:#f0ecd0; } .right{text-align:right;} .center{text-align:center;}

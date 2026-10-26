@@ -1,0 +1,96 @@
+{
+  "fixtureSchemaVersion": 1,
+  "fixtures": [
+    {
+      "bytes": 2603,
+      "file": "cfi-structure.epub",
+      "id": "cfi-structure",
+      "sha256": "a4449275677588bef610e2a4b520441b3136d04f069bd5cb5dba1e2157a828e9",
+      "source": "tool/oracle/fixtures/cfi-structure"
+    },
+    {
+      "bytes": 27807,
+      "file": "chapters.epub",
+      "id": "chapters",
+      "sha256": "9084f32798fe18eab6f995de10cff260c2171ba3d6aab91f21be9f2a4e73916e",
+      "source": "tool/oracle/fixtures/chapters"
+    },
+    {
+      "bytes": 4489,
+      "file": "html-fallback.epub",
+      "id": "html-fallback",
+      "sha256": "ddc9ee92d2880b256e391d9e90586e589352c3fed112a708477321b7225435c9",
+      "source": "tool/oracle/fixtures/html-fallback"
+    },
+    {
+      "bytes": 11877,
+      "file": "images.epub",
+      "id": "images",
+      "sha256": "1fbdad4b323ca2f6e7ebaf137ff09c4f0b718105e0ff55bc6ab167eecd81813e",
+      "source": "tool/oracle/fixtures/images"
+    },
+    {
+      "bytes": 10682,
+      "file": "inert-content.epub",
+      "id": "inert-content",
+      "sha256": "c8d26c35acf9797ae57a31f2a47da5bef978c2b52ddb7d6b9383482353cd77c3",
+      "source": "tool/oracle/fixtures/inert-content"
+    },
+    {
+      "bytes": 778175,
+      "file": "long-content.epub",
+      "id": "long-content",
+      "sha256": "0a01519614b52bf8dfd5660abeb2749613ea3b93da4afe4c798e08e9dee5c5d2",
+      "source": "tool/oracle/fixtures/long-content"
+    },
+    {
+      "bytes": 2130,
+      "file": "one-page.epub",
+      "id": "one-page",
+      "sha256": "ff093e2433536c74fa99e6bcc094716d98055a8907c40f5542610d9d9f02733b",
+      "source": "tool/oracle/fixtures/one-page"
+    },
+    {
+      "bytes": 3665,
+      "file": "opf-variants.epub",
+      "id": "opf-variants",
+      "sha256": "989de711ac14f325d13baab1bcd814a8cf79de50446ab49b39ad5fd3194d3c3d",
+      "source": "tool/oracle/fixtures/opf-variants"
+    },
+    {
+      "bytes": 360562,
+      "file": "styles.epub",
+      "id": "styles",
+      "sha256": "60e9b8a45a65f61051aa9e4e8879e0793d853c41d2c1fa73d483c35241a27ac5",
+      "source": "tool/oracle/fixtures/styles"
+    },
+    {
+      "bytes": 2368,
+      "file": "unicode.epub",
+      "id": "unicode",
+      "sha256": "5d9fe285e8a1ef8a4b893c05b4ed2a9ba683b9717fe80731ffb4487b0207caf6",
+      "source": "tool/oracle/fixtures/unicode"
+    },
+    {
+      "bytes": 2327,
+      "file": "unsupported-fixed.epub",
+      "id": "unsupported-fixed",
+      "sha256": "0beac7ee0bd004a46bddc28c87ea4245a239af8beaeed01d3b7c9f558510a5d7",
+      "source": "tool/oracle/fixtures/unsupported-fixed"
+    },
+    {
+      "bytes": 2239,
+      "file": "unsupported-rtl.epub",
+      "id": "unsupported-rtl",
+      "sha256": "27b86ad828b059fd645f1fb66e500e1dfde554417164e96a09588741d68282e6",
+      "source": "tool/oracle/fixtures/unsupported-rtl"
+    },
+    {
+      "bytes": 2338,
+      "file": "unsupported-vertical.epub",
+      "id": "unsupported-vertical",
+      "sha256": "f3fb74513408639d93e3bb4c5947e6f691ba9021311ebee0088e87d195c4f601",
+      "source": "tool/oracle/fixtures/unsupported-vertical"
+    }
+  ]
+}

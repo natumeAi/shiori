@@ -1,0 +1,34 @@
+[
+  {
+    "command": "dart run build_runner build",
+    "timeoutSeconds": 900,
+    "exitCode": 0,
+    "timedOut": false,
+    "durationSeconds": 5.273,
+    "outputTail": "  0s riverpod_generator on 179 inputs; lib/app/app.dart\n  0s riverpod_generator on 179 inputs: 174 skipped, 5 no-op\n  0s freezed on 179 inputs; lib/app/app.dart\n  0s freezed on 179 inputs: 174 skipped, 5 no-op\n  0s json_serializable on 358 inputs; lib/app/app.dart\n  2s json_serializable on 358 inputs: 210 skipped, 3 no-op; spent 1s analyzing; lib/features/reader/engine/surface/page_surface_pool.freezed.dart\n  3s json_serializable on 358 inputs: 282 skipped, 7 no-op; spent 2s analyzing; test/features/reader/engine/motion/motion_test_support.freezed.dart\n  3s json_serializable on 358 inputs: 343 skipped, 15 no-op; spent 2s analyzing\n  0s go_router_builder on 358 inputs; lib/app/app.dart\n  0s go_router_builder on 358 inputs: 343 skipped, 15 no-op\n  0s source_gen:combining_builder on 358 inputs; lib/app/app.dart\n  0s source_gen:combining_builder on 358 inputs: 358 skipped\n  Built with build_runner/aot in 4s; wrote 0 outputs."
+  },
+  {
+    "command": "dart format --set-exit-if-changed lib test tool/reader",
+    "timeoutSeconds": 180,
+    "exitCode": 0,
+    "timedOut": false,
+    "durationSeconds": 0.802,
+    "outputTail": "Formatted 196 files (0 changed) in 0.29 seconds."
+  },
+  {
+    "command": "flutter analyze",
+    "timeoutSeconds": 180,
+    "exitCode": 0,
+    "timedOut": false,
+    "durationSeconds": 3.486,
+    "outputTail": "Analyzing shiori...                                             \nNo issues found! (ran in 2.2s)"
+  },
+  {
+    "command": "flutter test",
+    "timeoutSeconds": 900,
+    "exitCode": 0,
+    "timedOut": false,
+    "durationSeconds": 14.311,
+    "outputTail": "00:06 +772 ~1: D:/Projects/shiori/test/features/reader/engine/support/local_books_support_test.dart: local books are supported and report their ignored CSS\nbook 1: sections=3 supported=true reasons=[] fontFaces=0 ignoredTotal=21 ignored=[stylesheetNotFound:@font-face x21]\nbook 2: sections=3 supported=true reasons=[] fontFaces=0 ignoredTotal=3 ignored=[stylesheetNotFound:@font-face x3]\nbook 3: sections=33 supported=true reasons=[] fontFaces=0 ignoredTotal=33 ignored=[stylesheetNotFound:@font-face x33]\nbook 4: sections=21 supported=true reasons=[] fontFaces=0 ignoredTotal=42 ignored=[unsupportedProperty:border-radius x42]\n00:06 +773 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:06 +773 ~1: D:/Projects/shiori/test/features/reader/engine/pagination/local_books_layout_test.dart: local books: conservation and anchors at the three gate settings\nbook a595d98d4400 size26-lh2.0: sections=33 pages=769 lines=9416 chars=86475 images=0 surfaced=0 unsupported=0 anchors=769 differences={} ms=588\n00:06 +774 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:06 +775 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:06 +776 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:06 +777 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:06 +778 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:06 +778 ~1: D:/Projects/shiori/test/features/reader/engine/pagination/local_books_layout_test.dart: local books: conservation and anchors at the three gate settings\nbook a595d98d4400 size14-ls0.12-margin48: sections=33 pages=295 lines=7877 chars=86475 images=0 surfaced=0 unsupported=0 anchors=295 differences={} ms=366\n00:06 +778 ~1: D:/Projects/shiori/test/features/reader/engine/pagination/anchor_test.dart: WebKit oracle CFIs land on a page where they are visible\noracle CFIs proven: 2980, not rendered (hidden/head): 1693\n00:06 +779 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:07 +779 ~1: D:/Projects/shiori/test/features/reader/engine/pagination/local_books_layout_test.dart: local books: conservation and anchors at the three gate settings\nbook 9bfc26bc676d default: sections=21 pages=443 lines=9313 chars=128385 images=14 surfaced=0 unsupported=0 anchors=443 differences={background-lines-only: 4} ms=519\n00:07 +780 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:07 +780 ~1: D:/Projects/shiori/test/features/reader/engine/pagination/local_books_layout_test.dart: local books: conservation and anchors at the three gate settings\nbook 9bfc26bc676d size26-lh2.0: sections=21 pages=1019 lines=13127 chars=128385 images=14 surfaced=0 unsupported=0 anchors=1019 differences={background-lines-only: 4} ms=519\n00:07 +781 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:07 +781 ~1: D:/Projects/shiori/test/features/reader/engine/pagination/local_books_layout_test.dart: local books: conservation and anchors at the three gate settings\nbook 9bfc26bc676d size14-ls0.12-margin48: sections=21 pages=381 lines=10801 chars=128385 images=14 surfaced=0 unsupported=0 anchors=381 differences={background-lines-only: 4} ms=448\n00:07 +782 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\n00:08 +783 ~1: D:/Projects/shiori/test/features/reader/data/epub/local_books_test.dart: local books equal their WebKit vectors\nlocal books compared: 4, sections: 60, cfi samples: 168677\n00:10 +784 ~1: All tests passed!"
+  }
+]

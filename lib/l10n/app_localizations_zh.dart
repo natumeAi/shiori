@@ -13,6 +13,161 @@ class AppLocalizationsZh extends AppLocalizations {
   String get diagnosticsTitle => '设备诊断探针';
 
   @override
+  String get probeSynthetic => 'S1 合成动画采集';
+
+  @override
+  String get readerProbeTitle => '阅读器可行性探针';
+
+  @override
+  String get readerProbeHelp =>
+      '从内置夹具或 Documents 中选择 EPUB。用户书籍仅以 SHA-256 标识。引擎提交不等于物理呈现；原生呈现数据尚未验证。';
+
+  @override
+  String get readerProbeControls => '探针控制';
+
+  @override
+  String get readerBooks => '选择书籍 / 刷新列表';
+
+  @override
+  String readerFixture(String id) {
+    return '夹具：$id';
+  }
+
+  @override
+  String readerUserBook(String digest) {
+    return '用户书籍 SHA-256：$digest';
+  }
+
+  @override
+  String get readerEmpty => '没有可用书籍，请将 EPUB 放入 Documents 后刷新。';
+
+  @override
+  String get readerUnsupported => '此书包含固定版式、竖排或从右至左布局，探针无法打开。可选择其他书籍。';
+
+  @override
+  String get readerFailure => '无法打开、准备或证明阅读位置，请重试或选择其他书籍。';
+
+  @override
+  String get readerFont => '字体';
+
+  @override
+  String readerFontName(String id) {
+    String _temp0 = intl.Intl.selectLogic(id, {
+      'system': '默认',
+      'pingfang': '苹方',
+      'yahei': '微软雅黑',
+      'sans': '黑体',
+      'serif': '宋体',
+      'kai': '楷体',
+      'other': '默认',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get readerSize => '字号';
+
+  @override
+  String get readerLineHeight => '行高';
+
+  @override
+  String get readerLetterSpacing => '字距（em）';
+
+  @override
+  String get readerHorizontalMargin => '水平附加边距';
+
+  @override
+  String get readerVerticalMargin => '垂直附加边距';
+
+  @override
+  String get readerTheme => '主题';
+
+  @override
+  String readerThemeName(String id) {
+    String _temp0 = intl.Intl.selectLogic(id, {
+      'light': '明亮',
+      'sepia': '柔和',
+      'green': '护眼',
+      'dark': '深色',
+      'other': '主题 $id',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String readerSettingValue(String label, String value) {
+    return '$label：$value';
+  }
+
+  @override
+  String get readerReducedMotion => '减少动态效果';
+
+  @override
+  String get readerJump => '跳转章节';
+
+  @override
+  String readerSection(int number) {
+    return '第 $number 节';
+  }
+
+  @override
+  String get readerScenario => '场景';
+
+  @override
+  String readerScenarioName(String id) {
+    String _temp0 = intl.Intl.selectLogic(id, {
+      'R01': 'R01 前后各 40 次轻点',
+      'R02': 'R02 拖动、快滑、反向和边界回弹',
+      'R03': 'R03 按住手指等待冷邻页',
+      'R04': 'R04 队列溢出和跳转',
+      'R05': 'R05 冷热双向跨章',
+      'R06': 'R06 十万字长段落',
+      'R07': 'R07 图文和 SVG',
+      'R08': 'R08 字号行高重排和锚点恢复',
+      'R09': 'R09 运动及准备时模拟后台恢复',
+      'R10': 'R10 百次交替翻页和跳转资源采样',
+      'R11': 'R11 用户书籍手动阅读至少 50 次',
+      'other': '未知场景',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get readerRepeat => '重复次数（默认 3）';
+
+  @override
+  String get readerManual => '手动触摸采集（R11 必须使用用户书籍）';
+
+  @override
+  String get readerStart => '开始阅读器采集';
+
+  @override
+  String get readerRunning => '正在采集；脚本触摸为注入输入，后台切换为控制器模拟。';
+
+  @override
+  String readerPosition(int section, int page, int total) {
+    return '第 $section 节 · 第 $page/$total 页';
+  }
+
+  @override
+  String get readerManualMinimum => 'R11 每本书至少完成 50 次已接受翻页；提前停止的记录保留为不完整证据。';
+
+  @override
+  String get readerNativeMode => '原生呈现证据（仅诊断）';
+
+  @override
+  String readerNativeModeName(String mode) {
+    String _temp0 = intl.Intl.selectLogic(mode, {
+      'inventory': '系统信息',
+      'a1': 'A1 图层提交（无辅助显示链接）',
+      'a2': 'A2 图层提交及辅助显示链接',
+      'b': 'B 非默认路径的 drawable 呈现',
+      'other': '未知',
+    });
+    return '$_temp0';
+  }
+
+  @override
   String diagnosticsBuild(String buildId, String number) {
     return '构建 $buildId · 版本号 $number';
   }

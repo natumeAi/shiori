@@ -19,7 +19,8 @@
   "pr_url": null,
   "subtasks": [],
   "children": [
-    "10-22-ios-free-device-bootstrap"
+    "10-22-ios-free-device-bootstrap",
+    "10-22-native-reader-feasibility"
   ],
   "parent": null,
   "relatedFiles": [],

@@ -54,3 +54,9 @@ app.*.map.json
 *.p12
 *.mobileprovision
 *.cer
+
+# S2 oracle tooling and private evidence (never publish book text)
+/tool/oracle/node_modules/
+/build/oracle-local/
+/local-evidence/
+/tool/oracle/.generated/

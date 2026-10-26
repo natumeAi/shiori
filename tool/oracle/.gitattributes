@@ -1,0 +1,4 @@
+* text eol=lf
+*.ttf -text
+# The source deliberately tests CRLF, bare CR, and LF as different input bytes.
+fixtures/unicode/EPUB/unicode.xhtml -text

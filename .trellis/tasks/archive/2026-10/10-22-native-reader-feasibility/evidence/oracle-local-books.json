@@ -1,0 +1,9 @@
+{
+  "command": "npm.cmd run vectors-local -- \"D:\\Projects\\lan-reader\\docs\\[入间人间].电波女与青春男 外传 8月×日 今夜星光必将灿烂（网翻）.epub\" \"D:\\Projects\\lan-reader\\docs\\[入间人间].电波女与青春男~外传 请让我回家（网翻）.epub\" D:\\Projects\\lan-reader\\docs\\和非常可爱的我交往吧！_短篇.epub \"D:\\Projects\\lan-reader\\docs\\综上所述，我们证明了初恋 - 02.epub\"",
+  "cwd": "tool/oracle",
+  "timeoutSeconds": 600,
+  "exitCode": 0,
+  "timedOut": false,
+  "durationSeconds": 159.495,
+  "outputTail": "\n> shiori-reader-oracle@1.0.0 vectors-local\n> node src/run-oracle.mjs vectors-local D:\\Projects\\lan-reader\\docs\\[入间人间].电波女与青春男 外传 8月×日 今夜星光必将灿烂（网翻）.epub D:\\Projects\\lan-reader\\docs\\[入间人间].电波女与青春男~外传 请让我回家（网翻）.epub D:\\Projects\\lan-reader\\docs\\和非常可爱的我交往吧！_短篇.epub D:\\Projects\\lan-reader\\docs\\综上所述，我们证明了初恋 - 02.epub\n\nwebkit 27.2\nchromium 156.0.8078.4\n6e4ed2a78ea62c9fc610545070626e8d816acdd9a9bcbe9373736eec18a15210 webkit: 3 sections\n6e4ed2a78ea62c9fc610545070626e8d816acdd9a9bcbe9373736eec18a15210 chromium: 3 sections\naac482b2d33f76c1994f6c9bb728f8e93649211d8f5a5d23b3b20326086107d8 webkit: 3 sections\naac482b2d33f76c1994f6c9bb728f8e93649211d8f5a5d23b3b20326086107d8 chromium: 3 sections\na595d98d44007a7ce905e449c7342688211f934044527dfa3bb176d5df723160 webkit: 33 sections\na595d98d44007a7ce905e449c7342688211f934044527dfa3bb176d5df723160 chromium: 33 sections\n9bfc26bc676d2175697e47bcdb5d803461626a55264bdf4054a6f5af939af2e0 webkit: 21 sections\n9bfc26bc676d2175697e47bcdb5d803461626a55264bdf4054a6f5af939af2e0 chromium: 21 sections"
+}

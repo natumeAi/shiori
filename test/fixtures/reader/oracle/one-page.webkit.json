@@ -1,0 +1,414 @@
+{
+  "fixtureId": "one-page",
+  "grammar": [
+    {
+      "collapsedEnd": "epubcfi(/6/2[ref^,one]!/4/2[a^]b^^c]/1:1)",
+      "collapsedStart": "epubcfi(/6/2[ref^,one]!/4/2[a^]b^^c]/1:1)",
+      "input": "epubcfi(/6/2[ref^,one]!/4/2[a^]b^^c]/1:1)",
+      "parsed": [[{"index":6},{"id":"ref,one","index":2}],[{"index":4},{"id":"a]b^c","index":2},{"index":1,"offset":1}]]
+    },
+    {
+      "collapsedEnd": "epubcfi(/8/4!/4/2/1:8)",
+      "collapsedStart": "epubcfi(/8/4!/4/2/1:0)",
+      "input": "epubcfi(/8/4!/4/2,/1:0,/1:8)",
+      "parsed": {
+        "end": [[{"index":1,"offset":8}]],
+        "parent": [[{"index":8},{"index":4}],[{"index":4},{"index":2}]],
+        "start": [[{"index":1,"offset":0}]]
+      }
+    },
+    {
+      "collapsedEnd": "epubcfi(/6/2!/4/2/1:0[before,after;s=b])",
+      "collapsedStart": "epubcfi(/6/2!/4/2/1:0[before,after;s=b])",
+      "input": "epubcfi(/6/2!/4/2/1:0[before,after;s=b])",
+      "parsed": [
+        [{"index":6},{"index":2}],
+        [{"index":4},{"index":2},{"index":1,"offset":0,"side":"b","text":["before","after"]}]
+      ]
+    },
+    {
+      "collapsedEnd": "epubcfi(/6/2!/4/2~1.25@2.5:3.5)",
+      "collapsedStart": "epubcfi(/6/2!/4/2~1.25@2.5:3.5)",
+      "input": "epubcfi(/6/2!/4/2~1.25@2.5:3.5)",
+      "parsed": [[{"index":6},{"index":2}],[{"index":4},{"index":2,"spatial":[2.5,3.5],"temporal":1.25}]]
+    },
+    {
+      "collapsedEnd": "epubcfi(/6/2!/4/2[id])",
+      "collapsedStart": "epubcfi(/6/2!/4/2[id])",
+      "input": "epubcfi(/6/2!/4/2[id;unknown=value])",
+      "parsed": [[{"index":6},{"index":2}],[{"index":4},{"id":"id","index":2}]]
+    },
+    {
+      "collapsedEnd": "epubcfi(/6/2!/4/2[id;s=a])",
+      "collapsedStart": "epubcfi(/6/2!/4/2[id;s=a])",
+      "input": "epubcfi(/6/2!/4/2[id;s=a])",
+      "parsed": [[{"index":6},{"index":2}],[{"index":4},{"id":"id","index":2,"side":"a"}]]
+    },
+    {
+      "collapsedEnd": "epubcfi(/6/2!/4/0)",
+      "collapsedStart": "epubcfi(/6/2!/4/0)",
+      "input": "epubcfi(/6/2!/4/0)",
+      "parsed": [[{"index":6},{"index":2}],[{"index":4},{"index":0}]]
+    },
+    {
+      "collapsedEnd": "epubcfi(/6/2!/4/1:0)",
+      "collapsedStart": "epubcfi(/6/2!/4/1:0)",
+      "input": "epubcfi(/6/2!/4/1:0)",
+      "parsed": [[{"index":6},{"index":2}],[{"index":4},{"index":1,"offset":0}]]
+    },
+    {"collapsedEnd":"epubcfi()","collapsedStart":"epubcfi()","input":"","parsed":[[]]},
+    {"collapsedEnd":"epubcfi()","collapsedStart":"epubcfi()","input":"not-a-cfi","parsed":[[]]},
+    {"collapsedEnd":"epubcfi()","collapsedStart":"epubcfi()","input":"epubcfi()","parsed":[[]]},
+    {"collapsedEnd":"epubcfi(/NaN)","collapsedStart":"epubcfi(/NaN)","input":"epubcfi(/)","parsed":[[{"index":null}]]},
+    {"error":{"name":"TypeError"},"input":"epubcfi(:2)"},
+    {"error":{"name":"TypeError"},"input":"epubcfi(/6/2,/4/2)"},
+    {
+      "collapsedEnd": "epubcfi(/6/2!/4/2)",
+      "collapsedStart": "epubcfi(/6/2!/4/2)",
+      "input": "epubcfi(/6/2!/4/2[unterminated)",
+      "parsed": [[{"index":6},{"index":2}],[{"index":4},{"index":2}]]
+    }
+  ],
+  "oracleSchemaVersion": 1,
+  "package": {
+    "direction": null,
+    "opfPath": "EPUB/package.opf",
+    "rendition": {},
+    "spine": [
+      {
+        "cfiBase": "epubcfi(/6/2[ref-only])",
+        "href": "EPUB/only.xhtml",
+        "id": "ref-only",
+        "idref": "only",
+        "linear": null,
+        "sectionIndex": 0
+      }
+    ],
+    "toc": [{"href":"EPUB/only.xhtml","label":"only","subitems":null}]
+  },
+  "provenance": {
+    "engineName": "webkit",
+    "engineVersion": "27.2",
+    "fixtureSHA256": "ff093e2433536c74fa99e6bcc094716d98055a8907c40f5542610d9d9f02733b",
+    "foliateCommit": "78914aef4466eb960965702401634c2cb348e9b1",
+    "nodeVersion": "v24.19.0",
+    "referenceCommit": "a4bda23fd3e82e285a22566d88576e67d3e8756b",
+    "toolVersions": {
+      "esbuild": "0.28.2",
+      "fflate": "0.8.2",
+      "foliate-js": "https://codeload.github.com/johnfactotum/foliate-js/tar.gz/78914aef4466eb960965702401634c2cb348e9b1",
+      "playwright": "1.64.1"
+    }
+  },
+  "resourceURLs": [],
+  "sections": [
+    {
+      "canonical": {
+        "entries": [{"canonicalToUtf16":[0,1,2,3,4,5],"length":6,"node":7,"start":0,"utf16Length":6}],
+        "length": 6,
+        "signature": "fnv1a64:52e31ed7a1255f6a",
+        "version": 1
+      },
+      "cfiBase": "epubcfi(/6/2[ref-only])",
+      "comparison": {
+        "input": [
+          "epubcfi(/6/2[ref-only]!/4/2[only],/1:0,/1:6)", "epubcfi(/6/2[ref-only]!/4/2[only]/1:6)",
+          "epubcfi(/6/2[ref-only]!/4/2[only]/1:5)", "epubcfi(/6/2[ref-only]!/4/2[only]/1:4)",
+          "epubcfi(/6/2[ref-only]!/4/2[only]/1:3)", "epubcfi(/6/2[ref-only]!/4/2[only]/1:2)",
+          "epubcfi(/6/2[ref-only]!/4/2[only]/1:1)", "epubcfi(/6/2[ref-only]!/4/2[only]/1:0)",
+          "epubcfi(/6/2[ref-only]!/2/4,/1:0,/1:8)", "epubcfi(/6/2[ref-only]!/2/4/1:8)",
+          "epubcfi(/6/2[ref-only]!/2/4/1:7)", "epubcfi(/6/2[ref-only]!/2/4/1:6)", "epubcfi(/6/2[ref-only]!/2/4/1:5)",
+          "epubcfi(/6/2[ref-only]!/2/4/1:4)", "epubcfi(/6/2[ref-only]!/2/4/1:3)", "epubcfi(/6/2[ref-only]!/2/4/1:2)",
+          "epubcfi(/6/2[ref-only]!/2/4/1:1)", "epubcfi(/6/2[ref-only]!/2/4/1:0)"
+        ],
+        "sorted": [
+          "epubcfi(/6/2[ref-only]!/2/4/1:0)", "epubcfi(/6/2[ref-only]!/2/4,/1:0,/1:8)",
+          "epubcfi(/6/2[ref-only]!/2/4/1:1)", "epubcfi(/6/2[ref-only]!/2/4/1:2)", "epubcfi(/6/2[ref-only]!/2/4/1:3)",
+          "epubcfi(/6/2[ref-only]!/2/4/1:4)", "epubcfi(/6/2[ref-only]!/2/4/1:5)", "epubcfi(/6/2[ref-only]!/2/4/1:6)",
+          "epubcfi(/6/2[ref-only]!/2/4/1:7)", "epubcfi(/6/2[ref-only]!/2/4/1:8)",
+          "epubcfi(/6/2[ref-only]!/4/2[only]/1:0)", "epubcfi(/6/2[ref-only]!/4/2[only],/1:0,/1:6)",
+          "epubcfi(/6/2[ref-only]!/4/2[only]/1:1)", "epubcfi(/6/2[ref-only]!/4/2[only]/1:2)",
+          "epubcfi(/6/2[ref-only]!/4/2[only]/1:3)", "epubcfi(/6/2[ref-only]!/4/2[only]/1:4)",
+          "epubcfi(/6/2[ref-only]!/4/2[only]/1:5)", "epubcfi(/6/2[ref-only]!/4/2[only]/1:6)"
+        ]
+      },
+      "href": "EPUB/only.xhtml",
+      "parser": {"errorClass":null,"originalType":"application/xhtml+xml","used":"xhtml"},
+      "projection": [
+        {
+          "id": "",
+          "index": 0,
+          "kind": "element",
+          "localName": "html",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": null,
+          "slot": 0,
+          "text": null
+        },
+        {
+          "id": "",
+          "index": 1,
+          "kind": "element",
+          "localName": "head",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 0,
+          "slot": 0,
+          "text": null
+        },
+        {
+          "id": "",
+          "index": 2,
+          "kind": "element",
+          "localName": "meta",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 1,
+          "slot": 0,
+          "text": null
+        },
+        {
+          "id": "",
+          "index": 3,
+          "kind": "element",
+          "localName": "title",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 1,
+          "slot": 1,
+          "text": null
+        },
+        {"id":null,"index":4,"kind":"text","localName":null,"namespaceURI":null,"parent":3,"slot":0,"text":"One page"},
+        {
+          "id": "",
+          "index": 5,
+          "kind": "element",
+          "localName": "body",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 0,
+          "slot": 1,
+          "text": null
+        },
+        {
+          "id": "only",
+          "index": 6,
+          "kind": "element",
+          "localName": "p",
+          "namespaceURI": "http://www.w3.org/1999/xhtml",
+          "parent": 5,
+          "slot": 0,
+          "text": null
+        },
+        {"id":null,"index":7,"kind":"text","localName":null,"namespaceURI":null,"parent":6,"slot":0,"text":"单页合成书。"}
+      ],
+      "samples": [
+        {
+          "cfi": "epubcfi(/6/2[ref-only]!/2/4/1:0)",
+          "collapsedEnd": "epubcfi(/6/2[ref-only]!/2/4/1:0)",
+          "collapsedStart": "epubcfi(/6/2[ref-only]!/2/4/1:0)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":0},"start":{"node":4,"offset":0}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-only","index":2}],[{"index":2},{"index":4},{"index":1,"offset":0}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":0},"start":{"node":4,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-only]!/2/4/1:1)",
+          "collapsedEnd": "epubcfi(/6/2[ref-only]!/2/4/1:1)",
+          "collapsedStart": "epubcfi(/6/2[ref-only]!/2/4/1:1)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":1},"start":{"node":4,"offset":1}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-only","index":2}],[{"index":2},{"index":4},{"index":1,"offset":1}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":1},"start":{"node":4,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-only]!/2/4/1:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-only]!/2/4/1:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-only]!/2/4/1:2)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":2},"start":{"node":4,"offset":2}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-only","index":2}],[{"index":2},{"index":4},{"index":1,"offset":2}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":2},"start":{"node":4,"offset":2}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-only]!/2/4/1:3)",
+          "collapsedEnd": "epubcfi(/6/2[ref-only]!/2/4/1:3)",
+          "collapsedStart": "epubcfi(/6/2[ref-only]!/2/4/1:3)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":3},"start":{"node":4,"offset":3}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-only","index":2}],[{"index":2},{"index":4},{"index":1,"offset":3}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":3},"start":{"node":4,"offset":3}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-only]!/2/4/1:4)",
+          "collapsedEnd": "epubcfi(/6/2[ref-only]!/2/4/1:4)",
+          "collapsedStart": "epubcfi(/6/2[ref-only]!/2/4/1:4)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":4},"start":{"node":4,"offset":4}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-only","index":2}],[{"index":2},{"index":4},{"index":1,"offset":4}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":4},"start":{"node":4,"offset":4}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-only]!/2/4/1:5)",
+          "collapsedEnd": "epubcfi(/6/2[ref-only]!/2/4/1:5)",
+          "collapsedStart": "epubcfi(/6/2[ref-only]!/2/4/1:5)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":5},"start":{"node":4,"offset":5}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-only","index":2}],[{"index":2},{"index":4},{"index":1,"offset":5}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":5},"start":{"node":4,"offset":5}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-only]!/2/4/1:6)",
+          "collapsedEnd": "epubcfi(/6/2[ref-only]!/2/4/1:6)",
+          "collapsedStart": "epubcfi(/6/2[ref-only]!/2/4/1:6)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":6},"start":{"node":4,"offset":6}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-only","index":2}],[{"index":2},{"index":4},{"index":1,"offset":6}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":6},"start":{"node":4,"offset":6}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-only]!/2/4/1:7)",
+          "collapsedEnd": "epubcfi(/6/2[ref-only]!/2/4/1:7)",
+          "collapsedStart": "epubcfi(/6/2[ref-only]!/2/4/1:7)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":7},"start":{"node":4,"offset":7}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-only","index":2}],[{"index":2},{"index":4},{"index":1,"offset":7}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":7},"start":{"node":4,"offset":7}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-only]!/2/4/1:8)",
+          "collapsedEnd": "epubcfi(/6/2[ref-only]!/2/4/1:8)",
+          "collapsedStart": "epubcfi(/6/2[ref-only]!/2/4/1:8)",
+          "input": {"collapsed":true,"end":{"node":4,"offset":8},"start":{"node":4,"offset":8}},
+          "kind": "point",
+          "parsed": [[{"index":6},{"id":"ref-only","index":2}],[{"index":2},{"index":4},{"index":1,"offset":8}]],
+          "resolved": {"collapsed":true,"end":{"node":4,"offset":8},"start":{"node":4,"offset":8}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-only]!/2/4,/1:0,/1:8)",
+          "collapsedEnd": "epubcfi(/6/2[ref-only]!/2/4/1:8)",
+          "collapsedStart": "epubcfi(/6/2[ref-only]!/2/4/1:0)",
+          "input": {"collapsed":false,"end":{"node":4,"offset":8},"start":{"node":4,"offset":0}},
+          "kind": "node-range",
+          "parsed": {
+            "end": [[{"index":1,"offset":8}]],
+            "parent": [[{"index":6},{"id":"ref-only","index":2}],[{"index":2},{"index":4}]],
+            "start": [[{"index":1,"offset":0}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":4,"offset":8},"start":{"node":4,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-only]!/4/2[only]/1:0)",
+          "collapsedEnd": "epubcfi(/6/2[ref-only]!/4/2[only]/1:0)",
+          "collapsedStart": "epubcfi(/6/2[ref-only]!/4/2[only]/1:0)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":0},"start":{"node":7,"offset":0}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-only","index":2}],
+            [{"index":4},{"id":"only","index":2},{"index":1,"offset":0}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":0},"start":{"node":7,"offset":0}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-only]!/4/2[only]/1:1)",
+          "collapsedEnd": "epubcfi(/6/2[ref-only]!/4/2[only]/1:1)",
+          "collapsedStart": "epubcfi(/6/2[ref-only]!/4/2[only]/1:1)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":1},"start":{"node":7,"offset":1}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-only","index":2}],
+            [{"index":4},{"id":"only","index":2},{"index":1,"offset":1}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":1},"start":{"node":7,"offset":1}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-only]!/4/2[only]/1:2)",
+          "collapsedEnd": "epubcfi(/6/2[ref-only]!/4/2[only]/1:2)",
+          "collapsedStart": "epubcfi(/6/2[ref-only]!/4/2[only]/1:2)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":2},"start":{"node":7,"offset":2}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-only","index":2}],
+            [{"index":4},{"id":"only","index":2},{"index":1,"offset":2}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":2},"start":{"node":7,"offset":2}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-only]!/4/2[only]/1:3)",
+          "collapsedEnd": "epubcfi(/6/2[ref-only]!/4/2[only]/1:3)",
+          "collapsedStart": "epubcfi(/6/2[ref-only]!/4/2[only]/1:3)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":3},"start":{"node":7,"offset":3}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-only","index":2}],
+            [{"index":4},{"id":"only","index":2},{"index":1,"offset":3}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":3},"start":{"node":7,"offset":3}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-only]!/4/2[only]/1:4)",
+          "collapsedEnd": "epubcfi(/6/2[ref-only]!/4/2[only]/1:4)",
+          "collapsedStart": "epubcfi(/6/2[ref-only]!/4/2[only]/1:4)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":4},"start":{"node":7,"offset":4}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-only","index":2}],
+            [{"index":4},{"id":"only","index":2},{"index":1,"offset":4}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":4},"start":{"node":7,"offset":4}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-only]!/4/2[only]/1:5)",
+          "collapsedEnd": "epubcfi(/6/2[ref-only]!/4/2[only]/1:5)",
+          "collapsedStart": "epubcfi(/6/2[ref-only]!/4/2[only]/1:5)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":5},"start":{"node":7,"offset":5}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-only","index":2}],
+            [{"index":4},{"id":"only","index":2},{"index":1,"offset":5}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":5},"start":{"node":7,"offset":5}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-only]!/4/2[only]/1:6)",
+          "collapsedEnd": "epubcfi(/6/2[ref-only]!/4/2[only]/1:6)",
+          "collapsedStart": "epubcfi(/6/2[ref-only]!/4/2[only]/1:6)",
+          "input": {"collapsed":true,"end":{"node":7,"offset":6},"start":{"node":7,"offset":6}},
+          "kind": "point",
+          "parsed": [
+            [{"index":6},{"id":"ref-only","index":2}],
+            [{"index":4},{"id":"only","index":2},{"index":1,"offset":6}]
+          ],
+          "resolved": {"collapsed":true,"end":{"node":7,"offset":6},"start":{"node":7,"offset":6}},
+          "resolvedSection": 0
+        },
+        {
+          "cfi": "epubcfi(/6/2[ref-only]!/4/2[only],/1:0,/1:6)",
+          "collapsedEnd": "epubcfi(/6/2[ref-only]!/4/2[only]/1:6)",
+          "collapsedStart": "epubcfi(/6/2[ref-only]!/4/2[only]/1:0)",
+          "input": {"collapsed":false,"end":{"node":7,"offset":6},"start":{"node":7,"offset":0}},
+          "kind": "node-range",
+          "parsed": {
+            "end": [[{"index":1,"offset":6}]],
+            "parent": [[{"index":6},{"id":"ref-only","index":2}],[{"index":4},{"id":"only","index":2}]],
+            "start": [[{"index":1,"offset":0}]]
+          },
+          "resolved": {"collapsed":false,"end":{"node":7,"offset":6},"start":{"node":7,"offset":0}},
+          "resolvedSection": 0
+        }
+      ]
+    }
+  ]
+}

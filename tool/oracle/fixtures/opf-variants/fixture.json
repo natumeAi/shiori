@@ -1,0 +1,25 @@
+{
+  "sections": [
+    {
+      "id": "first",
+      "href": "Text/first chapter.xhtml"
+    },
+    {
+      "id": "nonlinear",
+      "href": "Text/nonlinear.xhtml",
+      "linear": "no"
+    },
+    {
+      "id": "encoded",
+      "href": "Text/encoded%20chapter.xhtml"
+    },
+    {
+      "id": "outside",
+      "href": "../Shared/final.xhtml"
+    }
+  ],
+  "opfPath": "OPS/Package/book.opf",
+  "spineAtEight": true,
+  "ncxOnly": true,
+  "nestedToc": true
+}

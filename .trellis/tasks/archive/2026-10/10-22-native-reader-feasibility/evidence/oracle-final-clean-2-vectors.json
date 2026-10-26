@@ -1,0 +1,9 @@
+{
+  "command": "npm.cmd run vectors",
+  "cwd": "tool/oracle",
+  "timeoutSeconds": 180,
+  "exitCode": 0,
+  "timedOut": false,
+  "durationSeconds": 12.401,
+  "outputTail": "\n> shiori-reader-oracle@1.0.0 vectors\n> node src/run-oracle.mjs vectors\n\nwebkit 27.2\nchromium 156.0.8078.4\ncfi-structure webkit: 1 sections\ncfi-structure chromium: 1 sections\nchapters webkit: 16 sections\nchapters chromium: 16 sections\nhtml-fallback webkit: 5 sections\nhtml-fallback chromium: 5 sections\nimages webkit: 3 sections\nimages chromium: 3 sections\ninert-content webkit: 1 sections\ninert-content chromium: 1 sections\nlong-content webkit: 3 sections\nlong-content chromium: 3 sections\none-page webkit: 1 sections\none-page chromium: 1 sections\nopf-variants webkit: 4 sections\nopf-variants chromium: 4 sections\nstyles webkit: 1 sections\nstyles chromium: 1 sections\nunicode webkit: 1 sections\nunicode chromium: 1 sections\nunsupported-fixed webkit: 1 sections\nunsupported-fixed chromium: 1 sections\nunsupported-rtl webkit: 1 sections\nunsupported-rtl chromium: 1 sections\nunsupported-vertical webkit: 1 sections\nunsupported-vertical chromium: 1 sections"
+}

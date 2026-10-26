@@ -1,0 +1,15 @@
+{
+  "fixtureSchemaVersion": 1,
+  "fixtures": [
+    {
+      "file": "edge-html.epub",
+      "bytes": 8116,
+      "sha256": "6c74ec8426b1de0b4f2931561dc0bf391ce2f06633c17c07ca4e8d8624409b0f"
+    },
+    {
+      "file": "edge-xhtml.epub",
+      "bytes": 12640,
+      "sha256": "424ad55ee676aa1050873dee9bbd170190431614fc4cd836caf8e31474488b96"
+    }
+  ]
+}

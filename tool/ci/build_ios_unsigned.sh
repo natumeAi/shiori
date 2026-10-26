@@ -82,6 +82,7 @@ jq -n --arg buildId "$BUILD_ID" --arg buildNumber "$BUILD_NUMBER" \
 
 flutter pub get --enforce-lockfile
 git diff --exit-code -- pubspec.lock
+dart run tool/ci/check_reader_fixtures.dart
 flutter build ios --release --no-codesign --no-pub \
   --target lib/main_probe.dart \
   --build-number "$BUILD_NUMBER" \
@@ -91,36 +92,77 @@ flutter build ios --release --no-codesign --no-pub \
 # injects them itself and the app reads them through FlutterVersion.
 
 readonly APP="$PWD/build/ios/iphoneos/Runner.app"
-readonly PLIST="$APP/Info.plist"
-plist_value() { plutil -extract "$1" raw -o - "$PLIST"; }
-[[ "$(plist_value DTPlatformName)" == iphoneos ]]
-[[ "$(plist_value CFBundleIdentifier)" == io.github.natumeai.shiori ]]
-[[ "$(plist_value CFBundleVersion)" == "$BUILD_NUMBER" ]]
-EXECUTABLE="$(plist_value CFBundleExecutable)"
-[[ -n "$EXECUTABLE" && "$EXECUTABLE" != */* ]]
-test -s "$APP/$EXECUTABLE"
-lipo "$APP/$EXECUTABLE" -verify_arch arm64
-printf 'Validated arm64 device executable: %s\n' "$EXECUTABLE"
-for framework in Flutter App; do
-  test -d "$APP/Frameworks/$framework.framework"
-  test -s "$APP/Frameworks/$framework.framework/$framework"
-  lipo "$APP/Frameworks/$framework.framework/$framework" -verify_arch arm64
-  printf 'Validated arm64 framework: %s.framework\n' "$framework"
-done
-printf 'Validated bundle: iphoneos, io.github.natumeai.shiori, version %s\n' "$BUILD_NUMBER"
-plutil -p "$PLIST" > "$OUTPUT_DIR/bundle-info.txt"
-
+plist_value() { plutil -extract "$1" raw -o - "$2/Info.plist"; }
+validate_bundle() {
+  local app="$1" executable framework
+  [[ "$(plist_value DTPlatformName "$app")" == iphoneos ]]
+  [[ "$(plist_value CFBundleIdentifier "$app")" == io.github.natumeai.shiori ]]
+  [[ "$(plist_value CFBundleVersion "$app")" == "$BUILD_NUMBER" ]]
+  executable="$(plist_value CFBundleExecutable "$app")"
+  [[ -n "$executable" && "$executable" != */* ]]
+  test -s "$app/$executable"
+  lipo "$app/$executable" -verify_arch arm64
+  printf 'Validated arm64 device executable: %s\n' "$executable"
+  for framework in Flutter App; do
+    test -d "$app/Frameworks/$framework.framework"
+    test -s "$app/Frameworks/$framework.framework/$framework"
+    lipo "$app/Frameworks/$framework.framework/$framework" -verify_arch arm64
+    printf 'Validated arm64 framework: %s.framework\n' "$framework"
+  done
+  printf 'Validated bundle: iphoneos, io.github.natumeai.shiori, version %s\n' "$BUILD_NUMBER"
+}
+metal_value() {
+  local value
+  if value="$(plist_value FLTUseFlutterMetalLayer "$1" 2>/dev/null)"; then
+    [[ "$value" == true || "$value" == false ]] || {
+      echo 'Invalid FLTUseFlutterMetalLayer boolean.' >&2; return 1;
+    }
+    printf '%s' "$value"
+  else
+    printf null
+  fi
+}
+validate_bundle "$APP"
+plutil -p "$APP/Info.plist" > "$OUTPUT_DIR/bundle-info.txt"
+DEFAULT_METAL="$(metal_value "$APP")"
 STAGING="$(mktemp -d "${TMPDIR:-/tmp}/shiori-package.XXXXXX")"
-mkdir "$STAGING/Payload"
-ditto "$APP" "$STAGING/Payload/Runner.app"
-readonly IPA="$OUTPUT_DIR/shiori-probe-$BUILD_ID.ipa"
-(
-  cd "$STAGING"
-  zip -qry "$STAGING/probe.ipa" Payload
-)
-mv "$STAGING/probe.ipa" "$IPA"
-test -s "$IPA"
-unzip -t "$IPA"
-unzip -Z1 "$IPA" | grep -Fx 'Payload/Runner.app/Info.plist'
-shasum -a 256 "$IPA" > "$OUTPUT_DIR/sha256.txt"
-printf 'Unsigned device package: %s\n' "$IPA"
+: > "$OUTPUT_DIR/sha256.txt"
+for variant in default cametal; do
+  stage="$STAGING/$variant"
+  mkdir -p "$stage/Payload"
+  bundle="$stage/Payload/Runner.app"
+  ditto "$APP" "$bundle"
+  filename="shiori-probe-$BUILD_ID.ipa"
+  if [[ "$variant" == cametal ]]; then
+    filename="shiori-probe-$BUILD_ID-cametal.ipa"
+    if [[ "$DEFAULT_METAL" == null ]]; then
+      plutil -insert FLTUseFlutterMetalLayer -bool false "$bundle/Info.plist"
+    else
+      plutil -replace FLTUseFlutterMetalLayer -bool false "$bundle/Info.plist"
+    fi
+    [[ "$(metal_value "$bundle")" == false ]]
+  else
+    cmp "$APP/Info.plist" "$bundle/Info.plist"
+  fi
+  validate_bundle "$bundle"
+  metal="$(metal_value "$bundle")"
+  [[ "$variant" != default || "$metal" == "$DEFAULT_METAL" ]]
+  plutil -p "$bundle/Info.plist" > "$OUTPUT_DIR/bundle-info-$variant.txt"
+  (
+    cd "$stage"
+    zip -qry "$stage/probe.ipa" Payload
+  )
+  mv "$stage/probe.ipa" "$OUTPUT_DIR/$filename"
+  test -s "$OUTPUT_DIR/$filename"
+  unzip -t "$OUTPUT_DIR/$filename"
+  unzip -Z1 "$OUTPUT_DIR/$filename" | grep -Fx 'Payload/Runner.app/Info.plist'
+  checksum="$(shasum -a 256 "$OUTPUT_DIR/$filename")"
+  checksum="${checksum%% *}"
+  printf '%s  %s\n' "$checksum" "$filename" >> "$OUTPUT_DIR/sha256.txt"
+  jq --arg file "$filename" --arg sha256 "$checksum" --arg variant "$variant" \
+    --argjson metal "$metal" \
+    '.variants = (.variants // []) + [{file:$file,sha256:$sha256,variant:$variant,FLTUseFlutterMetalLayer:$metal,FLTUseFlutterMetalLayerEffective:(if $metal == null then true else $metal end)}]' \
+    "$OUTPUT_DIR/provenance.json" > "$STAGING/provenance.json"
+  mv "$STAGING/provenance.json" "$OUTPUT_DIR/provenance.json"
+  printf 'Unsigned device package: %s\n' "$OUTPUT_DIR/$filename"
+done

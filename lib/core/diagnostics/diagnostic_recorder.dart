@@ -55,6 +55,7 @@ class DiagnosticRecorder {
   int _frameOverflow = 0;
   int _motionOverflow = 0;
   int _drainReports = 0;
+  int _sourceGeneration = 0;
   bool _motionFrameNumberUnavailable = false;
   bool _engineFrameNumberUnavailable = false;
   final _errors = <String>[];
@@ -86,7 +87,10 @@ class DiagnosticRecorder {
     _startedUs = clock.monotonicUs;
     _completion = Completer<DiagnosticRecord?>();
     phase = CapturePhase.recording;
-    source.start(_onTimings);
+    final generation = ++_sourceGeneration;
+    source.start((timings) {
+      if (generation == _sourceGeneration) _onTimings(timings);
+    });
     _limit = Timer(
       maximumDuration,
       () => unawaited(stop(reason: 'duration_limit')),
@@ -234,6 +238,7 @@ class DiagnosticRecorder {
   }
 
   void dispose() {
+    ++_sourceGeneration;
     _limit?.cancel();
     _drain?.cancel();
     source.stop();

@@ -1,0 +1,17 @@
+{"file": ".trellis/spec/flutter/index.md", "reason": "Approved stack, quality gate and guide index."}
+{"file": ".trellis/spec/flutter/directory-structure.md", "reason": "Feature-first layout; S2 adds reader data/engine layers, tool dirs and fixture assets."}
+{"file": ".trellis/spec/flutter/state-management.md", "reason": "Reader-local motion state, injected long-lived dependencies, no per-tick provider rebuilds."}
+{"file": ".trellis/spec/flutter/widget-guidelines.md", "reason": "Probe screens: localization, theme tokens, semantics, disposal."}
+{"file": ".trellis/spec/flutter/error-handling.md", "reason": "Typed exceptions for archive/parse/file failures and nonduplicated logging."}
+{"file": ".trellis/spec/flutter/quality-guidelines.md", "reason": "Dependency justification and approved-dependency table for ZIP/XML/HTML/CSS/SVG packages; lints and pins."}
+{"file": ".trellis/spec/flutter/testing.md", "reason": "Injected clocks/resources, golden vectors, no live network."}
+{"file": ".trellis/spec/flutter/diagnostics.md", "reason": "S1 recorder, frame-number correlation and evidence boundaries the reader recorder must reuse without breaking."}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Oracle -> vectors -> Dart, app -> native probe -> export -> analyzer boundaries."}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Reuse S1 recorder/export/storage pieces instead of duplicating them."}
+{"file": ".trellis/tasks/10-22-native-reader-feasibility/research/s2-entry-evidence.md", "reason": "S1 device baseline, pinned engine presentation path, reference pins and files to port."}
+{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/native-reader-contracts.md", "reason": "Exact CFI, canonical, gesture, layout and cache contracts with reference source anchors."}
+{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/performance-acceptance.md", "reason": "Proposed engineering gate, mandatory scenarios and evidence levels."}
+{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/reader-fidelity.md", "reason": "Reader settings domain, accepted reflow boundary and the four local sample books."}
+{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/native-reader-options.md", "reason": "Package evidence and the accepted first-release content scope."}
+{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/ios-device-workflow.md", "reason": "Free build/sign/install constraints and public-repository push rules."}
+{"file": ".trellis/tasks/archive/2026-10/10-22-ios-free-device-bootstrap/device-runbook.md", "reason": "Model for the S2 device runbook; 全能签 and Files-app export steps that actually worked."}

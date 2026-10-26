@@ -73,3 +73,64 @@ Reviewed and revised the lan-reader parity plan (GitHub Actions build host, fixe
 ### Status
 
 [OK] **Completed**
+
+
+## Session 3: S2 phases 0-A complete; user-paused in Phase B
+
+**Date**: 2026-10-22
+**Task**: S2 phases 0-A complete; user-paused in Phase B
+**Branch**: `ios-build/s2-reader-probe`
+
+### Summary
+
+Completed local Phase 0 and Phase A with passing oracle and Flutter gates. User explicitly paused during Phase B, roughly 25 percent effort; parser/source and CFI model drafts plus dependencies remain uncommitted and unverified. Resume from the S2 resume-handoff.md; no push, archive, device run or Phase B commit.
+
+### Main Changes
+
+- Created ios-build/s2-reader-probe and committed baseline/planning plus reproducible oracle tooling and synthetic fixtures.
+- Recorded Phase B source and CFI drafts, agreed APIs, dependency versions/licences and exact pending work in S2 resume notes.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4e15862` | (see git log) |
+| `74932bb` | (see git log) |
+
+### Testing
+
+- [OK] Phase A: 45 byte-identical outputs, 4807 CFI samples per engine, private 168677 samples per engine, zero observed engine differences, 91 Flutter tests passed.
+- [OK] Phase B: dependency installation exit 0 only; no formatter, codegen, analyzer, tests or gate run.
+
+### Status
+
+[PAUSED] **Paused at user request; Phase B is incomplete**
+
+### Next Steps
+
+- After user resumes, read .trellis/tasks/10-22-native-reader-feasibility/resume-handoff.md and both resume research notes; set this task's session pointer, preserve drafts, and continue Phase B.
+
+
+## Session 4: S2 phases D-F, first iPhone run and S4 conditional GO
+
+**Date**: 2026-10-26
+**Task**: S2 phases D-F, first iPhone run and S4 conditional GO
+**Branch**: `ios-build/s2-reader-probe`
+
+### Summary
+
+Phases D (page-turn controller, prepared surfaces), E (reader probe, Swift presentation probe, analyzer, two-IPA CI) and F (device runbook, report, specs) implemented with the Codex CLI gpt-6.1-sol and verified with gpt-6-astra; pushed and built by CI (39923417215, 40250493709). First iPhone run: 43 private exports; stage budgets pass (A1 30/30, R11 4/4), correctness passes where evaluable, resource failures recorded, admission latency and stall classification unverified by measurement limits; user stopped further instrumentation and recorded S4 conditional GO with seven conditions. Task archived.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `25bac2d` | (see git log) |
+| `bf12416` | (see git log) |
+| `862d999` | (see git log) |
+| `417daf4` | (see git log) |
+| `7ff10be` | (see git log) |
+
+### Status
+
+[OK] **Completed**

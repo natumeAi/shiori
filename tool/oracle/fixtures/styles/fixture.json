@@ -1,0 +1,35 @@
+{
+  "sections": [
+    {
+      "id": "styles",
+      "href": "styles.xhtml"
+    }
+  ],
+  "resources": [
+    {
+      "id": "css",
+      "href": "styles.css",
+      "mediaType": "text/css"
+    },
+    {
+      "id": "font",
+      "href": "fonts/Roboto-Regular.ttf",
+      "mediaType": "font/ttf"
+    },
+    {
+      "id": "font-license",
+      "href": "fonts/LICENSE",
+      "mediaType": "text/plain"
+    },
+    {
+      "id": "font-notice",
+      "href": "fonts/NOTICE",
+      "mediaType": "text/plain"
+    },
+    {
+      "id": "font-alias",
+      "href": "fonts/Roboto-Copy.ttf",
+      "mediaType": "font/ttf"
+    }
+  ]
+}

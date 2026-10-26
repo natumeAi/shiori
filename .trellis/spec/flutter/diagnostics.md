@@ -146,3 +146,244 @@ passes `GetVsyncTargetTime()` and the recorder frame number to
 therefore sees the previous ID. Same-frame post-frame callbacks see the updated
 ID. `ui/window.dart` defines `FrameData.frameNumber` with unavailable default
 `-1`. These source facts explain the test contract; device results stay pending.
+
+## 8. Scenario: Reader Feasibility (S2)
+
+### 8.1 Scope / Trigger
+
+`lib/features/diagnostics/data/` composes the unchanged S1 recorder through
+`ReaderProbeRecorder`. Probe UI/scenarios live in
+`lib/features/diagnostics/presentation/reader_probe/`. The reader core owns its
+injected sink interfaces and imports no diagnostics. The ordinary product entry
+point never activates presentation sampling. Reader correctness and local
+resource tests do not establish device performance or physical presentation.
+
+### 8.2 Signatures
+
+- `ReaderProbeRecorder.start({runId, bookSha256, fixtureId, scenarioId,
+  repeatIndex, repeatCount, input, declarations, metadata, mode})`, `stop`,
+  `completed`, `dispose`; implements `TurnTimingSink`, `TurnFrameSink`,
+  `TurnTraceSink`, `TurnEvidenceSink` from reader `engine/motion/turn_session.dart`.
+- `ReaderExportRepository.export(ReaderFeasibilityRecord) -> Future<String>`,
+  static `decode(String)`, `fileName(record)`, `clipboard(record)`.
+- `PresentationProbe.install() -> Future<PresentationReport>`,
+  `start({runId, mode})`, `stop()`, `dispose()`; the method-channel adapter is
+  `lib/features/diagnostics/data/method_channel_presentation_probe.dart`.
+- Offline CLI: `dart run tool/diag/analyze_reader_export.dart [--strict] <export.json>...`.
+  The analyzer deliberately imports no app code.
+
+### 8.3 Contracts
+
+#### Record, privacy and capture identity
+
+`reader_feasibility_record.dart` defines the following top-level fields:
+
+| Fields | Contract |
+| --- | --- |
+| `kind`, `schemaVersion` | `reader_feasibility`, integer `1`; model defaults are not persisted-schema validation |
+| `bookSha256`, `fixtureId` | Lowercase 64-hex digest; bundled synthetic fixture ID or null for a user book |
+| `scenarioId`, `repeatIndex`, `repeatCount`, `input` | R01-R11, one-based repeat, `manual_touch` or `synthetic_injected` |
+| `engine` | Nested schema-v1 `DiagnosticRecord`: build/run identity, declarations, metadata, clocks, raw engine frames/motion, errors/overflow/omissions/aggregates |
+| `readerEvents`, `layoutCosts`, `resources` | Bounded raw sample arrays, `Map<String, Object?>` entries |
+| `presentation`, `aggregates`, `overflow`, `omissions` | Native report, app reader reduction, explicit loss counts and evidence omissions |
+
+`ReaderProbeRecorder.start` rejects invalid digest/scenario/input/repeat identity.
+R11 requires a user book (`fixtureId == null`), `manual_touch`, and one repeat.
+Completion records `manualMinimumMet` from at least 50 retained acceptances for
+R11; this marker alone does not establish correctness. Scripted R01-R10 use
+frame-driven real gesture injection. R09 records controller/session lifecycle
+simulation; it still needs actual OS background/foreground device evidence.
+
+Reader event/cost/resource rings default to 16384 each. The reader screen
+configures the nested engine recorder to 65536 samples and a ten-minute maximum,
+retaining the S1 bounded drain. Do not apply the S1 synthetic 15-second/4096
+defaults to reader runs. `overflow` keys are `events`, `layoutCosts`, `resources`,
+`frames`, `motion`, `native`. `omissions` keys are `native`, `trailingTimingBatch`,
+`manualMinimumMet`, `physicalPresentation`, `touchToPhoton`; trailing completeness
+is never inferred from a timing batch arriving.
+
+Export filename is `shiori-reader-<BUILD_ID>-<runId>.json`, built from
+`record.engine.buildId/runId` with sanitized/truncated safe components, written
+to Documents. Reader exports do not add a saved-record file to Application
+Support. Clipboard uses the S1 4000-byte UTF-8 ceiling without splitting a code
+point. User-placed EPUBs are intentional Documents inputs (`ProbeBookRepository`),
+an S2 exception to S1's export-only Documents rule. Private book locators stay in
+read closures; labels/metadata/serialization use digest identity.
+
+Never export book text, titles, user filenames, assertion-bearing CFIs, raw
+layout keys or private paths. `accepted.destination.pageIdentity` is SHA-256 of
+the internal page identity; it is not the original string. Book I/O warnings and
+platform-channel omissions exclude raw exception messages/details. This privacy
+boundary also applies to task evidence and clipboard summaries.
+
+Turn events contain `sequence`, `event`, `monotonicUs`, `turnClockMs`, `generation`,
+`activeGeneration`, `captureEpoch`, `queueDepth`, `inputId`; acceptance adds
+`destination` with `sectionIndex`, `pageIndex`, `layoutGeneration`, hashed
+`pageIdentity`. `firstMotionSubmission` instead carries `sequence`, `event`,
+`captureEpoch`, `monotonicUs`, `generation`, `frameNumber`, `inputId`.
+Section preparation events carry `section`, `cacheHit`, sequence/time and
+`sectionPreparationStart`/`sectionPreparationEnd`.
+
+Input objects map to opaque integer IDs. New captures reset numbering; known old
+objects retain their original capture epoch. Join by `(captureEpoch, inputId)`
+within one export, never by generation or across exports. Epoch-less legacy
+events remain separate from identified epochs. First-submission deduplication
+also uses epoch plus ID. The surface post-frame callback checks owner, generation,
+mounted state and `TurnFrameSink.frameEpoch` before publishing an engine ID.
+
+#### Correctness and resources
+
+`engine.metadata.readerCorrectnessVersion: 1` and integer `captureEpoch` declare
+correctness capability. `inputCommitted` marks the navigation handoff after
+settlement; rebound/boundary/no-turn inputs do not commit. Require exactly one
+acceptance per explicit commit, none before a commit, zero proof failures and
+zero stale acceptance publications. `staleCallbackRejected` is safe rejection,
+reported separately. A foreign epoch, mismatched active generation, invalidated
+input or rejected generation publishing acceptance fails. Missing required
+fields/capability and event loss cannot establish a passing absence claim.
+
+Layout samples: `monotonicUs`, `section`, `layoutUs`, `codeUnits`, `lines`,
+`sectionPageCount`. Resource samples: `monotonicUs`, `liveSurfaces`, `pictureBytes`,
+`imageBytes`, `rssBytes` (`ProcessInfo.currentRss` in Dart). The active pool/cache
+declares `engine.metadata.resourceCaps`: `liveSurfaceCap`, `liveSurfaceReserve`,
+`pictureCacheBytes`, `imageCacheBytes`; never copy guessed caps into an export.
+
+Resource analysis reports first/last/max and ordinary-least-squares slope per
+recorder second. Passing boundedness requires at least 100 accepted turns,
+nonoverflowed events/resources, maxima within surface cap plus reserve and byte
+caps, positive first RSS, and two distinct sample times. Both endpoint RSS growth
+and slope projected over the capture must be within
+`ReaderGates.maximumRssGrowthFraction` in `tool/diag/reader_export_data.dart`
+(currently 5% of first RSS). Observed breaches fail even with partial evidence;
+missing evidence stays unavailable. This implemented threshold is an observational
+bound, not a numerical requirement from design §8 or proof of indefinite/per-cycle
+stability. R10 supplies alternating-turn/jump coverage; telemetry does not certify
+direction, cycle completion or warm-up by itself.
+
+#### Native presentation probe and evidence levels
+
+Channel: `io.github.natumeai.shiori/presentation_probe`, registered in
+`ios/Runner/AppDelegate.swift`. Registration/construction allocates no sampling
+buffers, inspects no views and installs no hooks. Explicit `install` allocates
+the bounded buffer/shared callback and reads inventory; `start` lazily installs
+the selected hook after checking the actual layer. Do not claim hooks activate
+at registration or that `install` itself starts a capture.
+
+| Mode | Requirement and raw samples | `evidence` |
+| --- | --- | --- |
+| `inventory` | Layer/flag, max FPS, power/thermal/OS metadata | `metadata` |
+| `a1` | Default `FlutterMetalLayer`; `setContents:` timestamps | `layer_commit_cadence` |
+| `a2` | A1 plus auxiliary `CADisplayLink` timestamp/targetTimestamp | `layer_commit_cadence_per_display_period` |
+| `b` | Exact `CAMetalLayer` and explicit `FLTUseFlutterMetalLayer=false`; drawable ID and `presentedTime` | `system_drawable_presentation_non_product_path` |
+
+Compare A1/A2 for observer perturbation: the auxiliary display link can affect
+cadence. B describes only the alternate build path; it does not establish the
+product path's behavior. Neither engine frame identity, layer submission nor
+system drawable time establishes physical scan-out or touch-to-photon latency.
+Native seconds remain in a separate clock domain; never infer a Dart epoch.
+Reported display refresh-rate metadata is not measured effective cadence.
+
+`PresentationReport` exports `available`, `evidence`, `omission`, `inventory`,
+`samples`, `overflow`, `contentionDrops`, optional nonzero `unmatchedCallbacks`,
+`clock`, `physicalPresentation`, `touchToPhoton`; the reader recorder adds `mode`.
+Missing `unmatchedCallbacks` decodes as zero. `overflow` includes evictions plus
+contention loss; `contentionDrops` is a subset, not another amount to add.
+Unmatched callbacks are separate. Native rings have capacity 16384; callback
+paths try-lock and count contention instead of blocking. `dispose` stops capture
+and invalidates the auxiliary display link, retaining the bounded native buffer/
+shared callback for permanent hooks and late callbacks. Do not promise swizzle
+removal or buffer deallocation on dispose.
+
+`presentation_payload.dart` validates/whitelists inventory keys: `layerClass`,
+`FLTUseFlutterMetalLayer` (nullable bool), `maximumFramesPerSecond`, `lowPowerMode`,
+`thermalState`, `iosVersion`, `ringCapacity`. Raw sample shapes are:
+
+- `layer_commit`: `kind`, `timestamp` (A1/A2 only).
+- `display_link`: `kind`, `timestamp`, `targetTimestamp` (A2 only).
+- `drawable`: `kind`, `timestamp`, `presentedTime`, decimal-string `drawableId`
+  within unsigned 64-bit range (B only).
+
+Times must be finite/nonnegative, counters nonnegative, contention <= overflow,
+and available streams nonempty (A2 requires both commit and display-link data).
+Native B reports unavailable if no positive presented time arrives by stop.
+Zero means no presentation observed by stop, potentially pending/lost callbacks.
+The analyzer bins only recorded, positive, nonoverlapping A2 periods as
+`[timestamp, targetTimestamp)`: zero, one or at least two commits, plus commits
+outside recorded periods. Missing periods are not synthesized.
+
+Swift compilation, runtime hook/ABI behavior and actual A1/A2/B data require
+CI/device validation. Source inspection and Dart adapter tests do not prove them.
+The S2 spike has one device iteration plus at most one fix iteration; unavailable
+results stay explicitly unverified with the omission, not substituted evidence.
+
+#### Independent analyzer
+
+`tool/diag/reader_export_analysis.dart` recomputes both app reader and nested
+engine aggregates from raw samples, using a symmetric key/value comparison.
+Never import app reducers into this tool or trust exported aggregate values.
+S1 engine percentiles use `ceil((n-1)*p)`; reader distributions use
+`ceil(n*p)-1`. Preserve both conventions. Stage budgets, warm-submission P95,
+stall threshold, repeat/turn minima and RSS rule live in `ReaderGates`
+(`tool/diag/reader_export_data.dart`).
+
+Report UI and raster budgets separately; use nonnegative frame-number joins and
+consecutive matched IDs for engine cadence. Warm latency is input receipt to
+first motion submission for warm, unqueued admitted inputs, joined by epoch/ID;
+it is a submission proxy. Report queue wait, cold input/section preparation,
+paragraph layout, static fallback/rate, motion-window stage/interval/submission
+stalls, correctness, resource trends and native cadence separately. Unknown
+schemas and malformed required data are rejected; incomplete streams, open
+windows, broken adjacency, unavailable IDs and overflow qualify absence claims.
+Definite observed failures still fail. Repeat summaries do not invent missing
+repeats. Do not infer device acceptance from a matching synthetic export.
+
+CLI exit codes: `64` usage, `65` invalid file/JSON/schema/input, `1` aggregate
+mismatch with `--strict`, otherwise `0`. Failed measurement rows do not change
+exit status when aggregates match. Always read gate rows, omissions and loss
+counters in addition to the process result.
+
+### 8.4 Validation & Error Matrix
+
+| Condition | Behavior |
+| --- | --- |
+| Invalid capture identity / busy recorder | `ArgumentError` / `StateError` before starting a new capture |
+| Unsupported top-level or nested engine schema | Repository `decode` throws `ParseException`; analyzer refuses with invalid-input status |
+| Export I/O failure | Sanitized warning, typed `ParseException`; no success-looking export |
+| Missing plugin / platform channel error | Mode-specific unavailable report with omission; omit native exception details |
+| Malformed native report | Typed `ParseException`; capture completion errors rather than stranding the drain; scripted observer cancels the scenario |
+| Missing correctness capability/fields/caps or insufficient samples | Gate unavailable with reason; never fill from counters/aggregate guesses |
+| Safe stale rejection | Count separately; no correctness failure just for rejection |
+| Duplicate/uncommitted/stale acceptance, proof failure, observed resource breach | Failed gate, including on partial evidence |
+| Native stream absent or wrong layer/flag | Unavailable with reason; no stronger evidence label |
+| Late post-frame/native completion after restart/dispose | Owner/generation/epoch guards suppress publication into another capture |
+
+### 8.5 Good/Base/Bad Cases
+
+- Good: raw samples independently reproduce app aggregates, every committed
+  input has one hashed destination, and unavailable native evidence is explicit.
+- Base: legacy v1 export still reduces available timing data, while missing
+  correctness/capability fields leave those gates unavailable.
+- Bad: exit 0 treated as device PASS, epoch-less/old input joined to a new input
+  with the same number, contention counted twice, or B labeled product scan-out.
+
+### 8.6 Tests Required
+
+Keep S1 tests intact. Inject `ProbeClock`, `FrameSource`, presentation probe,
+`TurnClock`, scenario frames and temporary directories. Test restart/dispose and
+late callbacks, epoch/ID reuse and deduplication, schema rejection, bounded rings,
+safe filenames/clipboard, sanitized I/O and native failures, stream validation,
+native loss counters and A2 period boundaries. Maintain synthetic export parity
+plus negative correctness/resource/overflow/missing-data fixtures under
+`test/fixtures/reader/exports/`. Their regeneration path is in
+[Testing](./testing.md). Widget tests cover post-frame submission identity,
+scenario cancellation and typed stop failure, lifecycle cleanup and ordinary
+product isolation (`test/app/product_presentation_isolation_test.dart`).
+
+### 8.7 Wrong vs Correct
+
+Wrong: join on `inputId` alone, use `proofPassed` as a commit, or report "120 Hz
+physical presentation verified" from engine/layer/B intervals.
+
+Correct: join `(captureEpoch, inputId)` within one export, replay explicit
+`inputCommitted`/`accepted.destination` evidence, report each recorded evidence
+level and keep physical presentation/touch-to-photon unverified.

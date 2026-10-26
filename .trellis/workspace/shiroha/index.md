@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 2
-- **Last Active**: 2026-10-22
+- **Total Sessions**: 4
+- **Last Active**: 2026-10-26
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~75 | Active |
+| `journal-1.md` | ~136 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,8 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 4 | 2026-10-26 | S2 phases D-F, first iPhone run and S4 conditional GO | `25bac2d`, `bf12416`, `862d999`, `417daf4`, `7ff10be` | `ios-build/s2-reader-probe` |
+| 3 | 2026-10-22 | S2 phases 0-A complete; user-paused in Phase B | `4e15862`, `74932bb` | `ios-build/s2-reader-probe` |
 | 2 | 2026-10-22 | S1 free iPhone build and diagnostics probe | `1708520`, `4fc9475`, `9472fa0`, `5624af5`, `9943313` | `ios-build/s1-probe` |
 | 1 | 2026-10-22 | 初始化 Flutter spec 并搭建项目骨架 | `413c7bd`, `26bfe34` | `master` |
 <!-- @@@/auto:session-history -->
