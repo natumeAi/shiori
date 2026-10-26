@@ -21,11 +21,11 @@
   "children": [],
   "parent": "10-22-flutter-lan-reader-parity",
   "relatedFiles": [],
-  "notes": "Planned 2026-10-22. User decisions: diagnostic-only native presentation hook allowed (time-boxed); local phases commit once each on ios-build/s2-reader-probe; no push without user confirmation. Codex (gpt-6.1-sol, high) did Phase 0 and A, then was paused during Phase B. Sonnet 5.5 (medium) implement/check agents in the Claude session did Phases B and C. The user asks to stop after each phase: Phase D starts only on the user's explicit instruction. Phase D was implemented by the Codex CLI (gpt-6.1-sol, high) and reviewed by trellis-check; Phase E starts only on the user's explicit instruction. Phase E was implemented by the Codex CLI (gpt-6.1-sol, high) and verified/reviewed by the Codex CLI (gpt-6-astra, high); Phase F starts only on the user's explicit instruction. Phase F (runbook, report, evidence, specs) is done; the device run waits for the user's push confirmation.",
+  "notes": "Planned 2026-10-22. User decisions: diagnostic-only native presentation hook allowed (time-boxed); local phases commit once each on ios-build/s2-reader-probe; no push without user confirmation. Codex (gpt-6.1-sol, high) did Phase 0 and A, then was paused during Phase B. Sonnet 5.5 (medium) implement/check agents in the Claude session did Phases B and C. The user asks to stop after each phase: Phase D starts only on the user's explicit instruction. Phase D was implemented by the Codex CLI (gpt-6.1-sol, high) and reviewed by trellis-check; Phase E starts only on the user's explicit instruction. Phase E was implemented by the Codex CLI (gpt-6.1-sol, high) and verified/reviewed by the Codex CLI (gpt-6-astra, high); Phase F starts only on the user's explicit instruction. Phase F (runbook, report, evidence, specs) is done; the device run waits for the user's push confirmation. First device run analysed; user stopped further instrumentation and recorded S4 conditional GO.",
   "meta": {
-    "execution_state": "pushed_ci_built_awaiting_device_run",
+    "execution_state": "device_run_reported_conditional_go",
     "stop_after_phase": "F",
-    "next_phase": "device_run_per_device_runbook",
+    "next_phase": "user_decision_push_then_finish_or_s4",
     "codex_paused_at": "2026-10-22T17:05:00+08:00",
     "phase_b_resumed_at": "2026-10-22T17:40:00+08:00",
     "phase_b_completed_at": "2026-10-22T18:51:00+08:00",
@@ -47,6 +47,11 @@
     "phase_f_completed_at": "2026-10-23T16:15:00+08:00",
     "phase_f_executor": "Codex CLI gpt-6.1-sol (high) in parts F1 and F2; verification by Codex CLI gpt-6-astra (high); no Flutter gate or trellis-check review for this documentation-only phase by user decision",
     "ci_build_id": "862d999010fa-gha-7",
-    "ci_artifact": "shiori-probe-862d999010faed720286727af14a5b909e9f94f0-gha-7 (ID 12488920398)"
+    "ci_artifact": "shiori-probe-862d999010faed720286727af14a5b909e9f94f0-gha-7 (ID 12488920398)",
+    "device_run_build": "862d999010fa-gha-7",
+    "device_run_completed_at": "2026-10-23T17:30:00+08:00",
+    "device_exports": "43 accepted exports, private in local-evidence/s2/ (gitignored)",
+    "s4_decision": "conditional GO (user decision 2026-10-23); seven conditions in feasibility-report.md",
+    "report_verified_by": "Codex CLI gpt-6-astra (high), 2026-10-26; one raster-minimum correction applied by the coordinator"
   }
 }

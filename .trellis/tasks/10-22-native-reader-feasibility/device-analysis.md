@@ -285,8 +285,9 @@ are a/b/c/unresolved as defined in item 2.
 | R10 / 2 | P | P | U | P (0/0/0/0) | P | P | 100 |
 | R10 / 3 | P | P | U | P (0/0/0/0) | P | P | 100 |
 
-All A1 raster rows are 100% within stage budget; UI is 100% except R05/3
-at 99.96%. These rows cover retained matched samples; the drag-submission
+A1 raster rows are 100% within stage budget except R08/1 at 99.02% (202 of
+204 matched frames; corrected after the final report verification); UI is
+100% except R05/3 at 99.96%. These rows cover retained matched samples; the drag-submission
 omission in item 2 limits coverage. R09 includes interruptions with open
 motion windows, so stall absence is unavailable despite one accepted turn
 per repeat. No correctness failure or proof failure is observed. All A1
@@ -468,3 +469,43 @@ the raw declaration as passing.
 
 Charging and device-warm declarations for those exports remain as recorded
 (`unknown` where not stated); they are not limiter gates.
+
+## 11. Decisions after the first device run
+
+The following are the user's decisions and observations in this conversation
+on **2026-10-23**. Sections 1-10 remain the historical analysis; this section
+records the subsequent acceptance decision without changing raw evidence or
+analyzer gates.
+
+- **Stop instrumentation for S2.** No App change or rebuild will be made for
+  the three missing observation points in section 8. Warm recognized-admission
+  latency and stall classification are **unverified because of measurement
+  limits**, not acceptance passes or failures. The analyzer's conservative
+  failed stall rows and their unresolved candidates remain visible; they do
+  not establish physical stalls. Receipt-based latency is informational only.
+- **Subjective operator evidence:** during all scripted runs and R11 manual
+  reading of the four sample books, the user saw no visible stutter, freeze,
+  frame skipping or input lag. This observation does not replace measurement
+  or resolve missing admission, submission, hold or frame-demand evidence.
+- **Declaration corrections:** use section 10's operator corrections and label
+  affected runs "declaration corrected, corroborated". A1 R01 Limit Frame Rate
+  was off; R11 samples 1, 3, 4 and the R09 manual supplement had both Low Power
+  and Limit Frame Rate off. Raw declarations remain unchanged.
+- **R09 manual supplement will not be redone for S2.** Observed interruption
+  handling is verified, but no completed accepted turn follows return to the
+  foreground. Recovery/continued-reading acceptance remains partial.
+- **S4: conditional GO (有条件通过).** The user elects to proceed with the native
+  Flutter reader architecture. The entry/exit conditions and their reasons
+  and verification criteria are recorded in the
+  [final S2 report](feasibility-report.md#nc9-s4-decision-and-conditions).
+  This closes the S2 report, not the failed or unverified engineering gates.
+- A partial Dart instrumentation patch is saved privately at
+  `local-evidence/s2/i1-partial-instrumentation.patch` (gitignored, not committed).
+  It is a local starting point for S4 condition 1 only, not implemented or
+  device-verified instrumentation.
+
+One additional personal EPUB was refused as unsupported layout; its identity
+is intentionally omitted. Current detection rejects the whole book if any
+section is fixed-layout, vertical or right-to-left. S4 must provide per-section
+support or clear user-facing handling for mixed-layout books, as specified in
+the report's conditions. No personal-book digest or content is included here.
