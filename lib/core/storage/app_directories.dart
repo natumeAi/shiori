@@ -8,6 +8,7 @@ part 'app_directories.g.dart';
 abstract interface class AppDirectories {
   Future<Directory> applicationSupport();
   Future<Directory> documents();
+  Future<Directory> caches();
 }
 
 class _PlatformDirectories implements AppDirectories {
@@ -15,6 +16,9 @@ class _PlatformDirectories implements AppDirectories {
   Future<Directory> applicationSupport() => getApplicationSupportDirectory();
   @override
   Future<Directory> documents() => getApplicationDocumentsDirectory();
+
+  @override
+  Future<Directory> caches() => getApplicationCacheDirectory();
 }
 
 @Riverpod(keepAlive: true)

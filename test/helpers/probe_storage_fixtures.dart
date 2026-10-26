@@ -17,6 +17,8 @@ class TestDirectories implements AppDirectories {
       Directory('${root.path}/support');
   @override
   Future<Directory> documents() async => Directory('${root.path}/documents');
+  @override
+  Future<Directory> caches() async => Directory('${root.path}/caches');
 }
 
 class MockDirectories extends Mock implements AppDirectories {}

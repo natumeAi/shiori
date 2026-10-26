@@ -1,40 +1,72 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:json_annotation/json_annotation.dart';
-import 'package:logging/logging.dart';
 import 'package:shiori/core/errors/app_exception.dart';
+import 'package:shiori/core/network/redacted_request_log.dart';
+import 'package:shiori/core/network/request_cancelled.dart';
+import 'package:shiori/core/network/server_error_code.dart';
+import 'package:shiori/core/network/server_route.dart';
 
-final _log = Logger('Network');
-
-/// Runs a repository request and converts transport and parse failures into
-/// [AppException] subtypes. The failure is logged here, once.
-Future<T> guardDio<T>(Future<T> Function() request) async {
+/// Converts failures, leaving cancellation as non-error control flow.
+/// Logs only safe metadata, never exceptions, stack traces or response text.
+Future<T> guardDio<T>(
+  Future<T> Function() request, {
+  RedactedRequestLog? log,
+}) async {
+  final fallback = log ?? RedactedRequestLog(ServerRoute.unknown);
   try {
     return await request();
-  } on DioException catch (e, stack) {
+  } on DioException catch (e) {
+    if (e.type == DioExceptionType.cancel) throw const RequestCancelled();
+    (RedactedRequestLog.from(e.requestOptions) ?? fallback).write(
+      e.response?.statusCode,
+      failed: true,
+    );
+    if (e.error is HandshakeException) throw TlsException(e);
     if (e.type == DioExceptionType.unknown && e.error is FormatException) {
-      // Dio reports a body it cannot decode (malformed JSON, invalid UTF-8)
-      // as `unknown`. That is a parse failure, not a transport one.
-      _log.severe('Undecodable response body', e, stack);
       throw ParseException(e);
     }
-    _log.warning(
-      '${e.requestOptions.method} ${e.requestOptions.path} failed',
-      e,
-      stack,
-    );
     throw switch (e.type) {
+      DioExceptionType.cancel => const RequestCancelled(),
+      DioExceptionType.badCertificate => TlsException(e),
       DioExceptionType.badResponse => switch (e.response?.statusCode) {
         401 || 403 => UnauthorizedException(e),
-        final code => ServerException(code, e),
+        final status => ServerException(
+          status,
+          e,
+          serverErrorCode(e.response?.data),
+        ),
       },
-      _ => NetworkException(e),
+      DioExceptionType.connectionTimeout ||
+      DioExceptionType.sendTimeout ||
+      DioExceptionType.receiveTimeout ||
+      DioExceptionType.connectionError ||
+      DioExceptionType.transformTimeout ||
+      DioExceptionType.unknown => NetworkException(e),
     };
-  } on CheckedFromJsonException catch (e, stack) {
-    _log.severe('Unexpected JSON shape', e, stack);
+  } on HandshakeException catch (e) {
+    fallback.write(null, failed: true);
+    throw TlsException(e);
+  } on SocketException catch (e) {
+    fallback.write(null, failed: true);
+    throw NetworkException(e);
+  } on HttpException catch (e) {
+    fallback.write(null, failed: true);
+    throw NetworkException(e);
+  } on TimeoutException catch (e) {
+    fallback.write(null, failed: true);
+    throw NetworkException(e);
+  } on FormatException {
+    fallback.write(null, failed: true);
+    // FormatException.source may contain the entire private response body.
+    throw const ParseException();
+  } on CheckedFromJsonException catch (e) {
+    fallback.write(null, failed: true);
     throw ParseException(e);
-  } on TypeError catch (e, stack) {
-    // Casts at the JSON boundary (`json as Map<String, Object?>`).
-    _log.severe('Unexpected JSON shape', e, stack);
+  } on TypeError catch (e) {
+    fallback.write(null, failed: true);
     throw ParseException(e);
   }
 }

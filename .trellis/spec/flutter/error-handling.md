@@ -11,95 +11,101 @@ paths:
 
 # Error Handling and Logging
 
-> Errors are typed exceptions, not result objects. Repositories convert every
-> transport/parse failure into a sealed `AppException`; Riverpod carries it to
-> the UI as `AsyncError`; the UI maps it to a localized message.
+> Recoverable failures are typed `AppException`s. Cancellation is separate
+> control flow and must be consumed before publishing UI state. Never log raw
+> transport exceptions, body text or endpoint metadata.
 
 ---
 
-## Exception Types
+## Session transport boundary
+
+### Scope / Trigger
+
+Runtime deployments contain private endpoint/path/library information. All
+session reads use `SessionTransport`; repository DTO parsing uses `guardDio`.
+Only introduce an exception subtype when recovery, UI or retry differs.
+
+### Signatures
 
 ```dart
-// lib/core/errors/app_exception.dart
-sealed class AppException implements Exception {
-  const AppException([this.cause]);
-
-  final Object? cause;
-}
-
-/// No connection, timeout, or other transport failure. Retried automatically.
-final class NetworkException extends AppException {
-  const NetworkException([super.cause]);
-}
-
-/// 401 / 403 from the API.
-final class UnauthorizedException extends AppException {
-  const UnauthorizedException([super.cause]);
-}
-
-/// Any other non-2xx response.
-final class ServerException extends AppException {
-  const ServerException(this.statusCode, [super.cause]);
-
-  final int? statusCode;
-}
-
-/// The response body could not be decoded or did not match the expected
-/// JSON shape. Not retried.
-final class ParseException extends AppException {
-  const ParseException([super.cause]);
-}
+Future<T> guardDio<T>(Future<T> Function() request, {RedactedRequestLog? log});
+NetworkException([Object? cause]);
+UnauthorizedException([Object? cause]);
+ServerException(int? statusCode, [Object? cause, Object? code]);
+ParseException([Object? cause]);
+TlsException([Object? cause]);
+RedirectException(RedirectIssue issue); // recoveryMessage: enter final root
+RequestCancelled(); // core/network/request_cancelled.dart; NOT AppException
 ```
 
-Add a subtype only when the UI must react differently to it (e.g. a
-`NotFoundException` for a "deleted" screen). Never throw `Exception('...')`
-or strings.
+### Contracts
 
----
+- `RequestCancelled` deliberately does not extend `AppException`. It carries
+  no private cause. Session retirement cancels all requests; a final active
+  check rejects completed/decoded responses from a retired transport too.
+- The activation/controller owner must catch cancellation and check captured
+  server key/generation before publishing. Never turn cancellation into
+  `AsyncError`, call `errorMessage`, show a snackbar, or retry it. B1b provides
+  the transport boundary; the activation coordinator and UI are later slices.
+- Retry remains `retryNetworkErrors`: only `NetworkException`, at most three
+  retries after 200/400/800 ms. Do not unwrap/retry dependent ProviderExceptions.
+- TLS remains fail-closed. Never bypass certificates or infer LAN permission
+  denial from a generic socket failure. TLS recovery and redirect root-entry
+  feedback are separate from transient connection troubleshooting.
+- JSON endpoints reject non-JSON media types, HTML, invalid JSON/UTF-8 and
+  error envelopes without keeping body text as a message/cause. Missing media
+  type is tolerated only when the bytes decode as JSON. DTO shape and service/
+  schema validation remain repository-owned. Present Content-Type must have
+  exactly one value; empty/duplicate values are typed parse failures.
+- `ServerException.code` preserves opaque top-level `code` or nested
+  `error.code`, including unknown values; it is never a displayed/logged
+  message. HTTP error-envelope inspection is capped at 64 KiB. A non-JSON or
+  oversized error body keeps the HTTP failure status and no code.
 
-## Mapping: `guardDio`
+### Validation & Error Matrix
 
-```dart
-// lib/core/network/guard_dio.dart
-final _log = Logger('Network');
+| Evidence | Result | Automatic retry |
+| --- | --- | --- |
+| Dio `cancel`, disposed session | `RequestCancelled` control flow | Never |
+| Dio `badCertificate`, direct/wrapped `HandshakeException` | `TlsException` | Never |
+| Dio connect/send/receive/transform timeout, connection error | `NetworkException` | Bounded |
+| Dio `unknown` except known TLS/format causes | `NetworkException` | Bounded |
+| Direct receiving `SocketException`, `HttpException`, `TimeoutException` | `NetworkException` | Bounded |
+| HTTP 401/403 | `UnauthorizedException` regardless of body | Never |
+| Unapproved HTTP terminal status, including default 304/206/412/416 | `ServerException(status)` | Never |
+| JSON `{error: ...}`, even on HTTP 200 | `ServerException(status, null, code)` | Never |
+| HTML/non-JSON, malformed JSON/UTF-8, checked JSON/cast error | `ParseException` | Never |
+| Cover emitted bytes exceed caller limit | `ParseException` | Never |
+| Invalid/outside/looping/sixth redirect | `RedirectException(issue)`; enter final deployment root | Never |
 
-Future<T> guardDio<T>(Future<T> Function() request) async {
-  try {
-    return await request();
-  } on DioException catch (e, stack) {
-    if (e.type == DioExceptionType.unknown && e.error is FormatException) {
-      // Dio reports a body it cannot decode (malformed JSON, invalid UTF-8)
-      // as `unknown`. That is a parse failure, not a transport one.
-      _log.severe('Undecodable response body', e, stack);
-      throw ParseException(e);
-    }
-    _log.warning('${e.requestOptions.method} ${e.requestOptions.path} failed', e, stack);
-    throw switch (e.type) {
-      DioExceptionType.badResponse => switch (e.response?.statusCode) {
-        401 || 403 => UnauthorizedException(e),
-        final code => ServerException(code, e),
-      },
-      _ => NetworkException(e),
-    };
-  } on CheckedFromJsonException catch (e, stack) {
-    _log.severe('Unexpected JSON shape', e, stack);
-    throw ParseException(e);
-  } on TypeError catch (e, stack) {
-    // Casts at the JSON boundary (`json as Map<String, Object?>`).
-    _log.severe('Unexpected JSON shape', e, stack);
-    throw ParseException(e);
-  }
-}
-```
+### Good / Base / Bad Cases
 
-The error is logged once, here. Callers above the repository do not log it again.
+- Base: health JSON 200 reaches its repository unchanged for typed decoding.
+- Good: snapshot caller explicitly allows bodyless 304 and owns cache recovery.
+- Bad: login HTML at 200 is a parse failure; 401 login HTML is unauthorized.
+
+### Tests Required
+
+Fake `HttpClientAdapter` tests assert actual options and every Dio error type,
+direct/wrapped TLS and receiving errors, status precedence, unknown codes,
+HTML/error fixtures, bounded chunks and disposal before headers/during body.
+Capture whole `LogRecord`s and assert safe messages and null error/stack fields.
+
+### Wrong vs Correct
+
+Wrong: map cancellation/certificates to `NetworkException`, or log a raw Dio
+exception with `requestOptions.path`. Correct: use the matrix above and fixed
+`ServerRoute` log templates; consume cancellation at its owner.
 
 ---
 
 ## Showing Errors in the UI
 
 Load errors: the controller's `build` throws, the screen gets `AsyncError`
-and renders the shared `ErrorView` with a retry button.
+and renders the shared `ErrorView` with a retry button. This applies to current
+recoverable failures, never `RequestCancelled`. Product server UI will add
+localized TLS and final-root-entry messages in Phase E; the existing placeholder
+message helper retains a generic fallback until that UI exists.
 
 ```dart
 body: bookmarks.when(
@@ -193,11 +199,22 @@ void setupLogging() {
 ```
 
 - One logger per class or file: `final _log = Logger('BookmarkRepository');`
-- Levels: `fine` for debug detail (HTTP bodies), `info` for app lifecycle
+- Levels: `fine` for safe debug metadata, `info` for app lifecycle
   events, `warning` for handled failures (network errors), `severe` for bugs
   and unexpected states (parse errors, uncaught exceptions).
-- Never log tokens, passwords, or personal data. `LogInterceptor` keeps
-  `requestHeader: false` so `Authorization` is never printed.
+- `RedactingInterceptor` replaces `LogInterceptor`. Each HTTP hop records only
+  `GET api/books/{id} status=200 elapsedMs=12` (or another fixed `ServerRoute`
+  template); elapsed time is through response headers, not full body transfer.
+  Failures without headers use `status=-`. `guardDio` uses the same form and
+  shared metadata to avoid repeating a hop's record. Without metadata it uses
+  `GET {route}`; it never guesses a template from a path.
+- Network logs attach neither exceptions nor stack traces: `LogRecord.error`
+  and `.stackTrace` must be null. Causes can retain private Dio/DTO information
+  for typed internal inspection; never serialize/log them or `error.toString()`.
+  Direct JSON format failures discard `FormatException.source` entirely.
+- Never log scheme, host, port, deployment prefix, actual resource path/book ID,
+  query, headers, bodies, opaque server codes, tokens or library content.
+  Cancellation produces no failure log. Callers do not log handled failures again.
 
 ---
 

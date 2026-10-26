@@ -28,9 +28,13 @@ lib/
     router.dart                  # routerProvider (+ router.g.dart)
     theme.dart                   # AppTheme.light / AppTheme.dark
   core/
-    config/env.dart              # compile-time config (--dart-define)
+    config/env.dart              # build identity flags; legacy endpoint define
+    config/server_endpoint.dart  # pure Dart deployment root and resource resolution
+    config/server_endpoint_validation.dart # hand-written part: validation result/reasons
+    config/server_key.dart       # canonical root + SHA-256 namespace identity
+    config/book_key.dart         # server-scoped positive JS-safe book identity
     diagnostics/                 # storage-free bounded recorder, models, summary
-    storage/                     # injectable Application Support/Documents resolver
+    storage/                     # injectable Application Support/Documents/Caches resolver
     errors/app_exception.dart    # sealed AppException hierarchy
     errors/error_messages.dart   # AppException -> localized message
     logging/logging.dart         # setupLogging()
@@ -108,6 +112,7 @@ replaces or extends it.
 | Colors, typography | `app/theme.dart` |
 | Reusable timing samples/records and aggregation | `core/diagnostics/` (no feature or storage imports) |
 | Platform app-directory resolution | `core/storage/` (no marker/export formats) |
+| Deployment root validation/resolution and shared ServerKey/BookKey identities | `core/config/` (pure Dart, no feature or provider imports) |
 | Probe marker, saved record and export files | `features/diagnostics/data/` |
 | Synthetic capture animation and declaration form | `features/diagnostics/presentation/` |
 | EPUB/source/CFI/canonical operations | `features/reader/data/` (pure Dart) |
@@ -128,6 +133,10 @@ replaces or extends it.
   may use `dart:ui`; widgets belong only in `reader/engine/surface/`. Neither
   reader layer declares providers. See [Reader Engine](./reader-engine.md).
 - `core/**` must not import `features/**` or `app/**`.
+- Library and reader share `core/config/{server_endpoint,server_key,book_key}.dart`.
+  Import `server_endpoint.dart` for its validation types; the hand-written
+  `server_endpoint_validation.dart` part keeps the result and endpoint in one
+  library without an import cycle. These immutable values need no codegen.
 - `app/**` may import anything (the router needs every screen).
 - Always use package imports: `import 'package:shiori/core/errors/app_exception.dart';`,
   never relative `../` imports.

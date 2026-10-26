@@ -64,105 +64,189 @@ targets:
           explicit_to_json: true # nested models serialize correctly
 ```
 
-API field casing is not confirmed yet. Once known, set `field_rename`
-(e.g. `snake`) in the same block instead of per-field `@JsonKey(name: ...)`.
+S3 field casing/envelopes follow the pinned contract audit and server fixtures.
+Phase C adds checked DTOs; preserve actual mixed wire names instead of applying
+a guessed global `field_rename` policy.
 
 ---
 
 ## Repository
 
-One repository per feature: a plain class taking `Dio`, plus its keep-alive
-provider in the same file.
+One repository per feature: a plain class taking `SessionTransport`, plus its
+generated session-keyed keep-alive provider in the same file.
 
 ```dart
-// lib/features/bookmarks/data/bookmark_repository.dart
-part 'bookmark_repository.g.dart';
+// Illustrative Phase C book repository; DTO decoding remains feature-owned.
+part 'book_repository.g.dart';
 
-class BookmarkRepository {
-  BookmarkRepository(this._dio);
+class BookRepository {
+  BookRepository(this._transport);
 
-  final Dio _dio;
+  final SessionTransport _transport;
 
-  Future<List<Bookmark>> fetchBookmarks({int page = 1}) => guardDio(() async {
-    final response = await _dio.get<List<Object?>>(
-      '/bookmarks',
-      queryParameters: {'page': page},
+  Future<Book> fetchBook(int id) => guardDio(() async {
+    final response = await _transport.getJson(
+      ['api', 'books', id.toString()],
     );
-    return response.data!
-        .map((json) => Bookmark.fromJson(json as Map<String, Object?>))
-        .toList();
+    final envelope = response.body as Map<String, Object?>;
+    return Book.fromJson(envelope['book'] as Map<String, Object?>);
   });
-
-  Future<void> deleteBookmark(String id) =>
-      guardDio(() => _dio.delete<void>('/bookmarks/$id'));
 }
 
 @Riverpod(keepAlive: true)
-BookmarkRepository bookmarkRepository(Ref ref) =>
-    BookmarkRepository(ref.watch(dioProvider));
+BookRepository bookRepository(Ref ref, ServerSession session) =>
+    BookRepository(ref.watch(sessionTransportProvider(session)));
 ```
 
 Rules:
 
 - Every public method wraps its body in `guardDio` (`core/network/guard_dio.dart`),
-  so callers only ever see `AppException` subtypes.
+  so recoverable failures are `AppException` subtypes. Cancellation is a separate
+  `RequestCancelled` control-flow exception, consumed by its lifecycle owner.
 - Methods return models or `void`, never `Response`, `Map`, or `dynamic`.
-- Paths are relative (`'/bookmarks'`); the base URL comes from `Dio`'s `BaseOptions`.
-- Query parameters go through `queryParameters:`, never string interpolation.
-- No caching layer: provider state is the in-memory cache. Add local
-  persistence only with an explicit task and a spec update.
+- Product requests use
+  `ServerEndpoint.api(['api', ...])` and the session transport; leading-slash
+  origin-relative URLs discard deployment prefixes and are forbidden.
+- Cover query strings are preserved by `ServerEndpoint.cover`, never rebuilt
+  with string interpolation. B1b's JSON routes do not need query parameters.
+- Provider state is the scaffold's in-memory cache. S3 authorizes runtime
+  configuration and scoped persistence; B1a/B1b implement immutable identities,
+  Caches access and session transport. Product storage is deferred until
+  the hosted iPhone SQLite gate passes.
 
 ---
 
 ## Dio and Config
 
-```dart
-// lib/core/config/env.dart
-abstract final class Env {
-  static const apiBaseUrl = String.fromEnvironment('API_BASE_URL');
-  static const buildId = String.fromEnvironment('BUILD_ID', defaultValue: 'local');
-}
-```
+### Scope / Trigger
+
+Product requests use a user-selected runtime deployment root, replacing the
+compile-time `API_BASE_URL` contract. The legacy `dio_provider.dart` and
+`Env.apiBaseUrl` have been removed. There is no product endpoint define.
+`Env.buildId`/`Env.buildNumber` remain compile-time build identity flags;
+their behavior and the existing probe are unchanged. Public config files hold
+placeholders only; no private endpoint belongs in the binary or repository.
+
+### Signatures
 
 ```dart
-// lib/core/network/dio_provider.dart
-part 'dio_provider.g.dart';
-
-@Riverpod(keepAlive: true)
-Dio dio(Ref ref) {
-  final dio = Dio(
-    BaseOptions(
-      baseUrl: Env.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 20),
-    ),
-  );
-  if (kDebugMode) {
-    dio.interceptors.add(
-      LogInterceptor(
-        requestHeader: false,
-        responseHeader: false,
-        logPrint: Logger('Http').fine,
-      ),
-    );
-  }
-  ref.onDispose(dio.close);
-  return dio;
-}
+ServerEndpointValidation ServerEndpoint.parse(String input);
+String ServerEndpoint.canonicalRoot;
+String ServerEndpoint.normalizedText;
+Uri ServerEndpoint.api(List<String> segments); // includes the 'api' segment
+Uri ServerEndpoint.cover(String serverPath);
+ServerKey(ServerEndpoint endpoint); // value + canonicalRoot
+BookKey(ServerKey serverKey, int bookId);
+ServerSession({required ServerEndpoint endpoint, required int generation});
+SessionTransport(ServerSession session, {HttpClientAdapter? adapter});
+Future<TransportResponse<Object?>> getJson(List<String> segments, {
+  String? ifNoneMatch, String? ifModifiedSince,
+  Set<int> allowedTerminalStatuses = const {200},
+});
+Future<TransportResponse<Uint8List>> getBytes(String serverCoverPath, {
+  required int maxBytes,
+});
+void SessionTransport.dispose();
+sessionTransportProvider(ServerSession session); // generated family
+Future<Directory> AppDirectories.caches();
 ```
 
-- Config values come from `--dart-define-from-file=config/<env>.json`.
-  Without that flag `Env.apiBaseUrl` is `''` and every request fails; tests
-  never depend on it.
-- The repository is public. Committed `config/dev.json` holds placeholders
-  only (`https://api.example.com`). Real server addresses live in
-  `config/local.json`, which is git-ignored: copy `dev.json`, fill in real
-  values, and run `flutter run --dart-define-from-file=config/local.json`.
-  Never commit a real host, IP, or port.
-- Config files hold non-secret values only (base URLs, flags). Anything
-  compiled into the app can be extracted from the binary.
-- All interceptors (auth header, logging) are added in `dioProvider`.
-  Repositories never create their own `Dio`.
+### Contracts
+
+- These handwritten immutable core values are not HTTP DTOs and need no
+  Freezed/JSON/provider dependencies. Parsing is synchronous and has no I/O.
+- Trim outer whitespace; require explicit HTTP(S) and a host. Lowercase
+  scheme/host, drop default ports, normalize dot segments and end the root in
+  one slash. Preserve path case and encoded separators; never decode/re-encode
+  a whole path. `normalizedText` equals `canonicalRoot` without display decoding.
+- `api(['api', 'books', '7'])` encodes each segment separately under the root.
+  `cover('/covers/...?...')` retains the deployment prefix and encoded path/
+  query. It accepts only leading-slash covers paths and never origin URLs.
+- `ServerKey.value` is lowercase hex SHA-256 of UTF-8 `canonicalRoot`. Retain
+  and compare the canonical string too. No DNS/redirect-based identity merge.
+  `BookKey` combines that key with an integer in `1..9007199254740991`.
+  Both have value equality/hash; equal numeric IDs on different roots differ.
+- `caches()` uses `getApplicationCacheDirectory()`, through the existing
+  injectable `AppDirectories` provider; it never falls back to Documents.
+- Repositories share `sessionTransportProvider(session)` and never create Dio.
+  `ServerSession` derives its key from the endpoint; equality/hash also includes
+  its positive activation generation. A later A activation differs from old A.
+- Each transport owns one private Dio (10 s connect/20 s receive) with automatic
+  redirects disabled. Only GET health, snapshot, book detail/file and covers
+  are exposed. `ServerRoute.api` validates this inventory before any traffic.
+- JSON GET returns `TransportResponse` with status, copied immutable header
+  lists/map and decoded body. DTOs remain feature-owned. Validators pass through
+  exactly. Allowed terminal statuses are a per-call copy/subset of `{200,304}`;
+  only snapshot/file may opt into 304, which bypasses body decoding. Default
+  304 and all unexpected statuses fail. Cache recovery is caller-owned.
+- `getBytes` accepts only `endpoint.cover` resources and HTTP 200. It checks
+  actual received chunk totals before accumulating, ignoring Content-Length
+  as an authority; overflow cancels the remaining response and is a parse failure.
+  Image/pixel validation is Phase C. EPUB streaming/digest/file sinks are Phase D;
+  reuse the private `_openValidatedResponse` boundary rather than this bytes API.
+- Each hop has a session-owned cancel token. `dispose` is idempotent, cancels
+  every request/body and force-closes Dio. Checks before dispatch, during reads
+  and before returning reject retired work. The keep-alive provider disposes
+  its transport on invalidation/container disposal; the next activation owner
+  must retire/invalidate old families and guard publication by key/generation.
+- Manually follow 301/302/303/307/308 at most five times, retaining GET and
+  conditional headers only after same-scheme/host/effective-port and deployment
+  prefix validation. Detect repeated normalized targets including query, ignoring
+  fragments. Reject userinfo (including empty `@` before URI normalization),
+  malformed targets, encoded traversal/backslashes, cross-origin, prefix escape
+  and HTTPS downgrade. Location must contain exactly one value. Redirects never
+  change identity; failures ask for the
+  final deployment root. Error classification/redaction: [Error Handling](./error-handling.md).
+
+### Validation & Error Matrix
+
+| Input / condition | Result |
+| --- | --- |
+| Valid deployment root | `ServerEndpointValidation.endpoint`, null `issue` |
+| Bad scheme/host, userinfo (even empty), query/fragment (even empty), escapes, backslashes, port outside 1..65535 | Null endpoint + content-free `ServerEndpointIssue` |
+| Bracketed IPv6 zone ID (`%25...`) | `ipv6ZoneIdentifier`; interface-local identities are not portable |
+| URI parser failure | `invalidAddress`; original exception/input is not retained |
+| Empty/dot API segment | Content-free `ArgumentError` |
+| Absolute/foreign cover URL, traversal (including encoded `..` or separators), fragment, backslash, malformed encoding | Content-free `FormatException`, no source/offset |
+| Zero/negative/unsafe integer book ID | Runtime `RangeError` |
+| Missing application cache location | `path_provider` failure; callers use the existing local-I/O boundary |
+| Nonpositive activation generation | Content-free `ArgumentError` |
+| Unsupported S3 route/status opt-in or nonpositive byte limit | Content-free `ArgumentError`, no traffic |
+| 304 without opt-in, including every cover/health/detail request | `ServerException(304)` |
+| Cross-origin/prefix/downgrade, loop, malformed or sixth redirect | `RedirectException`, no disallowed request |
+| Session disposed before headers, during receive or before return | `RequestCancelled`, no retry/error publication |
+
+### Good / Base / Bad Cases
+
+- Base: `https://example.test` -> `https://example.test/`.
+- Good: ` HTTPS://EXAMPLE.TEST:443/a/../Reader ` ->
+  `https://example.test/Reader/`; encoded `a%2Fb` stays one segment.
+- Bad: `https://user@example.test`, `https://example.test/?`,
+  `http://[fe80::7%25en0]` yield validation issues and cannot produce traffic.
+- Good: snapshot `{200,304}` plus exact `If-None-Match` accepts a bodyless 304;
+  the caller must prove a usable cached representation before reuse.
+- Bad: health `{200,304}` is a caller contract error; covers exceeding their
+  emitted-byte limit are canceled without returning partial success.
+
+### Tests Required
+
+`test/core/config/` executes every committed `url_resolution.json` root,
+request and rejection, plus canonical round trips/idempotence, IPv6, encoded
+prefixes, traversal, key aliases/isolation and book-ID boundaries.
+`test/core/storage/app_directories_test.dart` verifies native cache method
+wiring and provider overrides with fakes, without actual platform storage.
+`test/core/network/` uses fake adapters asserting all 45 fixture request URIs,
+GET-only inventory, timeout/redirect settings, exact validators, 304 opt-in,
+five-hop/loop/origin/prefix/downgrade matrix, bounded receiving streams, every
+Dio error type, whole-log redaction and session-family/disposal isolation.
+
+### Wrong vs Correct
+
+Wrong: `Uri.parse(root).resolve('/covers/a.webp')` loses `/Reader/`.
+Correct: `endpoint.cover('/covers/a.webp')` retains `/Reader/covers/a.webp`.
+Wrong: `BookKey` based only on `bookId`; correct: compare both server and ID.
+Wrong: `Image.network` or a second Dio for covers. Correct: reuse the captured
+session transport, enforce byte/pixel bounds and check identity before publishing.
 
 ### Local diagnostic storage
 
@@ -173,6 +257,8 @@ to HTTP repositories, not local I/O.
 
 - **Application Support:** marker and last completed/partial diagnostic record.
   Private settings, checkpoints, outbox and caches never belong in Documents.
+- **Caches:** removable downloaded/derived data; absence must be recoverable.
+  B1a supplies only the directory accessor, with no cache files or metadata.
 - **Documents:** intentional user exports only,
   `shiori-diag-<BUILD_ID>-<runId>.json`. iOS File Sharing exposes this directory
   because `UIFileSharingEnabled` and `LSSupportsOpeningDocumentsInPlace` are true.
@@ -188,8 +274,9 @@ to HTTP repositories, not local I/O.
 
 - Authentication (token storage, refresh interceptor, router redirect):
   document here when the first auth task lands.
-- API field casing (`field_rename`), pagination shape, error response body format.
-- Cleartext HTTP: the dev API (`config/local.json`) is plain `http://`. Before the
+- Pagination contracts for later endpoints. S3 error envelopes/codes and exact
+  DTO casing are defined by the contract audit, fixtures and transport above.
+- Cleartext HTTP: runtime endpoints can use `http://`. Before the
   first real request, allow it per platform (Android `usesCleartextTraffic` for
   debug, iOS ATS exception, macOS `com.apple.security.network.client`
   entitlement) and record the chosen setup here.
