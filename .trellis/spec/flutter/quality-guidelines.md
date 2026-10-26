@@ -25,6 +25,7 @@ paths:
 | Models | `freezed_annotation`, `json_annotation` (dev: `freezed`, `json_serializable`) |
 | Localization | `flutter_localizations` (sdk), `intl` |
 | Logging | `logging` |
+| App directories | `path_provider` (Application Support for private probe state; Documents for user exports) |
 | Codegen | dev: `build_runner` |
 | Testing | dev: `flutter_test` (sdk), `mocktail` |
 
@@ -139,3 +140,31 @@ The project targets Dart 3.13; use modern syntax where it reads better:
 3. `flutter analyze` reports no issues.
 4. `flutter test` passes, including the new tests required by [Testing](./testing.md).
 5. New UI strings exist in every `lib/l10n/app_*.arb`.
+
+## Unsigned iPhone CI and build identity
+
+- Workflow: `.github/workflows/ios-unsigned.yml`; build/package command:
+  `bash tool/ci/build_ios_unsigned.sh`. Only dispatch and `ios-build/**` push
+  triggers; read-only contents permission, per-ref concurrency, 14-day artifacts.
+- Use an explicit standard macOS label, selected Xcode path and SHA-pinned
+  setup action. Current choice: `macos-15`, Xcode `26.3`, Flutter `3.47.7`
+  stable. Re-verify against official runner-images docs before changing pins.
+  No Apple signing credentials belong in CI. Keep setup-action caches disabled
+  unless their nested actions are reviewed and pinned too.
+- Require framework `abaf9c523780a608bd46686fd5e53740a07077f8` and engine
+  `deb287481e3ce9468f3434937ced4240a70539ca`. A mismatch fails before build.
+  Resolve the committed lockfile with `flutter pub get --enforce-lockfile`.
+- `BUILD_NUMBER` is the positive CI run number and becomes `CFBundleVersion`.
+  `BUILD_ID` is `<12-character commit>-<host>-<run number>` (`host=gha` here).
+  Supply both, plus SDK/framework/engine defines, to the probe build. Keep the
+  fixed source identifier `io.github.natumeai.shiori` across probe/product
+  builds. A new workflow/counter must not regress the installed build number.
+- Validate iphoneos, bundle identifier/version, arm64 executable and both
+  Flutter/App framework binaries before packaging `Payload/Runner.app` into
+  `shiori-probe-<BUILD_ID>.ipa`. Save provenance, checksum and native status/diff.
+  Save newly generated, nonignored iOS file contents in `ios-untracked.zip`;
+  status/diff alone cannot recover them after the hosted runner is removed.
+  A source push and device signing are separate user-operated review boundaries.
+- Windows validation is **only** `bash -n tool/ci/build_ios_unsigned.sh` using
+  Git Bash. `plutil`, `lipo`, hosted compilation, signing and device behavior
+  remain unverified until exercised on their actual platforms.

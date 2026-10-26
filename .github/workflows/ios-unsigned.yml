@@ -1,0 +1,53 @@
+name: Unsigned iPhone probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'ios-build/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-unsigned-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 40
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+      BUILD_NUMBER: ${{ github.run_number }}
+      BUILD_HOST: gha
+      SOURCE_COMMIT: ${{ github.sha }}
+      RUNNER_LABEL: macos-15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Select Xcode explicitly
+        run: |
+          test -d "$DEVELOPER_DIR"
+          sudo xcode-select --switch "$DEVELOPER_DIR"
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: '3.47.7'
+          architecture: arm64
+          cache: false
+      - name: Build, validate and package unsigned device app
+        run: bash tool/ci/build_ios_unsigned.sh
+      - name: Upload package, provenance and iOS project changes
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: shiori-probe-${{ github.sha }}-gha-${{ github.run_number }}
+          path: build/ios-probe/
+          if-no-files-found: error
+          retention-days: 14

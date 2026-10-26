@@ -48,3 +48,28 @@
 - 第一个调接口的任务: 处理明文 HTTP (Android/iOS/macOS 平台配置), 确定 API 字段命名和分页格式
 - 登录认证方案 (token 存储、刷新拦截器、路由重定向) 待定
 - pubspec.yaml description 仍是模板文字
+
+
+## Session 2: S1 free iPhone build and diagnostics probe
+
+**Date**: 2026-10-22
+**Task**: S1 free iPhone build and diagnostics probe
+**Branch**: `ios-build/s1-probe`
+
+### Summary
+
+Reviewed and revised the lan-reader parity plan (GitHub Actions build host, fixed app identifier, file-based diagnostics export, refresh-limit evidence). Delegated S1 implementation to Codex CLI (gpt-6.1-sol high); review found timestamp-equality frame correlation would never match on device and switched it to engine frame numbers. Fixed CI (reserved FLUTTER_VERSION define, lipo argument order) and missed-vsync counting (>=12.5 ms). Signing route changed to 全能签 with a user-supplied certificate. On iPhone 14 Pro Max / iOS 27.0.1: BC1-BC6 passed; 1797/1797 frames correlated, vsync P50/P99 8.34/8.46 ms with one start-transition miss; marker survived build 3->4 update and re-sign. Physical presentation unverified. PR natumeAi/shiori#1 opened; S1 archived.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1708520` | (see git log) |
+| `4fc9475` | (see git log) |
+| `9472fa0` | (see git log) |
+| `5624af5` | (see git log) |
+| `9943313` | (see git log) |
+
+### Status
+
+[OK] **Completed**

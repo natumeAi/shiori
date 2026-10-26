@@ -77,6 +77,7 @@ All must pass with zero issues. Full list in the Definition of Done in
 | [Error Handling](./error-handling.md) | `AppException`, `guardDio`, UI error display, logging | Filled |
 | [Testing](./testing.md) | Required tests, mocks, container and widget test helpers | Filled |
 | [Quality Guidelines](./quality-guidelines.md) | Dependencies, lints, formatting, codegen, forbidden patterns, definition of done | Filled |
+| [Diagnostics](./diagnostics.md) | Bounded synthetic capture, clock/evidence boundaries, private storage and shared export contracts | Filled |
 
 ---
 

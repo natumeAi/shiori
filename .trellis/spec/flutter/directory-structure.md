@@ -17,13 +17,17 @@ paths:
 ```text
 lib/
   main.dart                      # bootstrap only: logging, ProviderScope, runApp
+  main_probe.dart                # explicit synthetic diagnostics entry point
   app/
     app.dart                     # ShioriApp (MaterialApp.router)
+    probe_app.dart               # isolated probe shell, no normal route changes
     routes.dart                  # typed route classes (+ routes.g.dart)
     router.dart                  # routerProvider (+ router.g.dart)
     theme.dart                   # AppTheme.light / AppTheme.dark
   core/
     config/env.dart              # compile-time config (--dart-define)
+    diagnostics/                 # storage-free bounded recorder, models, summary
+    storage/                     # injectable Application Support/Documents resolver
     errors/app_exception.dart    # sealed AppException hierarchy
     errors/error_messages.dart   # AppException -> localized message
     logging/logging.dart         # setupLogging()
@@ -68,6 +72,10 @@ replaces or extends it.
 | A model shared by 2+ features | keep it in the owning feature's `data/models/`; other features import it from there |
 | UI text | `l10n/app_zh.arb` (and other locales) |
 | Colors, typography | `app/theme.dart` |
+| Reusable timing samples/records and aggregation | `core/diagnostics/` (no feature or storage imports) |
+| Platform app-directory resolution | `core/storage/` (no marker/export formats) |
+| Probe marker, saved record and export files | `features/diagnostics/data/` |
+| Synthetic capture animation and declaration form | `features/diagnostics/presentation/` |
 
 ---
 
