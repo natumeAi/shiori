@@ -1127,3 +1127,37 @@ package cache, task plan/context, reference checkout or git index/branch was
 changed. No staging, commit, push, branch switch or sub-agent dispatch occurred.
 No fix-specific issue remains; hosted/iPhone and later-phase gates retain
 their previously recorded status.
+
+## Hosted iOS SQLite gate (Phase A exit)
+
+Date: 2026-10-26. **PASSED.** Recorded by the orchestrator from the hosted
+build provenance and one user-operated iPhone export; the raw export and CI
+provenance are kept privately in ignored `local-evidence/s3/`.
+
+- Push of `ios-build/s3-runtime-server` (commits `f94664c`, `c018794`) was
+  explicitly authorized by the user. GitHub Actions run `40281924284`
+  ("Unsigned iPhone probe") succeeded; build `c018794f5aab-gha-10`, build
+  number 10, Flutter 3.47.7, Xcode 26.3, iPhoneOS SDK 26.2, build exit 0,
+  empty generated iOS project diff.
+- Packaged frameworks (`frameworks.txt`): `App`, `Flutter`, `objective_c`,
+  `sqlite3`. The default `sqlite3` 3.8.0 hook bundled its own library; the
+  iOS `source: system` option was not needed and remains unverified.
+- IPA SHA-256: default
+  `6e844e5cdc8141822c544da7ab63a175e246781581b27e7fa073681f80b4e2b8`,
+  cametal `b28c61de2c0c1f24da025823541a1f80fd82cf746a305735f9e081f44c8e6a8d`.
+  The export does not record which variant was installed; both contain the
+  same Dart code and frameworks.
+- The user signed/installed through the selected S1 on-device signing route
+  and ran the probe SQLite self-check on an iPhone (iOS 27.0.1, release mode,
+  120 Hz display metadata). Export `buildId` `c018794f5aab-gha-10` matches the
+  hosted build.
+- Self-check result: all six steps passed (`open`, `commit`, `reopen`,
+  `rollback`, `futureSchema`, `cleanup`), `ranOffRootIsolate: true`,
+  package 3.8.0, SQLite library 3.54.1, `journal_mode=delete`,
+  `synchronous=2` (FULL), elapsed 27,776 us, no failure.
+
+Decision: keep the default bundled SQLite (device-verified) for S3. Phase B
+may now build on SQLite. This gate proves packaging, signing/install and basic
+transactions under Application Support only; it does not prove the product
+storage owner, migrations under real data or update retention, which remain
+S3-AC6/AC8/AC10 work.
