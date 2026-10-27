@@ -101,9 +101,10 @@ local-evidence/                   # gitignored raw personal/device exports
 config/                          # --dart-define-from-file JSON (dev.json placeholders; local.json git-ignored)
 ```
 
-`app/`, `core/`, and `l10n/` exist as shown. `features/home/presentation/home_screen.dart`
-is a placeholder routed at `/` (no data layer); the first real feature
-replaces or extends it.
+`app/`, `core/`, and `l10n/` exist as shown. `/` renders the read-only
+`features/library/presentation/library_screen.dart` for the active `ServerSession`;
+its folder/book routes share that session and reset on activation changes.
+`/servers/setup` owns connection selection; `/startup` handles restoration.
 
 ---
 

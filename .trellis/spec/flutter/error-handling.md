@@ -45,8 +45,8 @@ RequestCancelled(); // core/network/request_cancelled.dart; NOT AppException
   check rejects completed/decoded responses from a retired transport too.
 - The activation/controller owner must catch cancellation and check captured
   server key/generation before publishing. Never turn cancellation into
-  `AsyncError`, call `errorMessage`, show a snackbar, or retry it. B1b provides
-  the transport boundary; the activation coordinator and UI are later slices.
+  `AsyncError`, call `errorMessage`, show a snackbar, or retry it. The activation
+  coordinator consumes it; session-scoped library owners reject late results.
 - Retry remains `retryNetworkErrors`: only `NetworkException`, at most three
   retries after 200/400/800 ms. Do not unwrap/retry dependent ProviderExceptions.
 - TLS remains fail-closed. Never bypass certificates or infer LAN permission
@@ -103,9 +103,12 @@ exception with `requestOptions.path`. Correct: use the matrix above and fixed
 
 Load errors: the controller's `build` throws, the screen gets `AsyncError`
 and renders the shared `ErrorView` with a retry button. This applies to current
-recoverable failures, never `RequestCancelled`. Product server UI will add
-localized TLS and final-root-entry messages in Phase E; the existing placeholder
-message helper retains a generic fallback until that UI exists.
+recoverable failures, never `RequestCancelled`. Connection actions preserve the
+selected session and expose typed `ServerActivationFailure` feedback through
+`features/servers/presentation/server_feedback.dart`: localized TLS, access,
+final-root-entry and network troubleshooting messages. A socket failure does
+not prove LAN permission denial. The shared `errorMessage` helper remains the
+generic load-error fallback; connection feedback uses `activationFailureMessage`.
 
 ```dart
 body: bookmarks.when(

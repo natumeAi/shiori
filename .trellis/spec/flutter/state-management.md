@@ -31,16 +31,27 @@ Generated names: `BookmarkListController` -> `bookmarkListControllerProvider`,
 
 ## Examples
 
-Dependency provider (colocated with the class):
+Session-scoped dependency provider (colocated with the class):
 
 ```dart
-// lib/features/bookmarks/data/bookmark_repository.dart
-part 'bookmark_repository.g.dart';
+// lib/features/library/data/book_repository.dart
+part 'book_repository.g.dart';
 
 @Riverpod(keepAlive: true)
-BookmarkRepository bookmarkRepository(Ref ref) =>
-    BookmarkRepository(ref.watch(dioProvider));
+BookRepository bookRepository(Ref ref, ServerSession session) {
+  final repository = BookRepository(
+    ref.watch(sessionTransportProvider(session)),
+    ref.watch(sessionPublicationGuardProvider),
+  );
+  ref.onDispose(repository.dispose);
+  return repository;
+}
+// usage: ref.watch(bookRepositoryProvider(session))
 ```
+
+Capture the full immutable session, including its activation generation, in the
+family key. Repositories share its transport and guard publication on retirement;
+server identity alone cannot distinguish A -> B -> A activations.
 
 Screen controller (AsyncNotifier):
 
