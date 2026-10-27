@@ -16,7 +16,7 @@ reading activity. Apply this contract when S3-S6 load books, restore positions,
 extend layout or connect product UI. Paths below are relative to
 `lib/features/reader/` unless a repository-root path is given.
 
-- `data/{epub,source,cfi,canonical}/` is pure Dart: no `dart:ui`, Flutter,
+- `data/{epub,source,cfi,canonical,worker}/` is pure Dart: no `dart:ui`, Flutter,
   providers or widgets. Its snapshots can be built in a worker isolate.
 - `engine/{style,layout,pagination,support,motion,surface}/` may use `dart:ui`.
   No providers; widgets belong only in `engine/surface/`. Hand-written core
@@ -35,6 +35,8 @@ extend layout or connect product UI. Paths below are relative to
 | Boundary | Implemented API / source |
 | --- | --- |
 | Container/book | `EpubArchive.open(Uint8List, {EpubLimits limits})`; `EpubBook.open(Uint8List, {limits, tokens})`, `loadSection(int) -> SourceDocument` (`data/epub/`) |
+| Verified publication import | `PublicationWorker.prepare(String path, ContentIdentity identity, {PublicationTag? tag, PublicationCancellation? cancellation}) -> Future<PreparedPublication>` (`data/worker/`); file-backed `EpubBook.fromArchive(archive, package, {tokens})` stays inside worker |
+| Shared content identities | `ContentIdentity(BookKey, String sha256, {parserVersion, canonicalVersion})`; `ContentChange({ContentIdentity? previous, required ContentIdentity next})` in `lib/core/config/` |
 | Parser | `SourceParser.parseTree(String, String) -> ParsedSection`; `parse(String, {mediaType, transform, protect}) -> SourceDocument` (`data/source/source_parser.dart`) |
 | CFI | `Cfi.parse`, `serialize`, `collapse`, `compare`, `sort`, `export`, `resolve`, `resolveLocal`, `resolvePackageNode` (`data/cfi/cfi.dart`) |
 | Canonical | `CanonicalIndex.build(SourceDocument)`; `CanonicalEntry.canonicalToUtf16` (`data/canonical/canonical_text.dart`) |
@@ -124,6 +126,76 @@ CDATA remain distinct. Doctypes and HTML template-fragment children are excluded
 from the frozen node list. CFI and canonical indexing use this final projection.
 The core executes no scripts and fetches no remote resources.
 
+### Verified worker import and layout facts (S3 D3)
+
+Use `prepare` for the verified-download handoff. The caller supplies an
+immutable, closed/flushed file and its actual streamed SHA-256; the worker does
+not rehash it or prove remote freshness. `core/config/content_identity.dart`
+and `content_change.dart` are feature-independent pure Dart values shared by
+cache/library and reader code. Identity equality includes server-scoped
+`BookKey`, lowercase 64-hex SHA-256, parser version and canonical version.
+Versions must be positive. `publicationParserVersion = 1` and
+`publicationCanonicalVersion = 1` are explicit compatibility constants; the
+latter must equal `canonicalTextVersion`. An incompatible identity fails before
+replacing the current publication. `ContentChange` permits an absent previous
+identity, requires the same BookKey when present, and never mutates progress.
+
+The worker opens with `EpubArchive.openFile`, validates container/package and
+the first original linear itemref, and projects/styles only that section for
+layout inspection. An unresolved first linear itemref or absent linear source
+fails; do not silently select a later readable section. Section-list indices
+are filtered indices; `spineIndex` retains the original OPF slot and CFI bases
+come from OPF structure. XHTML-to-HTML fallback remains oracle-compatible.
+Canonical indexing runs in the worker on the final inert projection. A valid
+image/SVG-only page can have canonical length zero and still be ready.
+
+`PreparedPublication` contains only detached immutable values:
+
+- `identity`, deeply frozen `snapshot.package` and `snapshot.sections`;
+- DC `metadata` (ordered titles, creators, languages, identifiers);
+- `layoutFacts` with raw package rendition, raw progression, first publication
+  language, and ordered per-section facts;
+- `firstSection` with index/href/CFI base, parser/fallback classification,
+  canonical version/length/signature and a resource-reference inventory.
+
+Each `SectionLayoutFacts` records effective fixed/reflowable mode, original
+itemref properties and rendition after layout/orientation/spread/page-spread
+overrides. Legacy display options still supply layout defaults. Raw package
+rendition remains separate, including viewport/sourceViewport declarations.
+The inspected section's `source` retains viewport/source-viewport meta content
+and SVG node indices with raw width/height/viewBox. Its `style` records computed
+root/body writing mode/direction, explicit root/body dir declarations, visible
+writing modes and `rtlRunCount` (visible non-root/body elements with computed
+RTL, matching S2's informational block count; not bidi text segmentation).
+Other sections have null source/style and `inspection = notInspected`, never
+invented horizontal/LTR facts. Later source reads do not mutate this snapshot.
+
+The first-source inventory follows local CSS imports/URLs and SVG dependencies,
+terminates cycles, preserves missing/external/data/fragment references, and
+never fetches them remotely. Each reference records sourcePath, original URL,
+nullable local path, declared media type and local presence. No decoded image,
+font, rasterization or rendering acceptance is implied. The existing loader's
+whole-spine resource graph remains for oracle token alias ordering; this is
+not a whole-book style/layout inspection. It retains digests/ordinals, not an
+expanded resource mirror. The prepared first SourceDocument stays in the worker
+for `loadSection`; only canonical summary facts cross in the import response.
+
+`prepare` uses the existing typed ID/tag/internal-generation queue (one running,
+eight pending). Product callers supply their captured session tag and still
+guard cache publication with the session owner. An omitted tag derives from
+the content identity; it is not a session lease. Reopen/prepare invalidate old
+results even for identical tags/content. Running cancellation completes the
+caller immediately and holds the physical slot until the discarded terminal
+reply; synchronous parse/inflate is not preempted. Discovery yields between
+dependencies. Close drains the running work, closes the handle and awaits exit.
+Returned identity must match the requested identity. No archive/book/loader,
+closure, Flutter object or lazy read crosses the port.
+
+Fixed, mixed, RTL-progression, RTL-language and vertical facts never fail import.
+`prepare` does not call `detectBookLayout` or `requireSupported`; S4 owns renderer
+verdicts. D4 owns the preloaded source/resource seam, leases and resource-cache
+accounting. File-backed import is not a total worker RSS or iPhone memory proof.
+
 ### CFI and canonical coordinates
 
 `data/cfi/` targets pinned Foliate behavior, not stricter generic conformance:
@@ -197,8 +269,9 @@ never source prose.
 fixed layout, RTL page progression, root/body direction, RTL publication language
 without explicit direction, and rendered vertical writing (including vendor
 aliases). `detectBookLayout` checks every section; `requireSupported()` throws
-`UnsupportedLayoutException` with reasons. A mixed book is refused before
-reading. Isolated RTL runs inside an LTR section are informational, not a refusal.
+`UnsupportedLayoutException` with reasons. The S2 probe refuses a mixed book
+before reading; product import uses the separate facts contract above. Isolated
+RTL runs inside an LTR section are informational, not a refusal.
 Detection must not replace an accepted anchor or succeed with an empty reader.
 
 Raster images are contained to the content box. The guarded SVG raster-wrapper
@@ -288,9 +361,11 @@ release-mode scheduler or an isolation guarantee for unguarded future APIs.
 
 - S3 Phase A: archive reads now use the bounded raw-directory index, native
   emitted-byte limits, exact length/CRC-32 checks and file-backed open described
-  above. The worker protocol prototype keeps archive/source work off root.
-  Phase D still owns the bounded preloaded source/resource adapter for reader
-  preparation, cache/lease accounting and near-limit worker memory evidence.
+  above. D3's worker import keeps archive/source/style/canonical work off root
+  and returns detached readiness/layout facts without a capability verdict.
+  D4 still owns the bounded preloaded source/resource adapter for reader
+  preparation; cache/lease accounting and near-limit worker memory evidence
+  remain separate Phase D integration work.
   Host archive measurements do not establish total worker RSS or iPhone limits;
   downloaded-publication integration and device validation remain required.
 - S4: `FontRegistry` caps each font at 32 MiB but cannot unload engine fonts or
@@ -317,6 +392,11 @@ release-mode scheduler or an isolation guarantee for unguarded future APIs.
 | Condition | Required behavior |
 | --- | --- |
 | Invalid/empty/oversize ZIP, corrupt entry, missing package/readable section | Typed `ParseException` from the EPUB boundary; no successful empty book |
+| `prepare`: invalid/truncated/over-limit ZIP | Content-free `PublicationImportException(invalidArchive)`; failed handle released, worker reusable |
+| `prepare`: invalid/missing container or OPF, empty spine, no resolvable first linear itemref | `PublicationImportException(invalidPackage)`; no ready result |
+| `prepare`: missing/empty/unparseable/invalid-root first source or corrupt discovered resource | `PublicationImportException(invalidFirstSection)`; worker reusable |
+| `prepare`: noncurrent parser/canonical version | `PublicationWorkerException(incompatibleIdentity)` before replacing current publication |
+| `prepare`: fixed/mixed/RTL/vertical | Successful facts and first-source readiness; no renderer-support claim |
 | Malformed XHTML / namespace-less XHTML | HTML fallback with recorded error class; non-XHTML XML failure throws |
 | Unsupported publication layout | `UnsupportedLayoutException` with reasons; accepted anchor unchanged |
 | CFI grammar/resolution failure | `CfiException` with reference error class; anchor proof maps it to `unresolved`/`roundTrip` |
@@ -334,6 +414,11 @@ release-mode scheduler or an isolation guarantee for unguarded future APIs.
   reflow proves the same CFI against the new identity.
 - Base: an unready neighbor yields a counted static turn only if navigation and
   proof succeed; an unsupported layout yields recoverable reasons.
+- Import base: ordinary reflowable source prepares; fixed first pages also
+  prepare with dimensions/resource facts and may have zero canonical characters.
+- Import good: mixed sections keep per-item overrides and unstyled sections
+  remain `notInspected`. Import bad: treating those sections as horizontal/LTR
+  or calling the probe's whole-book refusal as a download acceptance gate.
 - Bad: persist a page index as source position, count canonical intervals as read,
   overwrite an anchor after failed proof, or decode from a ticker.
 
@@ -349,6 +434,18 @@ acceptance, reduced motion and static fallback. Surface/widget tests must assert
 actual painted movement with stable build counts, owner/byte caps, pending decode
 through close, final release/disposal, and suspend/resume. Guard tests call real
 entry points inside and outside callback zones, asserting no mutation on refusal.
+
+D3 import tests generate simple/complex fixed, both mixed override directions,
+valid fixed/SVG first pages, progression/language/vertical and corrupt EPUBs
+in-test. Assert raw/resolved rendition, source dimensions, exactly one styled
+section, not-inspected later sections, first linear/CFI slots, canonical/source
+parity for all bundled oracle fixtures, typed recoverable errors and handle
+release, nested-discovery cancel/reopen/close and worker reuse. The VM graph
+audit in `test/features/reader/data/worker/` reflects every instance field,
+including private fields, requires final fields and a value-type allowlist,
+rejects lazy book/archive controls and proves snapshots outlive file deletion.
+Its VM-only source is test data because Flutter's SDK has no `dart:mirrors`;
+the Flutter test runs it with the package config using the standalone `dart`.
 
 ## 7. Wrong vs Correct
 
@@ -366,3 +463,9 @@ Wrong: `ReaderWorkGuard.callback(() => preparer.prepare(request))` or treating
 
 Correct: prepare in an ordinary control task, animate retained surfaces only,
 and leave visibility/activity acceptance to the later product contract.
+
+Wrong: `detectBookLayout(book).requireSupported()` during product import, or
+returning `EpubBook` to let root-side code inflate later. Correct:
+`await worker.prepare(verifiedPath, identity, tag: capturedSessionTag)` and
+consume immutable metadata/facts; obtain sources/resources through the worker
+and leave renderer verdicts to S4.

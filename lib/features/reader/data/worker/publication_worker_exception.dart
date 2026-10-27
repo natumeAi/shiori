@@ -8,6 +8,7 @@ enum PublicationWorkerFailure {
   unexpectedExit,
   workerError,
   protocol,
+  incompatibleIdentity,
 }
 
 /// Lifecycle/protocol failures are distinct from malformed EPUB ParseException.

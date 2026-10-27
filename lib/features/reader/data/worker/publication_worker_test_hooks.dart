@@ -4,9 +4,14 @@ import 'package:shiori/features/reader/data/worker/publication_worker_protocol.d
 
 /// Explicit test-only gates. Ports and values only, never captured callbacks.
 final class PublicationWorkerTestHooks {
-  const PublicationWorkerTestHooks(this.events, {this.pauseRequests = false});
+  const PublicationWorkerTestHooks(
+    this.events, {
+    this.pauseRequests = false,
+    this.pauseDiscovery = false,
+  });
   final SendPort events;
   final bool pauseRequests;
+  final bool pauseDiscovery;
 }
 
 enum PublicationWorkerTestAction { resume, crash }
@@ -30,6 +35,15 @@ enum PublicationWorkerWork {
   sectionParse,
   resourceRead,
   archiveClose,
+  resourceDiscovery,
+  sectionStyle,
+  canonicalIndex,
+}
+
+/// A gate inside the first-source resource inventory, after source parsing.
+final class PublicationWorkerDiscoveryEvent {
+  const PublicationWorkerDiscoveryEvent(this.resume);
+  final SendPort resume;
 }
 
 final class PublicationWorkerWorkEvent {

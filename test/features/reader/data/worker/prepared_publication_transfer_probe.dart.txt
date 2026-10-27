@@ -1,0 +1,116 @@
+// Standalone VM object-graph audit; dart:mirrors is intentionally test-only.
+import 'dart:collection';
+import 'dart:io';
+import 'dart:mirrors';
+
+import 'package:crypto/crypto.dart' as crypto;
+import 'package:shiori/core/config/book_key.dart';
+import 'package:shiori/core/config/content_identity.dart';
+import 'package:shiori/core/config/server_endpoint.dart';
+import 'package:shiori/core/config/server_key.dart';
+import 'package:shiori/features/reader/data/epub/epub_archive.dart';
+import 'package:shiori/features/reader/data/epub/epub_book.dart';
+import 'package:shiori/features/reader/data/worker/publication_worker.dart';
+
+const _values = {
+  'PreparedPublication',
+  'ContentIdentity',
+  'BookKey',
+  'ServerKey',
+  'PublicationSnapshot',
+  'PublicationSectionSnapshot',
+  'EpubPackage',
+  'EpubManifestItem',
+  'EpubSpineItem',
+  'EpubTocItem',
+  'PublicationMetadata',
+  'PublicationLayoutFacts',
+  'SectionLayoutFacts',
+  'SectionSourceFacts',
+  'SectionStyleFacts',
+  'SvgSourceDimensions',
+  'FirstSectionReadiness',
+  'PublicationResourceReference',
+};
+
+/// Reflect every instance field, including private fields. A future accidental
+/// archive/book/loader/callback field fails even if omitted by serialization.
+int audit(Object? root) {
+  final seen = HashSet<Object>.identity();
+  var fields = 0;
+  void visit(Object? value) {
+    if (value == null ||
+        value is String ||
+        value is num ||
+        value is bool ||
+        value is Enum ||
+        !seen.add(value)) {
+      return;
+    }
+    if (value is Map) {
+      for (final entry in value.entries) {
+        visit(entry.key);
+        visit(entry.value);
+      }
+      return;
+    }
+    if (value is Iterable) {
+      for (final item in value) {
+        visit(item);
+      }
+      return;
+    }
+    final instance = reflect(value);
+    final name = MirrorSystem.getName(instance.type.simpleName);
+    if (!_values.contains(name)) throw StateError('Non-value object: $name');
+    for (
+      ClassMirror? type = instance.type;
+      type != null;
+      type = type.superclass
+    ) {
+      for (final declaration in type.declarations.values) {
+        if (declaration is! VariableMirror || declaration.isStatic) continue;
+        if (!declaration.isFinal) throw StateError('Mutable field in $name');
+        fields++;
+        visit(instance.getField(declaration.simpleName).reflectee);
+      }
+    }
+  }
+
+  visit(root);
+  return fields;
+}
+
+Future<void> main(List<String> args) async {
+  final file = File(args.single);
+  final key = BookKey(ServerKey(ServerEndpoint.parse('https://fixture.invalid/library').endpoint!), 7);
+  final identity = ContentIdentity(key, crypto.sha256.convert(file.readAsBytesSync()).toString());
+  final worker = await PublicationWorker.spawn();
+  try {
+    final result = await worker.prepare(file.path, identity);
+    final fields = audit(result);
+    if (fields < 50) throw StateError('Audit did not visit the nested graph');
+    final lazy = EpubBook.open(file.readAsBytesSync());
+    for (final forbidden in <Object>[lazy, lazy.archive]) {
+      var refused = false;
+      try {
+        audit(forbidden);
+      } on StateError {
+        refused = true;
+      }
+      if (!refused) throw StateError('Audit accepted a lazy object');
+    }
+    final archive = EpubArchive.openFile(file.path);
+    archive.close();
+    await worker.close();
+    file.deleteSync();
+    if (result.metadata.titles.single != 'Generated import') {
+      throw StateError('Lost snapshot');
+    }
+    stdout.writeln(
+      'PASS: $fields immutable fields audited; lazy book/archive refused; snapshot survives close/delete',
+    );
+  } finally {
+    await worker.close();
+  }
+}

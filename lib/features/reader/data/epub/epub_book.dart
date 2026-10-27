@@ -27,6 +27,17 @@ final class EpubBook {
   }) {
     final archive = EpubArchive.open(bytes, limits: limits);
     final package = readEpubPackage(archive);
+    return EpubBook.fromArchive(archive, package, tokens: tokens);
+  }
+
+  /// Uses an already validated archive without copying its compressed bytes.
+  /// The caller retains ownership and must close the archive, including when
+  /// package/source preparation fails. This object stays inside the worker.
+  factory EpubBook.fromArchive(
+    EpubArchive archive,
+    EpubPackage package, {
+    ResourceTokenScheme tokens = const ResourceTokenScheme(),
+  }) {
     final sections = <EpubSection>[
       for (final spine in package.spine)
         if (package.itemById(spine.idref) case final item?)

@@ -3,8 +3,10 @@ import 'dart:collection';
 import 'dart:isolate';
 import 'dart:typed_data';
 
+import 'package:shiori/core/config/content_identity.dart';
 import 'package:shiori/features/reader/data/epub/epub_archive.dart';
 import 'package:shiori/features/reader/data/source/source_document.dart';
+import 'package:shiori/features/reader/data/worker/prepared_publication.dart';
 import 'package:shiori/features/reader/data/worker/publication_cancellation.dart';
 import 'package:shiori/features/reader/data/worker/publication_snapshot.dart';
 import 'package:shiori/features/reader/data/worker/publication_tag.dart';
@@ -118,6 +120,43 @@ final class PublicationWorker {
     },
     cancellation,
   );
+
+  /// Imports an immutable file whose actual SHA-256 was verified by its owner.
+  /// Supply a session tag in product flows; internal generations also protect
+  /// reopens with identical content/tags. Does not publish cache/progress state.
+  Future<PreparedPublication> prepare(
+    String path,
+    ContentIdentity identity, {
+    PublicationTag? tag,
+    PublicationCancellation? cancellation,
+  }) {
+    if (isClosed) return _failure(PublicationWorkerFailure.closed);
+    if (cancellation?.isCanceled ?? false) {
+      return _failure(PublicationWorkerFailure.canceled);
+    }
+    if (!identity.isCurrent) {
+      return _failure(PublicationWorkerFailure.incompatibleIdentity);
+    }
+    _invalidate(PublicationWorkerFailure.stale);
+    final capturedTag =
+        tag ??
+        PublicationTag(
+          '${identity.bookKey.serverKey.value}/${identity.bookKey.bookId}/'
+          '${identity.sha256}/${identity.parserVersion}/${identity.canonicalVersion}',
+        );
+    _tag = capturedTag;
+    _generation++;
+    return _enqueue(
+      PreparePublication(++_nextId, capturedTag, _generation, path, identity),
+      (reply) => switch (reply) {
+        PublicationPrepared(:final publication)
+            when publication.identity == identity =>
+          publication,
+        _ => throw _protocol,
+      },
+      cancellation,
+    );
+  }
 
   /// A detached, read-only view. Missing resources return null, like the
   /// archive API; malformed resources throw ParseException instead.

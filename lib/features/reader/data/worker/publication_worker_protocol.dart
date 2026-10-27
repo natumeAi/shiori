@@ -1,6 +1,8 @@
 import 'dart:isolate';
 
+import 'package:shiori/core/config/content_identity.dart';
 import 'package:shiori/features/reader/data/source/source_document.dart';
+import 'package:shiori/features/reader/data/worker/prepared_publication.dart';
 import 'package:shiori/features/reader/data/worker/publication_snapshot.dart';
 import 'package:shiori/features/reader/data/worker/publication_tag.dart';
 
@@ -16,6 +18,18 @@ sealed class PublicationRequest {
 final class OpenPublication extends PublicationRequest {
   const OpenPublication(super.id, super.tag, super.generation, this.path);
   final String path;
+}
+
+final class PreparePublication extends PublicationRequest {
+  const PreparePublication(
+    super.id,
+    super.tag,
+    super.generation,
+    this.path,
+    this.identity,
+  );
+  final String path;
+  final ContentIdentity identity;
 }
 
 final class LoadPublicationSection extends PublicationRequest {
@@ -52,6 +66,16 @@ sealed class PublicationResponse {
 final class PublicationOpened extends PublicationResponse {
   const PublicationOpened(super.id, super.tag, super.generation, this.snapshot);
   final PublicationSnapshot snapshot;
+}
+
+final class PublicationPrepared extends PublicationResponse {
+  const PublicationPrepared(
+    super.id,
+    super.tag,
+    super.generation,
+    this.publication,
+  );
+  final PreparedPublication publication;
 }
 
 final class PublicationSectionLoaded extends PublicationResponse {

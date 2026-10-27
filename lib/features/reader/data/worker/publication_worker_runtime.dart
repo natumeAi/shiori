@@ -1,14 +1,24 @@
 import 'dart:isolate';
 
 import 'package:shiori/core/errors/app_exception.dart';
+import 'package:shiori/features/reader/data/canonical/canonical_text.dart';
 import 'package:shiori/features/reader/data/epub/epub_archive.dart';
-import 'package:shiori/features/reader/data/epub/epub_loader.dart';
+import 'package:shiori/features/reader/data/epub/epub_book.dart';
 import 'package:shiori/features/reader/data/epub/epub_package.dart';
+import 'package:shiori/features/reader/data/source/source_document.dart';
+import 'package:shiori/features/reader/data/source/source_parser.dart';
+import 'package:shiori/features/reader/data/source/xml_parser.dart';
+import 'package:shiori/features/reader/data/worker/prepared_publication.dart';
+import 'package:shiori/features/reader/data/worker/publication_import_exception.dart';
+import 'package:shiori/features/reader/data/worker/publication_import_facts.dart';
+import 'package:shiori/features/reader/data/worker/publication_resource_discovery.dart';
 import 'package:shiori/features/reader/data/worker/publication_snapshot.dart';
 import 'package:shiori/features/reader/data/worker/publication_tag.dart';
 import 'package:shiori/features/reader/data/worker/publication_worker_exception.dart';
 import 'package:shiori/features/reader/data/worker/publication_worker_protocol.dart';
 import 'package:shiori/features/reader/data/worker/publication_worker_test_hooks.dart';
+
+part 'publication_worker_import.dart';
 
 final class PublicationWorkerBootstrap {
   const PublicationWorkerBootstrap(
@@ -60,7 +70,7 @@ Future<void> runPublicationWorker(PublicationWorkerBootstrap bootstrap) async {
           }
         }
       }
-      bootstrap.replies.send(owner.execute(message));
+      bootstrap.replies.send(await owner.execute(message));
       if (message is ClosePublication) break;
     }
   } finally {
@@ -73,8 +83,9 @@ final class _PublicationOwner {
   _PublicationOwner(this.bootstrap);
   final PublicationWorkerBootstrap bootstrap;
   EpubArchive? _archive;
-  EpubSectionLoader? _loader;
-  PublicationSnapshot? _snapshot;
+  EpubBook? _book;
+  SourceDocument? _firstDocument;
+  int? _firstIndex;
   PublicationTag? _tag;
   int? _generation;
 
@@ -89,9 +100,17 @@ final class _PublicationOwner {
     );
   }
 
-  PublicationResponse execute(PublicationRequest request) {
+  Future<PublicationResponse> execute(PublicationRequest request) async {
     try {
+      if (request is PreparePublication) return await _prepare(request);
       return _execute(request);
+    } on PublicationImportException catch (error) {
+      return PublicationFailed(
+        request.id,
+        request.tag,
+        request.generation,
+        error,
+      );
     } on PublicationWorkerException catch (error) {
       return PublicationFailed(
         request.id,
@@ -130,8 +149,7 @@ final class _PublicationOwner {
         if (snapshot.sections.isEmpty) {
           throw const ParseException(FormatException('No readable sections'));
         }
-        _loader = EpubSectionLoader(_archive!, package);
-        _snapshot = snapshot;
+        _book = EpubBook.fromArchive(_archive!, package);
         _tag = tag;
         _generation = generation;
         return PublicationOpened(id, tag, generation, snapshot);
@@ -146,8 +164,9 @@ final class _PublicationOwner {
     switch (request) {
       case LoadPublicationSection(:final index):
         _work(PublicationWorkerWork.sectionParse);
-        final item = _snapshot!.sections[index].item;
-        final document = _loader!.project(item).document;
+        final document = index == _firstIndex
+            ? _firstDocument!
+            : _book!.loadSection(index);
         return PublicationSectionLoaded(id, tag, generation, document);
       case ReadPublicationResource(:final path):
         _work(PublicationWorkerWork.resourceRead);
@@ -182,8 +201,9 @@ final class _PublicationOwner {
       _archive!.close();
     }
     _archive = null;
-    _loader = null;
-    _snapshot = null;
+    _book = null;
+    _firstDocument = null;
+    _firstIndex = null;
     _tag = null;
     _generation = null;
   }
