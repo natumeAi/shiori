@@ -2,6 +2,13 @@ part of 'sqlite_store.dart';
 
 const _migrations = <({int from, int to, List<String> statements})>[
   (from: 0, to: 1, statements: _schemaV1),
+  (
+    from: 1,
+    to: 2,
+    statements: [
+      'ALTER TABLE cached_publications ADD COLUMN canonical_version INTEGER NOT NULL DEFAULT 1 CHECK (canonical_version > 0)',
+    ],
+  ),
 ];
 
 const _schemaV1 = [
@@ -156,7 +163,7 @@ Database _openDatabase(String path, SqliteStoreTestHooks? hooks) {
     );
     db.select(
       '''SELECT server_key, book_id, byte_digest, relative_path, actual_bytes,
-      etag, last_modified, parser_version, validation_status, accessed_at
+      etag, last_modified, parser_version, canonical_version, validation_status, accessed_at
       FROM cached_publications LIMIT 0''',
     );
     db.select(

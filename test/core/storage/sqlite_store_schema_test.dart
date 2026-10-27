@@ -30,7 +30,7 @@ void main() {
       expect(db.select('PRAGMA synchronous').single.values.single, 2);
       expect(
         db.select('SELECT schema_version FROM app_state').single.values.single,
-        1,
+        SqliteStore.schemaVersion,
       );
       expect(
         db
@@ -61,7 +61,7 @@ void main() {
     });
     await (await fixture.open()).close();
     fixture.inspect((db) {
-      expect(db.userVersion, 1);
+      expect(db.userVersion, SqliteStore.schemaVersion);
       expect(
         db.select('SELECT value FROM sentinel').single['value'],
         'preserve',
@@ -94,7 +94,9 @@ void main() {
         );
       });
       await (await fixture.open()).close();
-      fixture.inspect((db) => expect(db.userVersion, 1));
+      fixture.inspect(
+        (db) => expect(db.userVersion, SqliteStore.schemaVersion),
+      );
     },
   );
 
@@ -187,7 +189,7 @@ void main() {
     _seedRetainedWal(fixture, version: 0);
     await (await fixture.open()).close();
     fixture.inspect((db) {
-      expect(db.userVersion, 1);
+      expect(db.userVersion, SqliteStore.schemaVersion);
       expect(db.select('PRAGMA journal_mode').single.values.single, 'delete');
       expect(
         db.select('SELECT value FROM sentinel').single.values.single,

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shiori/core/storage/storage_exception.dart';
+import 'package:shiori/core/storage/sqlite_store.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import 'store_test_support.dart';
@@ -41,7 +42,7 @@ void main() {
       _seedHotJournal(fixture, committedVersion: 0, pendingVersion: 42);
       await (await fixture.open()).close();
       fixture.inspect((db) {
-        expect(db.userVersion, 1);
+        expect(db.userVersion, SqliteStore.schemaVersion);
         expect(
           db.select('SELECT value FROM sentinel').single.values.single,
           'committed',

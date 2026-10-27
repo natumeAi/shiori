@@ -6,12 +6,14 @@ import 'package:logging/logging.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shiori/core/config/server_endpoint.dart';
 import 'package:shiori/core/config/server_key.dart';
+import 'package:shiori/core/config/book_key.dart';
 import 'package:shiori/core/storage/app_directories.dart';
 import 'package:shiori/core/storage/directory_access.dart';
 import 'package:shiori/core/storage/server_record.dart';
 import 'package:shiori/core/storage/sqlite_store_test_hooks.dart';
 import 'package:shiori/core/storage/storage_exception.dart';
 import 'package:shiori/core/storage/stored_snapshot.dart';
+import 'package:shiori/core/storage/stored_publication.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 part 'sqlite_store.g.dart';
@@ -19,13 +21,14 @@ part 'sqlite_store_protocol.dart';
 part 'sqlite_store_schema.dart';
 part 'sqlite_store_worker.dart';
 part 'sqlite_store_commands.dart';
+part 'sqlite_store_publications.dart';
 
 /// Scope-owned, long-lived SQLite worker. Only detached values cross its ports.
 final class SqliteStore {
   SqliteStore._();
 
   static const relativePath = 'shiori/v1/state.db';
-  static const schemaVersion = 1;
+  static const schemaVersion = 2;
 
   static Future<SqliteStore> open(
     AppDirectories directories, {
@@ -102,6 +105,24 @@ final class SqliteStore {
       _send(_ReplaceSnapshot(key, snapshot));
   Future<void> touchLastUsed(ServerKey key, DateTime at) =>
       _send(_Touch(key, at));
+
+  Future<void> publishGeneration(StoredPublication value) =>
+      _send(_PublishGeneration(value));
+  Future<StoredPublication?> readPublicationHead(BookKey key) =>
+      _send(_ReadPublication(key, null));
+  Future<StoredPublication?> readGeneration(BookKey key, String sha256) =>
+      _send(_ReadPublication(key, sha256));
+
+  /// Across every server; excludes container-owned leases/pins supplied by owner.
+  Future<List<StoredPublication>> listPublicationCandidates({
+    Set<String> protectedPaths = const {},
+  }) => _send(_ListPublications(Set.unmodifiable(protectedPaths)));
+  Future<void> deleteGeneration(BookKey key, String sha256) =>
+      _send(_DeleteGeneration(key, sha256));
+  Future<void> clearPublicationHead(BookKey key, String sha256) =>
+      _send(_ClearPublicationHead(key, sha256));
+  Future<void> touchGeneration(BookKey key, String sha256, DateTime at) =>
+      _send(_TouchGeneration(key, sha256, at));
 
   /// Test probes still execute through the real request queue in the worker.
   Future<bool> runsOffRootForTesting() => _send(const _WorkerIdentity());

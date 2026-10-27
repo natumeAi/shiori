@@ -17,6 +17,8 @@ final class PublicationStaging {
   final Set<StagingFile> _owned = {};
   bool _reserved = false;
 
+  bool owns(StagingFile file) => _owned.contains(file);
+
   Future<T> serialize<T>(Future<T> Function() action) async {
     final previous = _tail;
     final done = Completer<void>();

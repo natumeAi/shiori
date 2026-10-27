@@ -81,6 +81,41 @@ final class _Close extends _Operation<void> {
   const _Close();
 }
 
+final class _PublishGeneration extends _Operation<void> {
+  const _PublishGeneration(this.value);
+  final StoredPublication value;
+}
+
+final class _ReadPublication extends _Operation<StoredPublication?> {
+  const _ReadPublication(this.key, this.sha256);
+  final BookKey key;
+  final String? sha256;
+}
+
+final class _ListPublications extends _Operation<List<StoredPublication>> {
+  const _ListPublications(this.protectedPaths);
+  final Set<String> protectedPaths;
+}
+
+final class _DeleteGeneration extends _Operation<void> {
+  const _DeleteGeneration(this.key, this.sha256);
+  final BookKey key;
+  final String sha256;
+}
+
+final class _ClearPublicationHead extends _Operation<void> {
+  const _ClearPublicationHead(this.key, this.sha256);
+  final BookKey key;
+  final String sha256;
+}
+
+final class _TouchGeneration extends _Operation<void> {
+  const _TouchGeneration(this.key, this.sha256, this.at);
+  final BookKey key;
+  final String sha256;
+  final DateTime at;
+}
+
 final class _WorkerIdentity extends _Operation<bool> {
   const _WorkerIdentity();
 }

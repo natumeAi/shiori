@@ -466,6 +466,158 @@ count before each disk write and hash those same chunks incrementally.
 Wrong: cancel an unstarted StreamIterator to close a rejected source (it never
 subscribes). Correct: explicitly subscribe-and-cancel the discarded source.
 
+## Immutable publication cache (D2a)
+
+### Scope / Trigger
+
+`features/library/data/publications/publication_cache.dart` owns publication
+files and their committed heads. Its generated keep-alive provider is shared
+across server sessions. Await it before preparation: opening automatically
+reconciles publications and calls D1's staging cleanup. Package/source validation
+belongs to the worker/orchestrator; this cache accepts an already validated
+StagedDownload and rehashes its closed bytes before publication.
+
+### Signatures
+
+```dart
+Future<PublicationAttempt> beginPreparation(ServerSession session, BookKey key);
+Future<StoredPublication> publish(PublicationAttempt attempt, StagedDownload staged,
+    {required int parserVersion, required int canonicalVersion});
+Future<PublicationLease?> acquireHead(ServerSession session, BookKey key);
+Future<PublicationLease?> pinHead(BookKey key);
+Future<CacheReservation> reserveBytes(int bytes);
+Future<void> reconcile();
+Stream<PublicationHeadChange> get headChanges;
+void PublicationAttempt.close();
+void PublicationLease.release();
+void CacheReservation.release();
+
+// Async commands on the existing SQLite owner/worker; no filesystem in worker.
+Future<void> publishGeneration(StoredPublication value);
+Future<StoredPublication?> readPublicationHead(BookKey key);
+Future<StoredPublication?> readGeneration(BookKey key, String sha256);
+Future<List<StoredPublication>> listPublicationCandidates(
+    {Set<String> protectedPaths = const {}});
+Future<void> deleteGeneration(BookKey key, String sha256);
+Future<void> clearPublicationHead(BookKey key, String sha256);
+Future<void> touchGeneration(BookKey key, String sha256, DateTime at);
+```
+
+### Contracts
+
+- Files live at `<Caches>/shiori/v1/publications/<server SHA-256>/<safe book ID>/
+  <byte SHA-256>.epub`. Components are generated from BookKey/digest; titles,
+  filenames, URLs and stored arbitrary relative paths never authorize file I/O.
+  The path version stays v1 when the separate SQLite schema becomes v2.
+  Detached StoredPublication carries key, sha256, byteLength, parserVersion,
+  canonicalVersion, UTC accessedAt and exact nullable etag/lastModified.
+  Legacy invalid/zero-length/path-mismatched metadata can be listed for cleanup;
+  publishGeneration rejects it. It never follows that row's supplied path.
+- Begin preparation before detail/download/worker work. It captures the full
+  session, allocates a monotonically increasing operation token and pins the
+  previous usable head. Close the attempt in `finally` after success/failure.
+  Supersession cancels publication authority but keeps its fallback pin until
+  that attempt actually closes. Coalescing ordinary preparations belongs to the
+  orchestrator; each new beginPreparation supersedes its book's previous token.
+  Use `attempt.previousHead?.local` as D1's conditional-download input.
+- Publish only owned staging files for the attempt's BookKey. Check the guard
+  and operation token before rename and immediately before DB dispatch. Stream
+  SHA-256 and verify actual length; never read the whole archive into memory.
+  Reserve quota, then rename within Caches before issuing the SQLite command.
+  A present same-digest destination must pass full length/digest verification;
+  reuse it and discard staging without overwriting it, including on Windows.
+  A corrupt existing destination fails; never repair an open generation in place.
+- publishGeneration atomically upserts validated metadata and changes the head
+  with bound SQL, preserving old generation rows. A failed COMMIT rolls both
+  changes back. Consumers acquire through the serialized cache only after commit.
+  A dispatched SQLite transaction finishes even if retirement/supersession races
+  its reply; it writes only the captured server/book. A final guard/token check
+  suppresses stale return/events without compensation writes. Emit
+  PublicationHeadChange(key, previousDigest, newDigest) only on a new digest,
+  including null -> first digest. Later integration maps this to ContentChange.
+- Failure before rename discards only that attempt's stage, including queued
+  calls rejected by disposal. After rename/before commit, leave the unreferenced
+  destination for reconciliation; commit failure keeps the old head. A crash
+  after commit leaves the new head verifiable. Never undo a successful commit
+  because the caller was retired while awaiting its reply.
+- Leases/pins are counted in memory by generated generation path. Acquire checks
+  head file length/existence and touches its LRU time. Replacement keeps old
+  bytes readable while any lease/pin remains. Release is idempotent; the last
+  release makes a non-head generation eligible for later eviction. Closing an
+  attempt releases its fallback pin; it does not delete that generation.
+  Private container state retains pins, reservations and the serial queue across
+  cache provider invalidation. Direct open callers must maintain one owner.
+- CacheBudget defaults to **512 MiB** across all server namespaces. Admission
+  charges actual regular files under publications, including crash orphans,
+  plus outstanding reservations. D1's one **256 MiB** staging allowance stays
+  separate. Preflight enough reclaimable bytes, then evict unleased/unpinned
+  rows in global accessedAt order (stable server/book/digest ties). A current
+  head is evictable when unprotected; delete its matching head and generation
+  row together, then delete its file. DB failure preserves the file; deletion
+  failure leaves an orphan and a typed storage error. Same-digest reuse needs
+  zero extra bytes. Never evict the attempt's fallback or destination being reused.
+- Future covers reserve through reserveBytes before admission and hold that
+  reservation while their bytes exist outside publications. Release after
+  deletion, not after writing. Cover restoration must register its existing
+  bytes before publication admission; cover LRU integration is the next slice.
+  External reservations survive service invalidation within the container.
+- Reconcile each record against validation/path metadata and file existence/
+  length. Startup intentionally omits full digest hashing; same-length external
+  corruption is detected by later digest verification, not promised at startup.
+  Clear missing/mismatched heads and generation rows so preparation downloads
+  again. Remove unreferenced regular files only below publications, excluding
+  live protected paths. Never follow links or delete directory trees. A removed
+  publications directory is an empty cache and is recreated on later publish.
+  Call staging.cleanupAbandoned; it retains live staging ownership. Reconciliation
+  is callable later and shares the publication/acquisition queue.
+- Low-level cache commands are for this owner, not direct product consumers:
+  pass every protected path when requesting eviction candidates. All cache
+  operations affect only cached_publications/book_cache_heads and cache files.
+  Never mutate servers, app_state, snapshots, Documents, Application Support
+  files or present/future checkpoint/activity tables to recover cache space.
+
+### Validation & Error Matrix
+
+| Condition | Result |
+| --- | --- |
+| Individual generation/reservation exceeds total limit | PublicationCacheException(tooLarge); recoverable |
+| Leases, pins or reservations prevent admission | PublicationCacheException(cacheBusy); live bytes retained |
+| Stage hash/length or existing same-digest verification fails | PublicationCacheException(invalidGeneration) |
+| Filesystem, SQLite, staging cleanup or closed-worker failure | PublicationCacheException(storage), content-free |
+| Retired session, superseded/closed attempt, disposed service | RequestCancelled; no event/retry |
+| Foreign staging owner/book/session or invalid version/digest input | ArgumentError; caller contract violation |
+| Missing/length-mismatched/invalid referenced generation | Cache-only metadata removal; acquire returns null |
+| Same-length corruption during startup | Retained by documented length-only startup check |
+
+### Good / Base / Bad Cases
+
+Base: validate stage -> reserve -> rename -> generation/head commit -> lease.
+Good: leased A remains readable after B replaces its head; release later allows
+LRU eviction. Rename-before-commit crash leaves a removable orphan and old head.
+Bad: COMMIT failure must never point the head at an uncommitted generation or
+delete the old fallback; a same-number book on another server is independent.
+
+### Tests Required
+
+Use temporary Caches plus the real SQLite worker. Assert publish ordering and
+events, open-handle same-digest reuse, rename/precommit/actual deferred-FK COMMIT
+faults, restart on both sides of commit, token/session retirement, queued disposal
+cleanup and provider replacement with live leases/reservations. Cover cross-server
+LRU/touch, fallback and explicit pins, multiple leases/last release, inclusive
+quota, tooLarge/cacheBusy, orphan charging, cleanup retry, missing/length mismatch,
+legacy invalid/path records and outside sentinel files. Compare exact rows in
+servers/app_state/snapshots and a future-reader sentinel after cache operations.
+Migration tests reconstruct v1, preserve head/durable/sentinel rows, roll back
+the added column and version together, and retain future-schema refusal tests.
+
+### Wrong vs Correct
+
+Wrong: update the DB before rename, overwrite an existing digest path, or rebuild
+the lease map when a service provider is invalidated. Correct: rename first,
+commit the generation/head together, verify/reuse existing bytes and retain
+protection in container state. Wrong: release a future cover's charge immediately
+after writing; correct: keep it until those outside-subtree bytes are removed.
+
 ## Dio and Config
 
 ### Scope / Trigger
@@ -674,8 +826,10 @@ sqliteStoreProvider; // generated keep-alive FutureProvider
   keyed by server/book. Cache generation columns include relative path, actual
   bytes, ETag/Last-Modified, parser version, validation status and access time.
   Foreign keys restrict parent deletion and heads to validated generations;
-  an access-time index supports future cross-server LRU. No cache commands or
-  `cache_operations` table are added in B2.
+  an access-time index supports cross-server LRU. Schema v2 adds a positive
+  `canonical_version` with default 1 through an adjacent v1 -> v2 migration;
+  shipped v1 DDL is unchanged. D2a adds cache commands below, without a
+  `cache_operations` table.
 - Ordered migrations must connect adjacent versions. Each DDL step, metadata
   update and `user_version` bump share one transaction. Verify foreign keys,
   DELETE journal and FULL synchronous settings on open. S4 adds checkpoint/outbox
@@ -691,7 +845,7 @@ sqliteStoreProvider; // generated keep-alive FutureProvider
   A private scope-local gate waits for the retired worker to exit before a
   replacement opens. Disposal during initialization also closes the owner.
   Explicit callers must await `close()` before reopening the same path.
-- Future cache eviction may touch only cache-owned rows/files. Never delete
+- Cache eviction may touch only cache-owned rows/files. Never delete
   a server, whole database or future durable reader state to recover cache.
 
 ### Validation & Error Matrix
@@ -718,7 +872,7 @@ Localized recovery presentation remains Phase E.
 
 ### Good / Base / Bad Cases
 
-- Base: fresh v0 creates v1 and reopens the committed selection.
+- Base: fresh v0 migrates through v1 to v2 and reopens the committed selection.
 - Good: failed B activation retains A plus B's previous snapshot; v0 sentinel
   tables survive migration. Uncommitted future versions in journals roll back.
 - Bad: future committed schema returns `newerSchema` with identical original

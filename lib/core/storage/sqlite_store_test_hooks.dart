@@ -4,8 +4,12 @@ final class SqliteStoreTestHooks {
   const SqliteStoreTestHooks({
     this.failMigration = false,
     this.failActivation = false,
+    this.failPublicationCommitDigest,
   });
 
   final bool failMigration;
   final bool failActivation;
+
+  /// Force an actual deferred-FK COMMIT failure for this digest, then rollback.
+  final String? failPublicationCommitDigest;
 }

@@ -140,6 +140,32 @@ Object? _dispatch(
       });
     case _WorkerIdentity():
       return true; // The worker checks the bootstrap root on every dispatch.
+    case _PublishGeneration(:final value):
+      _publishGeneration(db, value, hooks);
+    case _ReadPublication(:final key, :final sha256):
+      return _readPublication(db, key, sha256);
+    case _ListPublications(:final protectedPaths):
+      return List<StoredPublication>.unmodifiable(
+        db
+            .select('''$_publicationSelect ORDER BY p.accessed_at,
+          p.server_key, p.book_id, p.byte_digest''')
+            .map(_publication)
+            .where((value) => !protectedPaths.contains(value.relativePath)),
+      );
+    case _DeleteGeneration(:final key, :final sha256):
+      _deleteGeneration(db, key, sha256);
+    case _ClearPublicationHead(:final key, :final sha256):
+      _transaction(db, () => _clearPublicationHead(db, key, sha256));
+    case _TouchGeneration(:final key, :final sha256, :final at):
+      _transaction(
+        db,
+        () => db.execute(
+          '''UPDATE cached_publications
+        SET accessed_at = ? WHERE server_key = ? AND book_id = ?
+        AND byte_digest = ?''',
+          [at.microsecondsSinceEpoch, key.serverKey.value, key.bookId, sha256],
+        ),
+      );
     case _Close() || _ExitForTesting():
       throw const StorageException(StorageFailure.protocol);
   }
