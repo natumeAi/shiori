@@ -147,11 +147,10 @@ void Function() onRetire(ServerSession captured, void Function() cancel);
 It is keep-alive; its lazy resolver reads `sqliteStoreProvider.future` inside
 port calls so open failures become typed selection errors. The underlying
 keep-alive provider owns worker disposal; tests can still override the port.
-Override `candidateSnapshotValidatorProvider` with Phase C's unconditional
-snapshot validator. Until configured, its default validator throws
-`SnapshotValidationException(incompatible)` from `validate`, producing typed
-feedback without committing. Throwing during provider construction would wrap
-the error in `ProviderException` before the coordinator can classify it.
+`candidateSnapshotValidatorProvider` defaults to Phase C's unconditional
+LibrarySnapshotValidator and remains overridable in tests. Validation errors
+are thrown by `validate`, not provider construction, so the coordinator can
+classify them without a dependency ProviderException wrapper.
 `candidateTransportFactoryProvider` creates temporary transports;
 active requests share `sessionTransportProvider(session)`. The generated
 `activeSessionTransportFactoryProvider` reads that family dynamically: the
@@ -256,6 +255,92 @@ before publishing. Correct: share the commit barrier across rebuilds, check afte
 synchronous notifications before dispatch, and restore after outstanding commits.
 
 ---
+
+## Session library and image lifecycle
+
+### Scope / Trigger
+
+Library data and cover work capture the current immutable ServerSession.
+Consumers pass the selected session to generated families; candidate activation
+must not start or invalidate the selected session's library providers.
+
+### Signatures
+
+```dart
+librarySnapshotRepositoryProvider(ServerSession session); // keep-alive
+librarySnapshotControllerProvider(ServerSession session); // auto-dispose Notifier
+bookRepositoryProvider(ServerSession session); // keep-alive, guarded
+bookDetailProvider(ServerSession session, BookKey key); // auto-dispose Future
+coverLoaderProvider(ServerSession session); // keep-alive, onRetire cleanup
+Future<void> LibrarySnapshotController.refresh();
+```
+
+### Contracts
+
+- The snapshot controller is a synchronous Notifier of LibrarySnapshotState,
+  initially empty, then receives the repository's stale/refreshing/fresh/error
+  states. It subscribes before starting load and cancels its subscription on
+  disposal. Every state assignment checks ref.mounted and the captured session
+  guard. The repository independently guards stream and persistence admission.
+- Snapshot requests coalesce in the repository. Both automatic initial load and
+  explicit refresh read durable cache first. Keep-alive repository ownership
+  preserves shared work/data between listeners; a replacement controller can
+  resubscribe and starts revalidation. The auto-dispose controller does not
+  dispose a shared session repository when leaving a view.
+- Snapshot failures are state.error alongside stale data, rather than provider
+  failures. The repository alone runs retryNetworkErrors for HTTP network
+  failures; successful provider states never trigger a second Riverpod retry.
+  Retirement interrupts retry waits and completes pending callers silently.
+- BookRepository guards detail admission/results itself. bookDetail adds a
+  per-view LibrarySessionScope; view disposal/retirement returns null silently.
+  BookDetailResult.unavailable is the separate HTTP 404 result. Other errors
+  propagate through AsyncValue and the root bounded network retry policy.
+- CoverLoader owns encoded bytes, decoded pixel reservations/LRU and active
+  leases. Its keep-alive provider retains reuse across views in one session;
+  onRetire synchronously clears owned cache state even while the provider is
+  retained. Provider disposal does the same. Native late decodes dispose their
+  resources when they finish. Never depend solely on auto-dispose for retirement.
+- SessionCoverImage uses the loader's decoded cache, with a lease until the
+  image stream is actually disposed, including its last keep-alive handle.
+  Image.errorBuilder consumes typed
+  placeholder reasons. Retired streams discard results without an image error.
+- LibrarySessionScope removes settled cancellation waiters; do not accumulate
+  one callback on a never-completing retirement Future per completed request.
+  Synchronous repository listeners may dispose owners; cancel immediately and
+  defer stream close to a microtask to avoid closing during event dispatch.
+
+### Validation & Error Matrix
+
+| Transition | Observable state |
+| --- | --- |
+| Relaunch + valid stored snapshot | stale/refreshing data before HTTP |
+| Successful refresh / matching 304 | fresh data |
+| Refresh fails | stale data + error; selected session unchanged |
+| First A -> B -> later A | first A can no longer publish/write |
+| Detail retired | null, never AsyncError(RequestCancelled) |
+| Cover retired/provider disposed | owned byte/image caches cleared; silent late result |
+
+### Good / Base / Bad Cases
+
+Base: a selected-session controller loads its repository once and watches state.
+Good: the same active session shares covers between views and clears on retirement.
+Bad: checking only ServerKey when first A and later A have different generations.
+
+### Tests Required
+
+Use selected guards, generated families, recording adapters and completers.
+Assert stale/fresh controller state, real SQLite reopen/persistence, silent detail
+cancellation, A -> B -> A late success/error, retry interruption, synchronous
+listener retirement/disposal, cover provider cleanup and lease release. Disable
+Riverpod retries in tests; inject retry waiting at the snapshot repository seam.
+
+### Wrong vs Correct
+
+Wrong: throw refresh failures from build and hide retained data. Correct: publish
+LibrarySnapshotState(snapshot: cached, stale: true, error: typedFailure).
+Wrong: release a cover lease immediately after decode or on last-listener
+removal while a TickerMode handle retains the image. Correct: release it from
+ImageStreamCompleter.onDisposed so admission accounts for those pixels too.
 
 ## Forbidden
 

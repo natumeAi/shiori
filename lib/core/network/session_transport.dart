@@ -49,7 +49,7 @@ final class SessionTransport {
   final Set<CancelToken> _pending = {};
   bool _disposed = false;
 
-  /// Returns decoded JSON and validators. DTO/service validation is Phase C.
+  /// Returns decoded JSON, its original text and validators. DTOs are feature-owned.
   Future<TransportResponse<Object?>> getJson(
     List<String> segments, {
     String? ifNoneMatch,
@@ -89,11 +89,12 @@ final class SessionTransport {
       if (status == 304) return _result(response, null);
       _validateJsonContentType(response.headers);
       final bytes = await _read(response, maxBytes: maxBytes);
-      final body = _decodeJson(bytes);
+      final decoded = _decodeJson(bytes);
+      final body = decoded.body;
       if (body is Map<String, Object?> && body.containsKey('error')) {
         throw ServerException(status, null, serverErrorCode(body));
       }
-      return _result(response, body);
+      return _result(response, body, rawJsonText: decoded.rawJsonText);
     });
   }
 
@@ -223,9 +224,10 @@ final class SessionTransport {
     }
   }
 
-  Object? _decodeJson(Uint8List bytes) {
+  ({Object? body, String rawJsonText}) _decodeJson(Uint8List bytes) {
     try {
-      return jsonDecode(utf8.decode(bytes));
+      final text = utf8.decode(bytes);
+      return (body: jsonDecode(text), rawJsonText: text);
     } on FormatException {
       throw const ParseException();
     }
@@ -241,8 +243,7 @@ final class SessionTransport {
       _validateJsonContentType(response.headers);
       // Inspect only bounded error envelopes. HTML/error text is never retained.
       final bytes = await _read(response, maxBytes: _smallJsonLimit);
-      final body = _decodeJson(bytes);
-      code = serverErrorCode(body);
+      code = serverErrorCode(_decodeJson(bytes).body);
     } on ParseException {
       // An HTTP failure keeps its status even when its error body is not JSON.
       code = null;
@@ -250,12 +251,16 @@ final class SessionTransport {
     throw ServerException(status, null, code);
   }
 
-  TransportResponse<T> _result<T>(Response<ResponseBody> response, T body) =>
-      TransportResponse(
-        statusCode: response.statusCode!,
-        headers: response.headers.map,
-        body: body,
-      );
+  TransportResponse<T> _result<T>(
+    Response<ResponseBody> response,
+    T body, {
+    String? rawJsonText,
+  }) => TransportResponse(
+    statusCode: response.statusCode!,
+    headers: response.headers.map,
+    body: body,
+    rawJsonText: rawJsonText,
+  );
 
   void dispose() {
     if (_disposed) return;

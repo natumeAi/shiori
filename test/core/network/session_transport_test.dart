@@ -81,6 +81,63 @@ void main() {
     expect(() => response.headers['etag']!.clear(), throwsUnsupportedError);
   });
 
+  for (final route in [
+    ['api', 'health'],
+    ['api', 'library', 'snapshot'],
+    ['api', 'books', '7'],
+    ['api', 'books', '7', 'file'],
+  ]) {
+    test('raw JSON text survives UTF-8 chunks and numeric spelling: $route', () async {
+      const raw =
+          ' { "text": "雪📚", "escaped": "\\u96ea", "whole": 1.00, "tiny": 1.0e-7 }\r\n';
+      final bytes = utf8.encode(raw);
+      final split =
+          bytes.indexOf(0xe9) + 1; // Inside the first UTF-8 character.
+      final adapter = FakeServerAdapter(
+        (_, _) => ResponseBody(
+          Stream.fromIterable([
+            Uint8List.sublistView(bytes, 0, split),
+            Uint8List.sublistView(bytes, split),
+          ]),
+          200,
+          headers: {
+            'content-type': ['application/json'],
+          },
+        ),
+      );
+      final response = await transport(adapter).getJson(route);
+      expect(response.rawJsonText, raw);
+      expect(utf8.encode(response.rawJsonText!), bytes);
+      expect(response.body, {
+        'text': '雪📚',
+        'escaped': '雪',
+        'whole': 1.0,
+        'tiny': 1e-7,
+      });
+      expect(jsonEncode(response.body), isNot(raw));
+      expect(jsonEncode(response.body).contains('1.00'), isFalse);
+      expect(jsonEncode(response.body).contains('1.0e-7'), isFalse);
+      expect(adapter.requests, hasLength(1));
+    });
+  }
+
+  test('304 and byte responses leave raw JSON text absent', () async {
+    for (final route in [
+      ['api', 'library', 'snapshot'],
+      ['api', 'books', '7', 'file'],
+    ]) {
+      final response = await transport(
+        FakeServerAdapter((_, _) => jsonBody('', 304)),
+      ).getJson(route, allowedTerminalStatuses: {200, 304});
+      expect(response.rawJsonText, isNull);
+    }
+    final response = await transport(
+      FakeServerAdapter((_, _) => ResponseBody.fromBytes([1, 2, 3], 200)),
+    ).getBytes('/covers/a.webp', maxBytes: 3);
+    expect(response.body, [1, 2, 3]);
+    expect(response.rawJsonText, isNull);
+  });
+
   test(
     'health fixture JSON is decoded and returned without DTO assumptions',
     () async {

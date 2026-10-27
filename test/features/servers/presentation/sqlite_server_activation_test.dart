@@ -1,10 +1,13 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shiori/core/config/selection_storage_exception.dart';
 import 'package:shiori/core/config/server_key.dart';
 import 'package:shiori/core/config/validated_snapshot.dart';
+import 'package:shiori/core/network/session_transport.dart';
+import 'package:shiori/core/storage/app_directories.dart';
 import 'package:shiori/core/storage/sqlite_server_selection_store.dart';
 import 'package:shiori/core/storage/sqlite_store.dart';
 import 'package:shiori/core/storage/sqlite_store_test_hooks.dart';
@@ -247,17 +250,86 @@ void main() {
     },
   );
 
-  test(
-    'unconfigured Phase C validator returns typed feedback without committing',
-    () async {
-      final h = harness(configureValidator: false);
-      await h.restore();
-      await h.activate('a');
-      expect(h.state.session, isNull);
-      expect(h.state.failure!.kind, ActivationFailureKind.incompatibleSnapshot);
-      expect(await h.store.readActiveServer(), isNull);
-      expect(await h.store.readServer(ServerKey(fake.endpoint('a'))), isNull);
-      expect(h.candidates.single.requests, hasLength(1));
-    },
-  );
+  for (final name in [
+    'typical',
+    'invalid_schema_version',
+    'invalid_duplicate_book_id',
+  ]) {
+    test('production validator and SQLite activation: $name', () async {
+      final adapters = <fake.FakeServerAdapter>[];
+      final raw = fake.fixture('snapshot_$name.json');
+      final container = ProviderContainer(
+        retry: (_, _) => null,
+        overrides: [
+          appDirectoriesProvider.overrideWithValue(directories),
+          candidateTransportFactoryProvider.overrideWithValue((session) {
+            final adapter = fake.FakeServerAdapter(
+              (options, _) => options.uri.path.endsWith('/api/health')
+                  ? fake.jsonBody(fake.fixture('health_ok.json'))
+                  : fake.jsonBody(raw, 200, {
+                      'etag': ['W/"exact opaque"'],
+                      'x-library-revision': ['42'],
+                    }),
+            );
+            adapters.add(adapter);
+            return SessionTransport(session, adapter: adapter);
+          }),
+          sessionTransportProvider.overrideWith((ref, session) {
+            final transport = SessionTransport(
+              session,
+              adapter: fake.FakeServerAdapter((_, _) => fake.jsonBody()),
+            );
+            ref.onDispose(transport.dispose);
+            return transport;
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.listen(serverActivationControllerProvider, (_, _) {});
+      await container.read(serverActivationControllerProvider.future);
+      final worker = await container.read(sqliteStoreProvider.future);
+      addTearDown(worker.close);
+      await container
+          .read(serverActivationControllerProvider.notifier)
+          .activate(fake.endpoint('a').canonicalRoot);
+      final state = container
+          .read(serverActivationControllerProvider)
+          .requireValue;
+      final store = container.read(serverSelectionStoreProvider);
+      if (name == 'typical') {
+        expect(state.failure, isNull);
+        final selected = state.session!;
+        expect(await store.readActiveServer(), selected.serverKey);
+        final saved = (await store.readCurrentSnapshot(selected.serverKey))!;
+        expect(saved.payloadText, raw);
+        expect(
+          utf8.encode(saved.payloadText),
+          File('test/fixtures/server/snapshot_$name.json').readAsBytesSync(),
+        );
+        expect(saved.schemaVersion, 1);
+        expect(saved.revision, 42);
+        expect(saved.etag, 'W/"exact opaque"');
+        expect(saved.fetchedAt.isUtc, isTrue);
+      } else {
+        expect(state.session, isNull);
+        expect(
+          state.failure!.kind,
+          name == 'invalid_schema_version'
+              ? ActivationFailureKind.incompatibleSnapshot
+              : ActivationFailureKind.malformedSnapshot,
+        );
+        expect(await store.readActiveServer(), isNull);
+        expect(await store.readServer(ServerKey(fake.endpoint('a'))), isNull);
+      }
+      expect(adapters.single.requests.map((r) => r.uri.path), [
+        '/Reader/api/health',
+        '/Reader/api/library/snapshot',
+      ]);
+      expect(
+        adapters.single.requests.last.headers.containsKey('If-None-Match'),
+        isFalse,
+      );
+      expect(adapters.single.closed, isTrue);
+    });
+  }
 }

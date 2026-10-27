@@ -4,12 +4,11 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shiori/core/config/server_selection_store.dart';
 import 'package:shiori/core/config/server_session.dart';
 import 'package:shiori/core/config/session_publication_guard.dart';
-import 'package:shiori/core/config/validated_snapshot.dart';
 import 'package:shiori/core/network/session_transport.dart';
 import 'package:shiori/core/storage/sqlite_server_selection_store.dart';
 import 'package:shiori/core/storage/sqlite_store.dart';
+import 'package:shiori/features/library/data/library_snapshot_validator.dart';
 import 'package:shiori/features/servers/data/candidate_snapshot_validator.dart';
-import 'package:shiori/features/servers/data/snapshot_validation_exception.dart';
 
 part 'server_activation_dependencies.g.dart';
 
@@ -18,22 +17,10 @@ part 'server_activation_dependencies.g.dart';
 ServerSelectionStore serverSelectionStore(Ref ref) =>
     SqliteServerSelectionStore(() => ref.read(sqliteStoreProvider.future));
 
-/// Phase C supplies validation. Until configured, activation fails recoverably
-/// as an incompatible snapshot without dispatching a commit.
+/// Validate the candidate snapshot before the atomic activation commit.
 @Riverpod(keepAlive: true)
 CandidateSnapshotValidator candidateSnapshotValidator(Ref ref) =>
-    const _UnconfiguredSnapshotValidator();
-
-final class _UnconfiguredSnapshotValidator
-    implements CandidateSnapshotValidator {
-  const _UnconfiguredSnapshotValidator();
-
-  @override
-  Future<ValidatedSnapshot> validate(SessionTransport transport) async =>
-      throw const SnapshotValidationException(
-        SnapshotValidationIssue.incompatible,
-      );
-}
+    const LibrarySnapshotValidator();
 
 typedef CandidateTransportFactory = SessionTransport Function(ServerSession);
 

@@ -61,15 +61,13 @@ final class ServerSelectionStoreProvider
 String _$serverSelectionStoreHash() =>
     r'047beb4a610ae47d936a69abc38abae526c0e21a';
 
-/// Phase C supplies validation. Until configured, activation fails recoverably
-/// as an incompatible snapshot without dispatching a commit.
+/// Validate the candidate snapshot before the atomic activation commit.
 
 @ProviderFor(candidateSnapshotValidator)
 final candidateSnapshotValidatorProvider =
     CandidateSnapshotValidatorProvider._();
 
-/// Phase C supplies validation. Until configured, activation fails recoverably
-/// as an incompatible snapshot without dispatching a commit.
+/// Validate the candidate snapshot before the atomic activation commit.
 
 final class CandidateSnapshotValidatorProvider
     extends
@@ -79,8 +77,7 @@ final class CandidateSnapshotValidatorProvider
           CandidateSnapshotValidator
         >
     with $Provider<CandidateSnapshotValidator> {
-  /// Phase C supplies validation. Until configured, activation fails recoverably
-  /// as an incompatible snapshot without dispatching a commit.
+  /// Validate the candidate snapshot before the atomic activation commit.
   CandidateSnapshotValidatorProvider._()
     : super(
         from: null,
@@ -116,7 +113,7 @@ final class CandidateSnapshotValidatorProvider
 }
 
 String _$candidateSnapshotValidatorHash() =>
-    r'a15c5d735839f28d4098a2d2b6c95b1c2e9c3b1e';
+    r'691e4db773d748d3e0a87040e93cfba51858a74a';
 
 /// Temporary transports have no active-session provider identity.
 
