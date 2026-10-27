@@ -37,7 +37,7 @@ extension _CoverDecode on CoverLoader {
         targetHeight: targetHeight,
       );
       _scope.check();
-      image = (await codec.getNextFrame()).image;
+      image = (await (_decodeFrame?.call(codec) ?? codec.getNextFrame())).image;
       _scope.check();
       final entry = _DecodedCover(image);
       if (entry.bytes > reservation) throw CoverFailure.nonImage;

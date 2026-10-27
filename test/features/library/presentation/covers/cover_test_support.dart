@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -41,3 +42,27 @@ Matcher placeholder(CoverFailure reason) =>
     isA<CoverPlaceholder>().having((result) => result.reason, 'reason', reason);
 
 void release(CoverLoadResult result) => (result as CoverLoaded).lease.release();
+
+/// Holds a real native frame before handing it back to the loader.
+final class CoverDecodeGate {
+  final entered = Completer<ui.Image>();
+  final resume = Completer<void>();
+
+  Future<ui.FrameInfo> decode(ui.Codec codec) async {
+    final frame = await codec.getNextFrame();
+    entered.complete(frame.image);
+    await resume.future;
+    return frame;
+  }
+
+  void complete() {
+    if (!resume.isCompleted) resume.complete();
+  }
+}
+
+Future<void> drainCoverDecode(bool Function() finished) async {
+  for (var i = 0; i < 100 && !finished(); i++) {
+    await Future<void>.delayed(Duration.zero);
+  }
+  expect(finished(), isTrue, reason: 'Native decode cleanup must complete');
+}

@@ -8,6 +8,7 @@ import 'package:shiori/core/network/request_cancelled.dart';
 import 'package:shiori/core/network/retry_policy.dart';
 import 'package:shiori/core/network/session_transport.dart';
 import 'package:shiori/core/network/transport_response.dart';
+import 'package:shiori/core/storage/storage_exception.dart';
 import 'package:shiori/features/library/data/cached_library_snapshot.dart';
 import 'package:shiori/features/library/data/library_session_scope.dart';
 import 'package:shiori/features/library/data/library_snapshot_cache.dart';
@@ -47,9 +48,15 @@ final class LibrarySnapshotRepository {
 
   Future<CachedLibrarySnapshot?> _read() async {
     _scope.check();
-    return CachedLibrarySnapshot.restore(
-      await _scope.wait(_cache.read(_transport.session.serverKey)),
-    );
+    try {
+      return CachedLibrarySnapshot.restore(
+        await _scope.wait(_cache.read(_transport.session.serverKey)),
+      );
+    } on StorageException {
+      // Unreadable cache cannot authorize a validator or satisfy a 304.
+      // Recover through the same bounded unconditional path as missing data.
+      return null;
+    }
   }
 
   Future<void> _refresh() async {

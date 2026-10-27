@@ -25,6 +25,7 @@ final class CoverLoader {
     SessionPublicationGuard guard, {
     this.encodedBudget = defaultBudget,
     this.decodedBudget = defaultBudget,
+    this._decodeFrame,
   }) : _scope = LibrarySessionScope(_transport.session, guard) {
     if (encodedBudget < 1 || decodedBudget < 4) {
       throw ArgumentError('Invalid cover budget');
@@ -38,6 +39,8 @@ final class CoverLoader {
   final LibrarySessionScope _scope;
   final int encodedBudget;
   final int decodedBudget;
+  // Allows lifecycle tests to hold a real native frame until retirement.
+  final Future<ui.FrameInfo> Function(ui.Codec)? _decodeFrame;
   final _encoded = <(ServerSession, String), Uint8List>{};
   final _decoded = <(ServerSession, String), _DecodedCover>{};
   final _pending = <(ServerSession, String), Future<_DecodedCover>>{};

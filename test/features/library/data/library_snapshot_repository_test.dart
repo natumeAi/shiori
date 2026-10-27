@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -99,6 +100,131 @@ void main() {
     expect(cache.writes, 0);
   });
 
+  test(
+    '200 with unchanged ETag replaces body; subsequent 304 reuses it',
+    () async {
+      final old = storedFixture();
+      cache.values[active.serverKey] = old;
+      final changed = payload('snapshot_typical.json');
+      final books = snapshot(changed)['books']! as List<Object?>;
+      final firstBook = books.first! as Map<String, Object?>;
+      firstBook['title'] = 'Changed title with unchanged validator';
+      final raw = ' \n${jsonEncode(changed)}\r\n';
+      setup(
+        (_, index) => index == 0
+            ? jsonBody(raw, 200, {
+                'etag': [old.etag!],
+              })
+            : responseFixture('snapshot_304'),
+      );
+      final sub = repository.changes.listen((state) {
+        if (!state.stale) {
+          expect(cache.values[active.serverKey]!.payload, raw);
+          expect(state.snapshot!.stored.payload, raw);
+        }
+      });
+      addTearDown(sub.cancel);
+
+      await repository.load();
+      final fresh = repository.state.snapshot!;
+      expect(fresh.index.books.values.first.title, firstBook['title']);
+      expect(fresh.stored.payload, raw);
+      expect(fresh.stored.payload, isNot(old.payload));
+      expect(fresh.stored.etag, old.etag);
+      expect(fresh.stored.fetchedAt, now);
+      expect(cache.writes, 1);
+      await repository.refresh();
+      expect(repository.state.snapshot!.stored, same(fresh.stored));
+      expect(repository.state.stale, isFalse);
+      expect(cache.writes, 1);
+      expect(states.where((state) => !state.stale), hasLength(2));
+      expect(adapter.requests, hasLength(2));
+      expect(adapter.requests.map((r) => r.headers['If-None-Match']), [
+        old.etag,
+        old.etag,
+      ]);
+    },
+  );
+
+  for (final during304 in [false, true]) {
+    for (final outcome in ['200', 'network', '304']) {
+      test(
+        'cache read throws ${during304 ? 'during 304' : 'on load'}; recovery $outcome is bounded and typed',
+        () async {
+          final stored = storedFixture();
+          cache.values[active.serverKey] = stored;
+          const failure = StorageException(StorageFailure.command);
+          if (!during304) cache.readError = failure;
+          setup((options, index) {
+            if (during304 && index == 0) {
+              cache.readError = failure;
+              return responseFixture('snapshot_304');
+            }
+            if (outcome == 'network') {
+              throw DioException.connectionError(
+                requestOptions: options,
+                reason: 'offline',
+              );
+            }
+            return responseFixture('snapshot_$outcome');
+          });
+
+          await repository.load();
+          final recoveryRequests = adapter.requests.skip(during304 ? 1 : 0);
+          expect(
+            recoveryRequests.every(
+              (r) => !r.headers.containsKey('If-None-Match'),
+            ),
+            isTrue,
+          );
+          expect(cache.reads, during304 || outcome == '304' ? 2 : 1);
+          if (during304) {
+            expect(
+              adapter.requests.first.headers['If-None-Match'],
+              stored.etag,
+            );
+          } else {
+            expect(states.where((s) => s.stale && s.snapshot != null), isEmpty);
+          }
+          if (outcome == '200') {
+            expect(recoveryRequests, hasLength(1));
+            expect(repository.state.error, isNull);
+            expect(repository.state.stale, isFalse);
+            expect(cache.writes, 1);
+            expect(
+              cache.values[active.serverKey]!.payload,
+              fixture('snapshot_typical.json'),
+            );
+          } else {
+            expect(
+              recoveryRequests,
+              hasLength(outcome == 'network' ? 4 : (during304 ? 1 : 2)),
+            );
+            expect(
+              repository.state.error,
+              outcome == 'network'
+                  ? isA<NetworkException>()
+                  : isA<LibrarySnapshotProtocolException>(),
+            );
+            expect(
+              repository.state.snapshot?.stored,
+              during304 ? same(stored) : isNull,
+            );
+            expect(repository.state.stale, isTrue);
+            expect(cache.values[active.serverKey], same(stored));
+            expect(cache.writes, 0);
+          }
+          expect(repository.state.refreshing, isFalse);
+          expect(guard.current, active);
+          expect(
+            delays.map((d) => d.inMilliseconds),
+            outcome == 'network' ? [200, 400, 800] : isEmpty,
+          );
+        },
+      );
+    }
+  }
+
   for (final kind in [
     'missing',
     'corrupt',
@@ -170,6 +296,7 @@ void main() {
     'corrupt',
     'incompatible',
     'changedValidator',
+    'changedPayload',
   ]) {
     test(
       'cache $kind during conditional request forces one unconditional fetch',
@@ -201,6 +328,10 @@ void main() {
             cache.values[active.serverKey] = storedFixture(schema: 2);
           case 'changedValidator':
             cache.values[active.serverKey] = storedFixture(etag: '"new"');
+          case 'changedPayload':
+            cache.values[active.serverKey] = storedFixture(
+              name: 'snapshot_empty.json',
+            );
         }
         response.complete(responseFixture('snapshot_304'));
         await refresh;
