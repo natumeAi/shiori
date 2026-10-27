@@ -134,3 +134,27 @@ Phases D (page-turn controller, prepared surfaces), E (reader probe, Swift prese
 ### Status
 
 [OK] **Completed**
+
+
+## Session 5: S3 device acceptance and closeout
+
+**Date**: 2026-10-27
+**Task**: S3 device acceptance and closeout
+**Branch**: `ios-build/s3-runtime-server`
+
+### Summary
+
+Owner confirmed all S3 device tests passed on 2026-10-27. Recorded acceptance attribution and AC1-AC11 disposition, updated parent delivery status and S4 handoff, and archived S3. Existing code gates retained; documentation/task validations passed. S4 rendering/performance and all seven S2 conditions remain open. Archive hit a Windows research-directory lock; verified all 21 archived files, removed identical source duplicates, and committed the recovered archive. Only an empty locked source directory remains; no task metadata remains there.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0ac4a86` | (see git log) |
+| `bd9de27` | (see git log) |
+| `a077ef3` | (see git log) |
+| `f94c7ba` | (see git log) |
+
+### Status
+
+[OK] **Completed**
