@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shiori/app/app.dart';
 import 'package:shiori/core/config/server_key.dart';
@@ -28,7 +29,7 @@ export '../features/library/data/snapshot_cache_test_support.dart'
 final l10n = lookupAppLocalizations(const Locale('zh'));
 
 class ProductUiHarness {
-  ProductUiHarness() {
+  ProductUiHarness({List<Override> overrides = const []}) {
     final validator = activation.FakeSnapshotValidator()
       ..respond = (transport) {
         if (snapshotFailure case final error?) throw error;
@@ -37,6 +38,7 @@ class ProductUiHarness {
     container = ProviderContainer.test(
       retry: (_, _) => null,
       overrides: [
+        ...overrides,
         serverSelectionStoreProvider.overrideWithValue(store),
         candidateSnapshotValidatorProvider.overrideWithValue(validator),
         librarySnapshotCacheProvider.overrideWithValue(cache),

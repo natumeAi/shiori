@@ -489,7 +489,59 @@ class AppLocalizationsZh extends AppLocalizations {
   String get libraryUnknownAuthor => '作者未知';
 
   @override
-  String get libraryPreparationPlaceholder => '书籍准备功能即将加入。目前可查看书籍信息。';
+  String get libraryPreparationTitle => '准备书籍';
+
+  @override
+  String get libraryPreparationHelp => '下载并检查此书，为之后阅读做好准备。离开此页面后，准备仍会继续。';
+
+  @override
+  String get libraryPreparationStart => '准备此书';
+
+  @override
+  String get libraryPreparationWorking => '正在准备书籍…';
+
+  @override
+  String libraryPreparationProgress(int percent) {
+    return '已下载 $percent%';
+  }
+
+  @override
+  String get libraryPreparationCheckingHelp => '下载完成后还需检查内容，请等待准备完成。';
+
+  @override
+  String get libraryPreparationReady => '书籍已下载并检查完成。阅读器可用后即可打开。';
+
+  @override
+  String get libraryPreparationRefresh => '重新准备';
+
+  @override
+  String get libraryPreparationRefreshHelp => '重新获取并检查服务器上的此书。';
+
+  @override
+  String get libraryPreparationUnavailable =>
+      '服务器上暂时找不到此书，可能已被移除。请刷新书库，确认书籍仍在后重试。';
+
+  @override
+  String get libraryPreparationTooLarge =>
+      '此书过大，暂时无法准备。可换一本较小的书；更换此书的较小版本后可重试。';
+
+  @override
+  String get libraryPreparationBusy =>
+      '下载空间暂时不可用，或另一本书正在准备。请稍后重试；若空间不足，可先释放设备储存空间。';
+
+  @override
+  String get libraryPreparationInvalid =>
+      '此书内容不完整或结构有误，无法完成检查。请在服务器上更换完整的 EPUB 后重试。';
+
+  @override
+  String get libraryPreparationUnsupported =>
+      '暂时无法检查此书的内容结构。请尝试更新应用，或在服务器上更换 EPUB 后重试。';
+
+  @override
+  String get libraryPreparationStorage => '无法保存此书。请检查设备的可用储存空间，然后重试。';
+
+  @override
+  String get libraryPreparationInterrupted => '书籍准备意外中断，请重试。';
 
   @override
   String libraryBookCount(int count) {

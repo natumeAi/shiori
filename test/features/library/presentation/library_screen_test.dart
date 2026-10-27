@@ -50,7 +50,7 @@ void main() {
         const BookRoute(id: 10).location,
       );
       expect(find.text('Fixture Author 10'), findsOneWidget);
-      expect(find.text(l10n.libraryPreparationPlaceholder), findsOneWidget);
+      expect(find.text(l10n.libraryPreparationStart), findsOneWidget);
       expect(
         find.bySemanticsLabel(l10n.libraryCoverLabel('Fixture Book 10')),
         findsOneWidget,

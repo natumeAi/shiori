@@ -77,7 +77,7 @@ void main() {
       const HomeRoute().location,
     );
     expect(router.canPop(), isFalse);
-    expect(find.text(l10n.libraryPreparationPlaceholder), findsNothing);
+    expect(find.text(l10n.libraryPreparationStart), findsNothing);
     expect(
       find.text(l10n.serverCurrent(endpoint('b').normalizedText)),
       findsOneWidget,

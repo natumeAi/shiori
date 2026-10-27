@@ -23,7 +23,7 @@ void main() {
         await tester.tap(find.text('Fixture Book 7'));
         await tester.pumpAndSettle();
         await tester.scrollUntilVisible(
-          find.text(l10n.libraryPreparationPlaceholder),
+          find.text(l10n.libraryPreparationStart),
           200,
           scrollable: find.byType(Scrollable).last,
         );

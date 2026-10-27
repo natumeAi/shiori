@@ -96,3 +96,89 @@ This split is test scaffolding only; product network behavior is unchanged.
   remaining S3 device acceptance are outside E1a and remain unverified here.
 - Session identity and navigation callbacks are provided by `app/routes.dart`;
   future preparation UI should continue capturing the session with the book ID.
+
+## E1b book preparation UI
+
+Date: 2026-10-27. Worktree `shiori-e1`, branch `s3/e1-product-ui`,
+implementation based on `062ef32` with the D5 controller available. Implemented
+directly without subagents, commits, staging, pushes, branch changes or task
+lifecycle changes. No other checkout was accessed or modified.
+
+### States and product copy
+
+- Replaced the book metadata placeholder with BookPreparation, capturing the
+  route's ServerSession and `BookKey(session.serverKey, book.id)`. Build makes
+  no preparation request. Explicit actions call the existing D5 controller.
+- Idle offers prepare. Preparing shows admitted download percentage when
+  received bytes and a positive total are known, otherwise an indeterminate
+  indicator. The percentage is clamped to 0-100. Even at 100%, the UI explains
+  that content checking must finish before readiness. Cancel returns to idle.
+- Ready says: "书籍已下载并检查完成。阅读器可用后即可打开。"
+  Refresh explicitly retrieves and checks the server copy with `refresh: true`.
+  There is no open-reader action, reading progress or saved-position claim.
+- Exhaustive typed failure mapping covers unavailable/deleted, network,
+  too-large, busy cache, invalid/unsupported content structure, storage,
+  access denial, TLS, server, redirect and interrupted preparation. Every
+  failed state offers retry. Existing safe server messages are reused where
+  recovery is identical. Product strings expose no raw error, hash, worker,
+  database or file path, and make no layout-support claim.
+- Added Chinese ARB strings and regenerated localizations. Existing route,
+  library and accessibility assertions now use the preparation action.
+
+### Lifecycle and ownership
+
+- The presentation-only bookPreparationBinding provider listens to D5 without
+  rebuilding itself on each progress/state update. It retains its subscription
+  while preparing or ready, even after the route listener disappears. Idle and
+  failed bindings can auto-dispose when unobserved. Returning to the same
+  session/book sees the retained preparation or ready result.
+- A watch-based retention prototype failed the off-screen progress-to-ready
+  regression: invalidation dropped retention before unobserved recomputation.
+  The final listener-based binding avoids that lifetime gap. The regression is
+  covered with both a fake controller and the real D5 controller/service.
+- Session retirement closes retention; D5 remains responsible for cancellation,
+  late-result rejection and releasing its PreparedBook. Routes never release
+  controller-owned resources or cancel work on navigation. No D5 bug/change was
+  needed. The existing app activation listener resets the complete route stack.
+- A -> B -> A widget coverage checks overlapping numeric book IDs, reset to
+  root, fresh activation generations and rejected/released late first-A ready
+  results. Real D5 binding tests additionally cover retirement during a held
+  download and lease release after retirement.
+
+### Verification
+
+Final gates all passed (exit 0):
+
+| Command | Result |
+| --- | --- |
+| `flutter pub get --offline` | Pass; no dependency changes |
+| `dart run build_runner build` | Pass; final incremental run wrote 6 outputs |
+| `flutter gen-l10n` | Pass |
+| `dart format --set-exit-if-changed` on all changed/generated Dart files | Pass; 15 files, 0 changed |
+| `flutter analyze --no-pub` | Pass; no issues |
+| Focused preparation widget tests | Pass; 18 tests |
+| Real D5 preparation-binding tests | Pass; 2 tests |
+| `flutter test --no-pub --reporter expanded` | Pass; 2,135 passed, 4 skipped, 0 failed |
+| `dart run tool/ci/check_reader_fixtures.dart` | Pass; fixture manifests/privacy guard |
+| `git -c core.safecrlf=false diff --check` | Pass |
+| Protected-path content diff | Pass; no changes |
+
+The 18 widget cases cover prepare/progress/check/ready, unknown and zero totals,
+cancel/re-prepare, all 12 failure types with successful retry, forced refresh,
+route departure/return, server switch/late results, and every state at 200% text
+on a 320px screen in light/dark themes. Two further tests use real D5 HTTP/cache/
+SQLite/worker orchestration with generated synthetic bytes and fake transport.
+No live NAS/HTTP or private content was used. The final suite log is ignored
+`build/e1b-flutter-test.log`.
+
+Initial full checks found two old placeholder localization references and one
+deprecated test override API; all were corrected before the final gates.
+No handwritten data, core, reader, diagnostics, routing, native, CI, dependency,
+fixture or task-planning files changed. Required generation may leave D5 `.g.dart`
+files marked modified by worktree/index metadata, but their content diff is empty.
+Lifecycle findings are captured here for the integration owner's spec follow-up;
+this bounded assignment does not edit shared specs or archive the S3 task.
+
+No E1b implementation issue remains. Real iPhone preparation/LAN transport,
+permission, lifecycle and resource evidence remains outside this host UI gate;
+S3-AC10 and the retained S2/S4 conditions are still open.

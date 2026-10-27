@@ -880,11 +880,101 @@ abstract class AppLocalizations {
   /// **'作者未知'**
   String get libraryUnknownAuthor;
 
-  /// No description provided for @libraryPreparationPlaceholder.
+  /// No description provided for @libraryPreparationTitle.
   ///
   /// In zh, this message translates to:
-  /// **'书籍准备功能即将加入。目前可查看书籍信息。'**
-  String get libraryPreparationPlaceholder;
+  /// **'准备书籍'**
+  String get libraryPreparationTitle;
+
+  /// No description provided for @libraryPreparationHelp.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载并检查此书，为之后阅读做好准备。离开此页面后，准备仍会继续。'**
+  String get libraryPreparationHelp;
+
+  /// No description provided for @libraryPreparationStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'准备此书'**
+  String get libraryPreparationStart;
+
+  /// No description provided for @libraryPreparationWorking.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在准备书籍…'**
+  String get libraryPreparationWorking;
+
+  /// No description provided for @libraryPreparationProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'已下载 {percent}%'**
+  String libraryPreparationProgress(int percent);
+
+  /// No description provided for @libraryPreparationCheckingHelp.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载完成后还需检查内容，请等待准备完成。'**
+  String get libraryPreparationCheckingHelp;
+
+  /// No description provided for @libraryPreparationReady.
+  ///
+  /// In zh, this message translates to:
+  /// **'书籍已下载并检查完成。阅读器可用后即可打开。'**
+  String get libraryPreparationReady;
+
+  /// No description provided for @libraryPreparationRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新准备'**
+  String get libraryPreparationRefresh;
+
+  /// No description provided for @libraryPreparationRefreshHelp.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新获取并检查服务器上的此书。'**
+  String get libraryPreparationRefreshHelp;
+
+  /// No description provided for @libraryPreparationUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器上暂时找不到此书，可能已被移除。请刷新书库，确认书籍仍在后重试。'**
+  String get libraryPreparationUnavailable;
+
+  /// No description provided for @libraryPreparationTooLarge.
+  ///
+  /// In zh, this message translates to:
+  /// **'此书过大，暂时无法准备。可换一本较小的书；更换此书的较小版本后可重试。'**
+  String get libraryPreparationTooLarge;
+
+  /// No description provided for @libraryPreparationBusy.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载空间暂时不可用，或另一本书正在准备。请稍后重试；若空间不足，可先释放设备储存空间。'**
+  String get libraryPreparationBusy;
+
+  /// No description provided for @libraryPreparationInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'此书内容不完整或结构有误，无法完成检查。请在服务器上更换完整的 EPUB 后重试。'**
+  String get libraryPreparationInvalid;
+
+  /// No description provided for @libraryPreparationUnsupported.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时无法检查此书的内容结构。请尝试更新应用，或在服务器上更换 EPUB 后重试。'**
+  String get libraryPreparationUnsupported;
+
+  /// No description provided for @libraryPreparationStorage.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法保存此书。请检查设备的可用储存空间，然后重试。'**
+  String get libraryPreparationStorage;
+
+  /// No description provided for @libraryPreparationInterrupted.
+  ///
+  /// In zh, this message translates to:
+  /// **'书籍准备意外中断，请重试。'**
+  String get libraryPreparationInterrupted;
 
   /// No description provided for @libraryBookCount.
   ///
