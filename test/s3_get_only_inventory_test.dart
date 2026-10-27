@@ -11,6 +11,9 @@ import 'package:shiori/core/network/session_transport.dart';
 import 'package:shiori/features/library/data/book_repository.dart';
 import 'package:shiori/features/library/data/library_snapshot_repository.dart';
 import 'package:shiori/features/library/data/library_snapshot_validator.dart';
+import 'package:shiori/features/library/data/publications/download_result.dart';
+import 'package:shiori/features/library/data/publications/publication_download_service.dart';
+import 'package:shiori/features/library/data/publications/publication_staging.dart';
 import 'package:shiori/features/library/presentation/covers/cover_loader.dart';
 import 'package:shiori/features/library/presentation/covers/session_cover_image.dart';
 import 'package:shiori/features/servers/data/health_repository.dart';
@@ -19,6 +22,7 @@ import 'package:shiori/features/servers/data/server_activation_dependencies.dart
 import 'core/network/fake_server_adapter.dart';
 import 'features/library/data/library_test_support.dart';
 import 'features/library/data/snapshot_cache_test_support.dart';
+import 'features/library/data/publications/download_test_support.dart';
 import 'features/library/presentation/covers/cover_test_support.dart';
 
 const readTemplates = {
@@ -42,6 +46,8 @@ List<String> forbiddenWrites(String source) {
         match.group(0)!,
   ];
 }
+
+bool constructsDio(String source) => RegExp(r'\bDio\s*\(').hasMatch(source);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -90,13 +96,17 @@ void main() {
         return responseFixture('snapshot_200');
       }
       if (path == 'api/books/7') return jsonBody(fixture('book_detail.json'));
-      if (path == 'api/books/7/file') return jsonBody('{}');
+      if (path == 'api/books/7/file') return fileFixture('file_200_chunked');
       if (path.startsWith('covers/')) return imageBody(bytes);
       throw StateError('Uninventoried request');
     });
     final transport = SessionTransport(active, adapter: adapter);
     addTearDown(transport.dispose);
     final cache = MemorySnapshotCache();
+    final stagingRoot = await Directory.systemTemp.createTemp(
+      'shiori-inventory-',
+    );
+    addTearDown(() => stagingRoot.delete(recursive: true));
     final repository = LibrarySnapshotRepository(transport, cache, guard);
     addTearDown(repository.dispose);
     final container = ProviderContainer.test(
@@ -104,6 +114,9 @@ void main() {
       overrides: [
         sessionPublicationGuardProvider.overrideWithValue(guard),
         sessionTransportProvider(active).overrideWithValue(transport),
+        publicationStagingProvider.overrideWithValue(
+          PublicationStaging(TestDirectories(stagingRoot)),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -116,8 +129,12 @@ void main() {
     final detail = bookDetailProvider(active, key);
     container.listen(detail, (_, _) {});
     await container.read(detail.future);
-    // Phase D owns file downloading; inventory its existing transport route seam.
-    await transport.getJson(['api', 'books', '7', 'file']);
+    final downloaded =
+        await container
+                .read(publicationDownloadServiceProvider(active))
+                .download(key)
+            as StagedDownload;
+    await downloaded.file.discard();
     final loader = container.read(coverLoaderProvider(active));
     release(await loader.load('/covers/direct.png'));
     final stream = SessionCoverImage(
@@ -159,6 +176,10 @@ void main() {
             .whereType<File>()
             .where((file) => file.path.endsWith('.dart'))) {
       final source = file.readAsStringSync();
+      final path = file.path.replaceAll(r'\', '/');
+      if (path != 'lib/core/network/session_transport.dart') {
+        expect(constructsDio(source), isFalse, reason: file.path);
+      }
       expect(forbiddenWrites(source), isEmpty, reason: file.path);
       expect(
         RegExp(r'Image\.network\s*\(').hasMatch(source),
@@ -168,7 +189,8 @@ void main() {
       if (source.contains(
             'package:shiori/core/network/session_transport.dart',
           ) &&
-          RegExp(r'\.get(?:Json|Bytes)\s*\(').hasMatch(source)) {
+          RegExp(r'\.get(?:Json|Bytes|File)(?:<[^;()]*>)?\s*\(')
+              .hasMatch(source)) {
         owners.add(file.path.replaceAll(r'\', '/'));
       }
     }
@@ -177,11 +199,19 @@ void main() {
       'lib/features/library/data/library_snapshot_validator.dart',
       'lib/features/library/data/library_snapshot_repository.dart',
       'lib/features/library/data/book_repository.dart',
+      'lib/features/library/data/publications/publication_download_service.dart',
       'lib/features/library/presentation/covers/cover_loader.dart',
     });
   });
 
   test('static inventory detects writes, aliases, generic requests and dynamic options', () {
+    for (final constructor in [
+      'Dio()',
+      'net.Dio(BaseOptions())',
+      'new Dio ()',
+    ]) {
+      expect(constructsDio(constructor), isTrue);
+    }
     for (final call in [
       'client.post("x")',
       'client.putUri<void>(uri)',

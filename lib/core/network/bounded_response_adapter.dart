@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:shiori/core/errors/app_exception.dart';
+import 'package:shiori/core/network/streaming_file_body.dart';
 
 /// Bounds the source before Dio eagerly subscribes and buffers response chunks.
 final class BoundedResponseAdapter implements HttpClientAdapter {
@@ -20,6 +21,13 @@ final class BoundedResponseAdapter implements HttpClientAdapter {
   ) async {
     final response = await _inner.fetch(options, requestStream, cancelFuture);
     final source = response.stream;
+    final fileBody = options.extra[StreamingFileBody.extraKey];
+    if (fileBody is StreamingFileBody && response.statusCode == 200) {
+      // Dio sees an empty body; disk writes control the original source.
+      await fileBody.attach(source);
+      response.stream = const Stream.empty();
+      return response;
+    }
     final limit = limitFor(options, response);
     if (limit == null) {
       await source.listen(null).cancel();

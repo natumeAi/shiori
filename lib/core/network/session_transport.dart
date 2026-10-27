@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -13,6 +14,7 @@ import 'package:shiori/core/network/redirect_policy.dart';
 import 'package:shiori/core/network/request_cancelled.dart';
 import 'package:shiori/core/network/server_error_code.dart';
 import 'package:shiori/core/network/server_route.dart';
+import 'package:shiori/core/network/streaming_file_body.dart';
 import 'package:shiori/core/network/transport_response.dart';
 
 part 'session_transport.g.dart';
@@ -118,8 +120,94 @@ final class SessionTransport {
     });
   }
 
-  // Phase D seam: reuse this status/redirect/cancellation boundary with a
-  // bounded file sink and digest. No public unscoped stream/download API yet.
+  /// Consumes a full file under this request's lifetime and disk backpressure.
+  /// The callback is never called for 304 or rejected headers/statuses.
+  Future<TransportResponse<T?>> getFile<T>(
+    int bookId, {
+    required int maxBytes,
+    required Future<T> Function(Stream<Uint8List>) consume,
+    String? ifNoneMatch,
+    String? ifModifiedSince,
+    CancelToken? cancelToken,
+  }) async {
+    if (maxBytes < 1) throw ArgumentError('Invalid response byte limit');
+    final segments = ['api', 'books', '$bookId', 'file'];
+    final route = ServerRoute.api(segments);
+    final body = StreamingFileBody();
+    try {
+      return await _run(route, (tokens, log) async {
+        final response = await _openValidatedResponse(
+          session.endpoint.api(segments),
+          route,
+          tokens,
+          log,
+          maxBytes: maxBytes,
+          fileBody: body,
+          cancelToken: cancelToken,
+          headers: {
+            'If-None-Match': ?ifNoneMatch,
+            if (ifNoneMatch == null) 'If-Modified-Since': ?ifModifiedSince,
+          },
+        );
+        final conditional = ifNoneMatch != null || ifModifiedSince != null;
+        if (response.statusCode == 304 && conditional) {
+          return _result<T?>(response, null);
+        }
+        if (response.statusCode != 200) await _throwStatus(response);
+        final declared = _validateFileHeaders(response.headers, maxBytes);
+        final token = response.requestOptions.cancelToken!;
+        var received = 0;
+        var complete = false;
+        Stream<Uint8List> bounded() async* {
+          await for (final chunk in body.read(token)) {
+            _ensureActive();
+            received += chunk.length;
+            if (received > maxBytes) throw const ParseException();
+            yield chunk;
+          }
+          complete = true;
+        }
+
+        final value = await consume(bounded());
+        if (token.isCancelled) throw const RequestCancelled();
+        if (!complete) throw const ParseException();
+        if (declared != null && declared != received) {
+          throw const ParseException();
+        }
+        return _result<T?>(response, value);
+      }, cancelToken: cancelToken);
+    } finally {
+      await body.close();
+    }
+  }
+
+  int? _validateFileHeaders(Headers headers, int maxBytes) {
+    final types = headers['content-type'];
+    final mediaType = types?.singleOrNull
+        ?.split(';')
+        .first
+        .trim()
+        .toLowerCase();
+    if (types == null ||
+        types.length != 1 ||
+        !const {
+          'application/epub+zip',
+          'application/octet-stream',
+        }.contains(mediaType)) {
+      throw const ParseException();
+    }
+    final lengths = headers['content-length'];
+    if (lengths != null) {
+      if (lengths.length != 1 || !RegExp(r'^\d+$').hasMatch(lengths.single)) {
+        throw const ParseException();
+      }
+      final length = int.tryParse(lengths.single);
+      if (length == null || length > maxBytes) throw const ParseException();
+      return length;
+    }
+    return null;
+  }
+
   Future<Response<ResponseBody>> _openValidatedResponse(
     Uri initial,
     ServerRoute route,
@@ -128,6 +216,8 @@ final class SessionTransport {
     required int maxBytes,
     bool json = false,
     Map<String, Object?> headers = const {},
+    StreamingFileBody? fileBody,
+    CancelToken? cancelToken,
   }) async {
     final redirects = RedirectPolicy(session.endpoint, initial);
     var uri = initial;
@@ -135,6 +225,8 @@ final class SessionTransport {
     while (true) {
       _ensureActive();
       final token = CancelToken();
+      if (cancelToken?.isCancelled ?? false) throw const RequestCancelled();
+      unawaited(cancelToken?.whenCancel.then((_) => token.cancel()));
       tokens.add(token);
       _pending.add(token);
       final response = await _dio.getUri<ResponseBody>(
@@ -146,6 +238,7 @@ final class SessionTransport {
             RedactedRequestLog.extraKey: hopLog,
             _bodyLimitKey: maxBytes,
             _jsonBodyKey: json,
+            StreamingFileBody.extraKey: ?fileBody,
           },
         ),
       );
@@ -278,8 +371,9 @@ final class SessionTransport {
 
   Future<T> _run<T>(
     ServerRoute route,
-    Future<T> Function(Set<CancelToken>, RedactedRequestLog) action,
-  ) async {
+    Future<T> Function(Set<CancelToken>, RedactedRequestLog) action, {
+    CancelToken? cancelToken,
+  }) async {
     _ensureActive();
     final tokens = <CancelToken>{};
     final log = RedactedRequestLog(route);
@@ -287,9 +381,11 @@ final class SessionTransport {
       final result = await guardDio(() => action(tokens, log), log: log);
       // A completed/decoded response from a retired activation cannot escape.
       _ensureActive();
+      if (cancelToken?.isCancelled ?? false) throw const RequestCancelled();
       return result;
     } catch (_) {
       _ensureActive();
+      if (cancelToken?.isCancelled ?? false) throw const RequestCancelled();
       rethrow;
     } finally {
       for (final token in tokens) {

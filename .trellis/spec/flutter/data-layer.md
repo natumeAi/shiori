@@ -340,6 +340,132 @@ is that same pending Future; it waits on itself. Correct: remove inside a void
 block and test coalesced completion. Wrong: treat global ImageCache's keep-alive
 quota as a bound on live covers. Correct: account pinned decoded leases too.
 
+## Bounded publication downloads and staging (D1)
+
+### Scope / Trigger
+
+Original EPUB transfers live in `features/library/data/publications/`. D1 ends
+at transfer-verified private staging bytes or a reverified local generation.
+It does not validate the EPUB package, publish a cache head, mutate SQLite or
+claim reader readiness. The caller pins its existing immutable generation for
+the attempt; D2 owns cache publication and retained-cache quota integration.
+
+### Signatures
+
+```dart
+Future<TransportResponse<T?>> SessionTransport.getFile<T>(int bookId, {
+  required int maxBytes,
+  required Future<T> Function(Stream<Uint8List>) consume,
+  String? ifNoneMatch, String? ifModifiedSince, CancelToken? cancelToken,
+});
+Future<DownloadResult> PublicationDownloadService.download(BookKey key, {
+  LocalPublication? local, bool refresh = false, CancelToken? cancelToken,
+});
+Future<void> PublicationStaging.cleanupAbandoned();
+Future<void> StagingFile.discard();
+void StagingFile.releaseAfterMove();
+publicationDownloadServiceProvider(ServerSession session); // keep-alive family
+publicationStagingProvider; // shared keep-alive transfer gate / reservation
+```
+
+`LocalPublication` carries BookKey, immutable path, expected byteLength, lowercase
+SHA-256 digest, nullable opaque etag/lastModified. `StagedDownload` carries BookKey,
+owned StagingFile/path, actual byteLength/digest and nullable response validators.
+`DownloadNotModified.local` is the reverified input generation. These are
+handwritten infrastructure values, not HTTP DTOs.
+
+### Contracts
+
+- The session transport alone constructs Dio. `getFile` accepts only the safe
+  file GET route, retaining deployment prefix, redirect policy and error mapping.
+  It sends exact If-None-Match preferentially, otherwise If-Modified-Since. It
+  never sends Range or If-Range. A 304 is admitted only if a condition was sent;
+  its body is discarded. Other statuses remain typed HTTP failures.
+- `StreamingFileBody` detaches a 200 source at the adapter boundary and gives Dio
+  an empty response stream. Header checks precede the file callback; disk awaits
+  propagate pause/resume to the original source. Do not expose the raw stream
+  outside the request lifetime, use getBytes for EPUBs, or let Dio prebuffer it.
+  An abandoned callback cannot return success without consuming the whole body.
+- Require one Content-Type of application/epub+zip or application/octet-stream
+  (parameters allowed); reject missing/ambiguous/HTML/JSON/text/other types before
+  creating a file. Binary MIME is only a staging admission, never package proof.
+  Present Content-Length must be one unsigned decimal within the limit. Count
+  actual bytes before each write regardless of that header; reject mismatch at
+  EOF, including truncated or understated bodies. The inclusive default limit is
+  `const EpubLimits().maxArchiveBytes` (256 MiB), injectable downward in tests.
+- The callback writes sequentially through an asynchronous RandomAccessFile,
+  hashes each written chunk with crypto SHA-256, flushes and closes before
+  returning. There is no whole-file buffer or second file read for download
+  hashing. Staging uses exclusive creation of a secure random 128-bit `.part`
+  name under `<Caches>/shiori/v1/staging/`; no supplied title/filename/path is used.
+- Only a usable same-book local generation enables conditions. Check expected
+  digest shape, existence and length before HTTP and again after 304. Rehash
+  generations up to 8 MiB using a file stream both times; larger files rely on
+  prior caller verification and its immutable-generation pin plus current length.
+  Explicit refresh bypasses both validators. Missing validators on 200 are valid
+  and return null, clearing any implication of previous validators.
+- An unusable 304 or unexpected 206/412/416 permits exactly one unconditional
+  recovery. This is one shared recovery allowance, including mixed statuses;
+  a second such response fails. No recursive or automatic network retries.
+- Ordinary duplicates for a BookKey share the same Future/result. Refresh
+  cancels/supersedes that book's older operation. Per-call cancellation cancels
+  the shared attempt, including its coalesced consumers. Session retirement and
+  provider disposal synchronously cancel pending operations. Check full session
+  ownership and per-book operation generation before traffic, writes and results;
+  await close and own-file deletion before releasing the transfer gate.
+- Shared PublicationStaging serializes transfers across books/sessions and
+  reserves at most one compressed staging file. Success transfers ownership to
+  the caller and retains the reservation. D2 must move/delete it before calling
+  releaseAfterMove, or call discard on abandonment. A retained staged result
+  causes stagingBusy for another file; it is never evicted implicitly.
+- Failures/cancellation delete only their own .part, preserving existing local
+  generations. A failed deletion reports storage and retains its reservation.
+  Call cleanupAbandoned at startup before admitting downloads: only immediate
+  regular `.part` files in the exact staging directory are deleted, excluding
+  live owned paths. Never recurse, follow links, scan Documents or touch other
+  cache/durable files. Late headers after cancellation also close their source.
+
+### Validation & Error Matrix
+
+| Condition | Result |
+| --- | --- |
+| Full bounded 200, including no validators | StagedDownload; closed/flushed .part |
+| Conditional 304 with still-usable generation | DownloadNotModified |
+| Unsolicited/unusable 304, 206/412/416 | One unconditional recovery; then ServerException(status) |
+| Other HTTP / TLS / transport receive error | Existing typed transport failure; no protocol recovery |
+| MIME/length/actual overflow/incomplete consumption | ParseException; own .part removed |
+| Disk create/write/flush/close/delete failure | DownloadException(storage) |
+| Duplicate validator header values | DownloadException(invalidValidators) |
+| Staging reservation already retained | DownloadException(stagingBusy) |
+| Cancellation, supersession, retired session | RequestCancelled; no retry |
+| Foreign BookKey/local generation | ArgumentError before traffic |
+
+### Good / Base / Bad Cases
+
+Base: chunked 200 hashes to the fixture digest without Content-Length. Good:
+file disappears during conditional HTTP, so 304 causes one unconditional 200.
+Bad: an HTML login 200, range fragment or truncated response becomes a complete
+book; none may escape as a successful staged generation.
+
+### Tests Required
+
+Use real SessionTransport plus chunked fake adapters and temporary Caches.
+Assert exact validators, GET/no Range, inclusive actual limits, lying lengths,
+source backpressure/abort, SHA-256, flush/close and own-file cleanup. Exercise
+304 loss/length/digest corruption, one recovery across status combinations,
+no-validator 200, disk fault injection, duplicate coalescing, refresh ordering,
+retirement before headers/during body/at close, reactivation, shared reservation
+and nonrecursive startup cleanup. The GET inventory drives the actual download
+provider and rejects every Dio construction outside session_transport.dart.
+
+### Wrong vs Correct
+
+Wrong: return Dio's already-subscribed response stream, trust Content-Length,
+or hash `readAsBytes()` afterward. Correct: detach the raw source before Dio,
+count before each disk write and hash those same chunks incrementally.
+Wrong: cancel an unstarted StreamIterator to close a rejected source (it never
+subscribes). Correct: explicitly subscribe-and-cancel the discarded source.
+
 ## Dio and Config
 
 ### Scope / Trigger
@@ -625,7 +751,8 @@ to HTTP repositories, not local I/O.
 - **Application Support:** marker and last completed/partial diagnostic record.
   Private settings, checkpoints, outbox and caches never belong in Documents.
 - **Caches:** removable downloaded/derived data; absence must be recoverable.
-  B1a supplies only the directory accessor, with no cache files or metadata.
+  Publication downloads use the task-owned staging directory described above;
+  durable cache publication/metadata are a separate step.
 - **Documents:** intentional user exports only,
   `shiori-diag-<BUILD_ID>-<runId>.json`. iOS File Sharing exposes this directory
   because `UIFileSharingEnabled` and `LSSupportsOpeningDocumentsInPlace` are true.
