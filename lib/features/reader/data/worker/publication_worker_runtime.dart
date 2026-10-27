@@ -153,6 +153,10 @@ final class _PublicationOwner {
     final id = request.id;
     final tag = request.tag;
     final generation = request.generation;
+    if (request is DetachPublication) {
+      close();
+      return PublicationDetached(id, tag, generation);
+    }
     if (request is ClosePublication) {
       close();
       return PublicationClosed(id, tag, generation);

@@ -58,6 +58,15 @@ final class ClosePublication extends PublicationRequest {
   const ClosePublication(super.id, super.tag, super.generation);
 }
 
+/// Releases the current archive without retiring the session's isolate.
+final class DetachPublication extends PublicationRequest {
+  const DetachPublication(super.id, super.tag, super.generation);
+}
+
+final class PublicationDetached extends PublicationResponse {
+  const PublicationDetached(super.id, super.tag, super.generation);
+}
+
 final class PlanPublicationResources extends PublicationRequest {
   const PlanPublicationResources(
     super.id,

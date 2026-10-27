@@ -1027,6 +1027,96 @@ to HTTP repositories, not local I/O.
 
 ---
 
+## Connected prepare-book orchestration (D5)
+
+### Scope / Trigger
+
+`library/data/publications/PrepareBookService` composes detail, D1 download,
+D3 worker import and D2 atomic publication. Its controller lives alongside it
+as an orchestration adapter; screens/routes/l10n consume that API separately.
+Reader data remains provider-free; session worker wiring is library-owned.
+
+### Signatures
+
+```dart
+Future<PreparedBook> PrepareBookService.prepare(BookKey key, {bool refresh = false});
+void PrepareBookService.cancel(BookKey key);
+Stream<ContentChange> get PrepareBookService.contentChanges;
+Stream<({BookKey key, int received, int? total})> get PrepareBookService.progress;
+Future<PublicationWorker> SessionPublicationWorker.get();
+Future<void> PublicationWorker.detach();
+Future<PublicationLease> PublicationCache.publishLeased(
+    PublicationAttempt attempt, StagedDownload staged, {
+    required int parserVersion, required int canonicalVersion});
+void PreparedBook.release();
+```
+
+### Contracts
+
+- Capture the full session and book-operation generation. Coalesce normal
+  duplicates, supersede on refresh. Hold the shared PrepareBookQueue through
+  download, import, detach and cleanup, including across session retirement.
+- BeginPreparation pins the old head before detail/network/import. Detail 404
+  is typed unavailable. Check parser/canonical compatibility and stream-rehash
+  the pinned file before conditional GET and after 304, including large files.
+  Unusable 304 permits one unconditional recovery. Refresh bypasses validators.
+- Build ContentIdentity from downloaded SHA-256 and current versions. Prepare
+  staging in the worker before any head publication. Detach waits for the actual
+  physical operation and releases its file handle before same-filesystem rename;
+  it keeps the session isolate available. Reopen/prepare/detach retires resources.
+- PublishLeased serializes commit and first new-head lease with eviction. Return
+  PreparedBook only with matching identity, detached PreparedPublication summary,
+  layoutFacts and lease. S4 reopens the immutable leased path for preload.
+- Emit identity-bearing ContentChange after commit/acquisition, including first
+  publication and interpretation-version changes; unchanged 304/200 emits none.
+  Never mutate saved position/activity. The stream is transient, not an outbox.
+- Cancellation/retirement completes callers silently and drains actual worker
+  work before deleting staging. Release attempt pins and abandoned leases on
+  every exit; retain the fallback pin through physical drain even after logical
+  cancellation. Synchronous event listeners may retire/dispose owners: recheck
+  after notification. A dispatched verified commit may finish without a UI
+  result; do not compensate by deleting durable reader state or verified bytes.
+- Session service owns outstanding PreparedBooks until release/retirement.
+  Coalesced callers share one result/owner. Consumers needing independent
+  lifetimes acquire their own cache lease and compare full identity.
+- D1 getFile progress hook counts actual received bytes before bound enforcement,
+  with nullable declared total; DownloadException(tooLarge) distinguishes limits
+  from ParseException. Both reject before oversized bytes enter the writer.
+  Keep core transport independent of feature error types.
+
+### Validation & Error Matrix
+
+| Condition | Result |
+| --- | --- |
+| Detail/file 404 | PrepareBookException(unavailable), no reader-state deletion |
+| Network / TLS / unauthorized / redirect | Separate sanitized preparation failure |
+| Compressed limit / pinned quota pressure | tooLarge / cacheBusy |
+| Invalid archive/package/first section | invalidStructure; old head retained |
+| Fixed/mixed/RTL/vertical | Prepared facts; capability belongs to S4 |
+| Disk/store failure | storage; cleanup and old-head preservation before commit |
+| Canceled/superseded/retired | RequestCancelled; never ready/error for new session |
+
+### Good / Base / Bad Cases
+
+Base: first 200 validates before publication. Good: changed bytes publish a new
+identity while an older leased file stays readable. Bad: invalid replacement
+must not become head or return an empty successful summary.
+
+### Tests Required
+
+Generated EPUB + real worker + real SQLite + fake adapter must cover 200/304,
+actual request validators, identity/change events, unchanged forced refresh,
+missing/corrupt head, bounded recovery, download/import cancellation, A -> B -> A,
+lease/pin/staging release, cache busy/storage failure, fixed/RTL facts, GET-only
+inventory, private-directory boundaries and S4 resource-preload consumption.
+
+### Wrong vs Correct
+
+Wrong: publish the download and validate later, or rename an open worker stage.
+Correct: prepare -> detach/drain -> publishLeased -> emit identity event/ready.
+Wrong: use summary readiness as a rendering/CFI-resume verdict. Correct: S4
+reopens leased bytes, preloads resources and proves anchors against full identity.
+
 ## Not Decided Yet
 
 - Authentication (token storage, refresh interceptor, router redirect):

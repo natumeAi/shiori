@@ -129,6 +129,7 @@ final class SessionTransport {
     String? ifNoneMatch,
     String? ifModifiedSince,
     CancelToken? cancelToken,
+    void Function(int received, int? total)? onReceiveProgress,
   }) async {
     if (maxBytes < 1) throw ArgumentError('Invalid response byte limit');
     final segments = ['api', 'books', '$bookId', 'file'];
@@ -154,7 +155,12 @@ final class SessionTransport {
           return _result<T?>(response, null);
         }
         if (response.statusCode != 200) await _throwStatus(response);
-        final declared = _validateFileHeaders(response.headers, maxBytes);
+        final declared = _validateFileHeaders(
+          response.headers,
+          maxBytes,
+          onReceiveProgress,
+        );
+        onReceiveProgress?.call(0, declared);
         final token = response.requestOptions.cancelToken!;
         var received = 0;
         var complete = false;
@@ -162,6 +168,7 @@ final class SessionTransport {
           await for (final chunk in body.read(token)) {
             _ensureActive();
             received += chunk.length;
+            onReceiveProgress?.call(received, declared);
             if (received > maxBytes) throw const ParseException();
             yield chunk;
           }
@@ -181,7 +188,11 @@ final class SessionTransport {
     }
   }
 
-  int? _validateFileHeaders(Headers headers, int maxBytes) {
+  int? _validateFileHeaders(
+    Headers headers,
+    int maxBytes,
+    void Function(int, int?)? onReceiveProgress,
+  ) {
     final types = headers['content-type'];
     final mediaType = types?.singleOrNull
         ?.split(';')
@@ -202,7 +213,11 @@ final class SessionTransport {
         throw const ParseException();
       }
       final length = int.tryParse(lengths.single);
-      if (length == null || length > maxBytes) throw const ParseException();
+      if (length == null) throw const ParseException();
+      if (length > maxBytes) {
+        onReceiveProgress?.call(0, length);
+        throw const ParseException();
+      }
       return length;
     }
     return null;

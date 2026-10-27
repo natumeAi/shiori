@@ -83,6 +83,17 @@ final class PublicationWorker {
 
   bool get isClosed => _closed || _closing;
 
+  /// Waits behind canceled physical work, then releases its file handle.
+  /// The caller must serialize prepare/detach pairs on this session worker.
+  Future<void> detach() {
+    if (isClosed) return close();
+    _invalidate(PublicationWorkerFailure.stale);
+    _tag ??= const PublicationTag('');
+    return _enqueue(DetachPublication(++_nextId, _tag!, _generation), (reply) {
+      if (reply is! PublicationDetached) throw _protocol;
+    }, null);
+  }
+
   /// Test-only fault injection: exercises the actual isolate exit listener.
   void killForTesting() => _isolate?.kill(priority: Isolate.immediate);
 

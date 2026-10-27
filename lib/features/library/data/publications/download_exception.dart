@@ -4,4 +4,4 @@ final class DownloadException implements Exception {
   final DownloadFailure failure;
 }
 
-enum DownloadFailure { storage, stagingBusy, invalidValidators }
+enum DownloadFailure { storage, stagingBusy, invalidValidators, tooLarge }

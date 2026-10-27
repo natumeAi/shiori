@@ -132,7 +132,13 @@ void main() {
       );
       await expectLater(
         h.service.download(h.key),
-        throwsA(isA<ParseException>()),
+        throwsA(
+          isA<DownloadException>().having(
+            (e) => e.failure,
+            'failure',
+            DownloadFailure.tooLarge,
+          ),
+        ),
       );
       expect(h.writers, isEmpty);
       expect(await h.parts(), isEmpty);
@@ -163,7 +169,13 @@ void main() {
       );
       await expectLater(
         h.service.download(h.key),
-        throwsA(isA<ParseException>()),
+        throwsA(
+          isA<DownloadException>().having(
+            (e) => e.failure,
+            'failure',
+            DownloadFailure.tooLarge,
+          ),
+        ),
       );
       expect(h.writers.single.bytes, 64);
       expect(emitted, lessThanOrEqualTo(112));

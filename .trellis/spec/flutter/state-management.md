@@ -342,6 +342,84 @@ Wrong: release a cover lease immediately after decode or on last-listener
 removal while a TickerMode handle retains the image. Correct: release it from
 ImageStreamCompleter.onDisposed so admission accounts for those pixels too.
 
+## Preparation controller and session worker (D5)
+
+### Scope / Trigger
+
+Use the generated preparation family for explicit book preparation/cancel/retry.
+State is handwritten orchestration infrastructure, separate from checked HTTP
+DTOs. No screen or reader-progress behavior is implied by ready.
+
+### Signatures
+
+```dart
+prepareBookServiceProvider(ServerSession session); // keep-alive
+sessionPublicationWorkerProvider(ServerSession session); // keep-alive lazy owner
+preparationControllerProvider(ServerSession session, BookKey key); // auto-dispose
+publicationContentChangesProvider(ServerSession session); // StreamProvider
+PreparationState PreparationController.build(ServerSession session, BookKey key);
+Future<void> PreparationController.prepare({bool refresh = false});
+void PreparationController.cancel();
+```
+
+### Contracts
+
+- Build returns PreparationIdle and subscribes to byte progress; it starts no
+  request. Explicit prepare yields Preparing -> Ready(PreparedBook) or
+  Failed(PrepareBookException). Received/total are nullable until known.
+- Controller methods consume cancellation and typed failure into state, so
+  Riverpod provider retries do not multiply preparation attempts. Retry is an
+  explicit prepare; refresh supersedes existing work and bypasses validators.
+- Capture a view lifetime and operation generation in every async method. Check
+  ref.mounted, lifetime, operation and session immediately before assignment.
+  Preparing/ready/progress listeners may synchronously cancel or dispose.
+- Cancel returns idle immediately, cancels shared book work and releases its
+  ready book. Disposal does the same without assigning state. Retirement
+  revokes the view and returns idle; late success/error cannot replace it.
+- Controller releases the old ready owner when beginning another prepare. S4
+  must acquire/verify an independent file lease before relying on it after that
+  transition. A summary remains detached; its file/resource owners do not.
+- SessionPublicationWorker closes on guard retirement, including a late spawn,
+  even if keep-alive providers still have listeners. It is declared outside
+  reader/data. Do not depend on view auto-disposal for session cleanup.
+- Content changes are guarded synchronous broadcast events and contain full
+  old/new identities; subscribe before prepare. StreamProvider adapts these
+  events, not replay/durability. Revalidate saved identity on every S4 open.
+- PrepareBookQueue persists across service/provider lifetimes. Logical cancel
+  finishes promptly; physical worker operations drain before the next staged
+  import. Provider invalidation cannot admit overlapping staged files.
+
+### Validation & Error Matrix
+
+| Transition | State / ownership |
+| --- | --- |
+| Build | idle, zero HTTP |
+| Prepare / chunk receipt | preparing, admitted byte count and nullable total |
+| Validated publish / usable 304 | ready, matching summary and file lease |
+| Recoverable failure | failed with sanitized typed reason |
+| Cancel / retirement | idle; no cancellation AsyncError or retry |
+| Dispose / stale callback | no assignment, owned lease released |
+
+### Good / Base / Bad Cases
+
+Base: idle until the UI explicitly prepares. Good: a retained old-session family
+is idle after activation changes. Bad: a late first-A result cannot update a
+later-A view merely because their BookKeys compare equal.
+
+### Tests Required
+
+Keep family listeners alive with real providers/fake HTTP, real SQLite and
+worker. Assert byte updates, ready/failed/cancel/retry, duplicate coalescing,
+refresh supersession, disposal, retirement during download and actual import,
+A -> B -> A, lease/staging accounting and no late content/state event.
+
+### Wrong vs Correct
+
+Wrong: store RequestCancelled in AsyncError or check only serverKey. Correct:
+consume cancellation, check session generation plus view/operation lifetime and
+release abandoned results. Wrong: hold the worker's staged handle across rename.
+Correct: drain/detach before publication; S4 reopens the leased immutable path.
+
 ## Forbidden
 
 - Hand-written providers (`final xProvider = Provider(...)`). Use codegen.

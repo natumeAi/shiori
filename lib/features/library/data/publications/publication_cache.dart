@@ -262,6 +262,40 @@ final class PublicationCache {
     }
   }
 
+  /// Publication and lease acquisition share admission with eviction. No other
+  /// cache user can evict the new head between commit and its first lease.
+  Future<PublicationLease> publishLeased(
+    PublicationAttempt attempt,
+    StagedDownload staged, {
+    required int parserVersion,
+    required int canonicalVersion,
+  }) async {
+    try {
+      return await _serialize(() async {
+        await _publish(
+          attempt,
+          staged,
+          parserVersion: parserVersion,
+          canonicalVersion: canonicalVersion,
+        );
+        attempt.checkCurrent();
+        final lease = await _leaseHead(
+          attempt.key,
+          touch: false,
+          check: attempt.checkCurrent,
+        );
+        if (lease == null) {
+          throw const PublicationCacheException(
+            PublicationCacheFailure.invalidGeneration,
+          );
+        }
+        return lease;
+      });
+    } finally {
+      if (staging.owns(staged.file)) await staged.file.discard();
+    }
+  }
+
   /// Future covers hold this charge until their bytes are deleted. They are
   /// outside publications' measured subtree; do not release after writing them.
   Future<CacheReservation> reserveBytes(int bytes) =>

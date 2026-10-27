@@ -45,6 +45,7 @@ final class PublicationDownloadService {
     LocalPublication? local,
     bool refresh = false,
     CancelToken? cancelToken,
+    void Function(int received, int? total)? onReceiveProgress,
   }) {
     if (key.serverKey != transport.session.serverKey ||
         (local != null && local.key != key)) {
@@ -61,7 +62,7 @@ final class PublicationDownloadService {
       return previous.future;
     }
     previous?.cancel.cancel();
-    final operation = _DownloadOperation(++_generation);
+    final operation = _DownloadOperation(++_generation, onReceiveProgress);
     _pending[key] = operation;
     cancelToken?.whenCancel.then((_) => operation.cancel.cancel());
     operation.future = staging
@@ -108,6 +109,14 @@ final class PublicationDownloadService {
             ifNoneMatch: etag,
             ifModifiedSince: modified,
             cancelToken: operation.cancel,
+            onReceiveProgress: (received, total) {
+              check();
+              if (received > limits.maxArchiveBytes ||
+                  (total != null && total > limits.maxArchiveBytes)) {
+                throw const DownloadException(DownloadFailure.tooLarge);
+              }
+              operation.onReceiveProgress?.call(received, total);
+            },
             consume: (chunks) async {
               check();
               owned = await staging.create();
@@ -175,8 +184,9 @@ final class PublicationDownloadService {
 }
 
 final class _DownloadOperation {
-  _DownloadOperation(this.generation);
+  _DownloadOperation(this.generation, this.onReceiveProgress);
   final int generation;
+  final void Function(int, int?)? onReceiveProgress;
   final CancelToken cancel = CancelToken();
   late Future<DownloadResult> future;
 }

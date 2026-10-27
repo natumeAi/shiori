@@ -371,3 +371,115 @@ assertion; both were corrected before the successful full gates above.
 
 No remaining D2b implementation issue. Broader S3 product/device/LAN acceptance
 and other phases remain with their owners; these host tests do not close them.
+
+Phase D / Phase F S4-contract handoff item: [Concrete S4 APIs, lifetimes, migrations and retained gates](s4-handoff.md).
+
+## D5 prepare-book orchestration
+
+Implemented and host-verified on 2026-10-27 from `e1d652c`, branch
+`ios-build/s3-runtime-server`. This session implemented directly, without
+sub-agents, git index/branch changes, commits or pushes. Screens/routes/l10n,
+iOS/CI/dependencies, fixtures/vectors, task planning/context files and other
+checkouts were not edited. The two Flutter specs document the new contracts.
+
+### Preparation sequence and ownership
+
+PrepareBookService captures the active ServerSession and a per-book generation.
+Normal duplicates share a Future/result; explicit refresh supersedes previous
+work and bypasses validators. A container-owned PrepareBookQueue holds the single
+staging/import slot through physical worker completion and cleanup across sessions.
+BeginPreparation pins the prior head before detail/download/import. Detail 404
+is typed unavailable. The current head supplies validators only after version
+compatibility, length and full incremental SHA-256 verification. After 304 the
+file is reverified again; local loss triggers bounded unconditional recovery.
+
+Staged bytes become ContentIdentity, then pass real worker prepare before cache
+publication. Worker detach drains canceled physical work and releases the staging
+handle before rename. PublishLeased serializes validated publication and new-head
+acquisition with eviction. PreparedBook returns identity, detached summary,
+layout facts and a lease. S4 reopens its immutable leased path before preload.
+Valid fixed/RTL/mixed/vertical facts remain independent of rendering capability.
+
+Every async boundary and publication checks session/operation ownership.
+Logical cancel settles callers silently; the fallback pin stays held until the
+worker physically detaches, then cleanup releases attempt pins/abandoned leases
+and removes only this attempt's staging. Ready owners are released on retirement.
+A dispatched verified SQLite commit may still finish for its server namespace;
+retired callbacks cannot expose ready/content events or write reader state.
+
+### Controller and events
+
+Generated preparationControllerProvider(session, BookKey) exposes idle,
+preparing(receivedBytes?, totalBytes?), ready(PreparedBook), failed(typed error),
+with explicit prepare/refresh/retry/cancel. Build starts no HTTP. Captured view
+and operation lifetimes protect rebuild/dispose/synchronous-listener races.
+Cancel returns idle; cancellation is never a provider error or automatic retry.
+
+The service owns guarded synchronous ContentChange broadcasts; the generated
+publicationContentChangesProvider(session) adapts them for S4. First publication
+has null previous identity; replacement includes both full identities. Matching
+304 and same-identity 200 emit none. This is transient notification, not an
+outbox. S4 compares identities on open, re-proves CFI and retains unresolvable
+checkpoints/events. No position/activity/goals or remote mutation API was added.
+
+SessionPublicationWorker is lazy and session-scoped, declared in library wiring
+so reader data stays provider-free. Retirement also closes a late spawn; failed
+spawn can retry. Closed workers are replaceable on the next explicit attempt.
+
+### Small D1-D4 integration hooks
+
+| Existing boundary | Change and reason |
+| --- | --- |
+| D1 SessionTransport.getFile | Optional actual-byte/nullable-total progress hook, including over-limit evidence before rejecting headers/chunks; core keeps no feature imports. |
+| D1 PublicationDownloadService / DownloadFailure | Forward guarded progress; typed tooLarge for declared/actual compressed overflow. Two existing limit tests now assert that stronger type; all safety assertions remain. |
+| D2a PublicationCache | Add publishLeased so commit and first lease cannot race eviction; existing publish API remains. |
+| D3 worker client/protocol/runtime | Add detach request/ack to release the archive while retaining its session isolate; canceled operations retain their physical slot until the late result drains. |
+
+No D2b or D4 resource implementation was changed. D4 is exercised by reopening
+the published leased file and preloading through ReaderResourceSource.
+
+### Tests and final commands
+
+27 new tests use generated EPUB bytes, real SQLite worker/store, real publication
+worker, fake HTTP adapter and temporary Support/Caches directories. They cover
+first 200/ready; conditional 304 without downloaded bytes; unchanged forced 200;
+digest changes/events and readable older leases; malformed EPUB/old head;
+detail 404/retry; missing/corrupt local heads; loss during 304 with one recovery;
+cache busy/fallback pin; rename/storage and declared/chunked size errors;
+network classification; fixed/RTL facts; worker-preload resource handoff;
+duplicates/refresh; cancel during download/import; A -> B -> A; view disposal;
+retirement cleanup; synchronous notification cancellation/retirement; foreign
+BookKey rejection; concurrent/retired/failed worker spawn. A paused real 304 import
+proves cancellation retains its fallback pin until detach, then permits eviction.
+All successful outputs stay inside injected Caches/Application Support; Documents
+resolution throws. Existing GET-only runtime/static inventory passes unchanged.
+
+| Command | Final result |
+| --- | --- |
+| `dart run build_runner build` | PASS; four new generated provider files; existing generated contents unchanged. |
+| `dart format` on changed/new Dart files | PASS; 26 files formatted. |
+| `flutter analyze` | PASS; no issues. |
+| Focused four D5 test files (`flutter test --no-pub ... --reporter expanded`) | PASS; 27 passed, zero skipped/failed. |
+| Publication/network/worker/GET inventory regression run | PASS; 414 passed before five additional final lifecycle/spawn tests. |
+| `flutter test --reporter expanded` | PASS; 2,082 passed, one existing optional skip, zero failed. |
+| `dart run tool/ci/check_reader_fixtures.dart` | PASS; manifests and EPUB privacy guard, exit 0. |
+| `git diff --check` and forbidden-path scope review | PASS. |
+
+Logs are ignored `build/d5-*.log`. The full suite includes the available local
+oracle/layout checks; no private input/output was added to tracked artifacts.
+The single skip is native CFI export without SHIORI_NATIVE_CFI_OUT.
+An initial analysis warning (unused import/braces) and two existing limit-test
+type assertions were corrected. The first full run passed 2,081 tests; final
+review tightened the cancellation pin lifetime and added its regression, then
+reran build/format/analyze/full suite/fixture gates to the final totals above.
+
+### Remaining boundaries
+
+No known D5 implementation blocker remains. The handoff records exact public
+types/APIs, release rules, v2 schema ownership and later S4 migrations, resource
+budget semantics and all seven retained S2 conditional S4 items. S4 coordinates
+session worker ownership with preparation, consumes resource owners once and
+re-proves positions; product rendering/checkpoint/outbox work remains S4-owned.
+Real iPhone product/LAN permission/HTTP-prefix/update/lifecycle evidence and
+near-limit peak memory/no OS termination remain owed. These host gates do not
+complete S3-AC10 or waive any S2 resource/performance/device condition.
