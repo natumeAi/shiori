@@ -2,7 +2,7 @@ part of 'cover_loader.dart';
 
 extension _CoverDecode on CoverLoader {
   Future<_DecodedCover> _decodeAndCache(
-    (ServerSession, String) key,
+    _DecodedKey key,
     Uint8List bytes,
   ) async {
     ui.ImmutableBuffer? buffer;
@@ -18,10 +18,20 @@ extension _CoverDecode on CoverLoader {
       final width = descriptor.width;
       final height = descriptor.height;
       if (width < 1 || height < 1) throw CoverFailure.nonImage;
-      final pixels = decodedBudget ~/ 4;
+      final pixels =
+          math.min(decodedBudget, CoverLoader.individualDecodedLimit) ~/ 4;
       final scale = math.min(1.0, math.sqrt(pixels / (width * height)));
       var targetWidth = math.max(1, (width * scale).floor());
       var targetHeight = math.max(1, (height * scale).floor());
+      final maxWidth = key.$3;
+      if (maxWidth != null && targetWidth > maxWidth) {
+        // Display-sized pixels keep a screen of covers within the LRU.
+        targetHeight = math.max(
+          1,
+          (targetHeight * maxWidth / targetWidth).round(),
+        );
+        targetWidth = maxWidth;
+      }
       if (targetWidth * targetHeight > pixels) {
         if (targetWidth >= targetHeight) {
           targetWidth = pixels ~/ targetHeight;

@@ -234,8 +234,8 @@ Future<StoredSnapshot?> LibrarySnapshotCache.read(ServerKey key);
 Future<void> LibrarySnapshotCache.replace(ServerKey key, StoredSnapshot value,
     {required void Function() checkActive});
 Future<BookDetailResult?> bookDetail(Ref ref, ServerSession session, BookKey key);
-Future<CoverLoadResult> CoverLoader.load(String? serverCoverPath);
-SessionCoverImage(CoverLoader loader, String? serverCoverPath);
+Future<CoverLoadResult> CoverLoader.load(String? serverCoverPath, {int? maxWidth});
+SessionCoverImage(CoverLoader loader, String? serverCoverPath, {int? maxWidth});
 void CoverLease.release();
 ```
 
@@ -287,15 +287,23 @@ values, not wire DTOs. HTTP DTOs retain checked generated decoding.
   before admitting bytes; HTML/random bytes never enter either cache. The
   `_readEncoded` remains the bounded network source; D2b checks the shared disk
   sub-budget before that source. Disk writes follow successful image decoding.
-- The decoded LRU has **16 MiB**, accounting RGBA pixels and reservations before
-  decoding. Read dimensions with ImageDescriptor, downsample larger images to
-  fit before instantiating the codec, keep only the first frame, and dispose the
-  codec/descriptor/buffer. Active CoverLeases pin entries; evict oldest unpinned
-  entries only. If pinned/reserved bytes prevent admission, return cacheBusy.
-- Both memory cache keys include ServerSession (ServerKey + generation) and path.
-  SessionCoverImage uses this loader's LRU directly, bypassing global ImageCache
-  whose live images are outside its byte quota. Use the provider directly;
-  loader owns pixel sizing. The image stream clones a display handle, retains
+- The decoded LRU has **128 MiB**, accounting RGBA pixels and reservations
+  before decoding. Read dimensions with ImageDescriptor and, before
+  instantiating the codec, downsample to `maxWidth` physical pixels (never
+  upscale; proportional height) and to at most **16 MiB** of pixels per cover.
+  Keep only the first frame and dispose the codec/descriptor/buffer. Active
+  CoverLeases pin entries; evict oldest unpinned entries only. If
+  pinned/reserved bytes prevent admission, return cacheBusy.
+- BookCover passes `ceil(width * devicePixelRatio)` as `maxWidth` and picks
+  `coverThumbnailUrl` (lan-reader's 384 px WebP) when that width is at most
+  384, otherwise `coverThumbnail2xUrl` (768 px), then the other thumbnail, then
+  `coverUrl`.
+- Both memory cache keys include ServerSession (ServerKey + generation) and path;
+  the decoded key also includes `maxWidth`, so one download can back several
+  display sizes. SessionCoverImage's key includes `maxWidth` and it uses this
+  loader's LRU directly, bypassing global ImageCache whose live images are
+  outside its byte quota. Use the provider directly; the loader owns pixel
+  sizing. The image stream clones a display handle, retains
   its lease until onDisposed (no listeners or keep-alive handles remain), and
   releases unused late results. TickerMode's handle still pins pixels.
 - `onRetire` clears encoded/decoded maps, pending lookup state and owned image
@@ -338,6 +346,9 @@ late A -> B -> A success/error, and repository/provider detail cancellation.
 Cover tests assert actual encoded boundaries/upstream abort, invalid images,
 downsampled pixels/reservations, LRU ordering, pinning/cacheBusy, same-path
 coalescing, session key/generation isolation, cleanup and Image.errorBuilder.
+They also assert display-width decode per `maxWidth` over one download, the
+per-cover pixel ceiling, BookCover's thumbnail choice, and that the default
+budgets keep 30 concurrent 768 px covers loaded at list width.
 `test/s3_get_only_inventory_test.dart` pins the five route templates, rejects
 list/catalog/folders/reading/goals/statistics/writes, drives all network owners
 through a recording adapter, and scans every lib Dart file for Dio write methods,
@@ -352,6 +363,10 @@ Wrong: a `whenComplete` callback returns `_pending.remove(key)` when the value
 is that same pending Future; it waits on itself. Correct: remove inside a void
 block and test coalesced completion. Wrong: treat global ImageCache's keep-alive
 quota as a bound on live covers. Correct: account pinned decoded leases too.
+Wrong: decode covers at source width and size the LRU with 1×1 test images;
+on a device, 768 px thumbnails pinned by visible rows fit only four at a time
+and the rest stayed cacheBusy. Correct: decode at the displayed width and test
+with real thumbnail dimensions.
 
 ## Removable cover disk cache (D2b)
 

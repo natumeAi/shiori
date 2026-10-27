@@ -73,6 +73,37 @@ void main() {
       SessionCoverImage(a, '/covers/x'),
       isNot(SessionCoverImage(a2, '/covers/x')),
     );
+    expect(
+      SessionCoverImage(a, '/covers/x', maxWidth: 144),
+      SessionCoverImage(a, '/covers/x', maxWidth: 144),
+    );
+    expect(
+      SessionCoverImage(a, '/covers/x', maxWidth: 144),
+      isNot(SessionCoverImage(a, '/covers/x', maxWidth: 360)),
+    );
+  });
+
+  test('image stream decodes at the requested display width', () async {
+    final bytes = await png(width: 8, height: 4);
+    final loader = makeLoader(
+      active,
+      FakeServerAdapter((_, _) => imageBody(bytes)),
+    );
+    final stream = SessionCoverImage(
+      loader,
+      '/covers/a',
+      maxWidth: 2,
+    ).resolve(ImageConfiguration.empty);
+    final ready = Completer<ImageInfo>();
+    final listener = ImageStreamListener(
+      (info, _) => ready.complete(info),
+      onError: ready.completeError,
+    );
+    stream.addListener(listener);
+    final info = await ready.future;
+    expect((info.image.width, info.image.height), (2, 1));
+    stream.removeListener(listener);
+    info.dispose();
   });
 
   test('image stream pins pixels, bypasses global cache, and unpins on listener removal', () async {

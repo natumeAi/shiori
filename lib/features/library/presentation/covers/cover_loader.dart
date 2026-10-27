@@ -19,13 +19,18 @@ import 'package:shiori/features/servers/data/server_activation_dependencies.dart
 part 'cover_loader.g.dart';
 part 'cover_loader_decode.dart';
 
+typedef _CoverKey = (ServerSession, String);
+
+/// Decoded pixels also depend on the requested display width.
+typedef _DecodedKey = (ServerSession, String, int?);
+
 /// Session-owned memory caches backed by removable, server-namespaced covers.
 final class CoverLoader {
   CoverLoader(
     this._transport,
     SessionPublicationGuard guard, {
     this.encodedBudget = defaultBudget,
-    this.decodedBudget = defaultBudget,
+    this.decodedBudget = defaultDecodedBudget,
     this._decodeFrame,
     this.diskStore,
   }) : _scope = LibrarySessionScope(_transport.session, guard) {
@@ -36,6 +41,10 @@ final class CoverLoader {
   }
 
   static const defaultBudget = CoverDiskStore.defaultLimit;
+  static const defaultDecodedBudget = 128 * 1024 * 1024;
+
+  /// Pixel ceiling for one decoded cover, whatever width was requested.
+  static const individualDecodedLimit = 16 * 1024 * 1024;
   static const individualLimit = CoverDiskStore.individualLimit;
   final SessionTransport _transport;
   final LibrarySessionScope _scope;
@@ -44,9 +53,9 @@ final class CoverLoader {
   final Future<CoverDiskStore?> Function()? diskStore;
   // Allows lifecycle tests to hold a real native frame until retirement.
   final Future<ui.FrameInfo> Function(ui.Codec)? _decodeFrame;
-  final _encoded = <(ServerSession, String), Uint8List>{};
-  final _decoded = <(ServerSession, String), _DecodedCover>{};
-  final _pending = <(ServerSession, String), Future<_DecodedCover>>{};
+  final _encoded = <_CoverKey, Uint8List>{};
+  final _decoded = <_DecodedKey, _DecodedCover>{};
+  final _pending = <_DecodedKey, Future<_DecodedCover>>{};
   void Function()? _unregister;
   int _encodedBytes = 0;
   int _decodedBytes = 0;
@@ -61,7 +70,12 @@ final class CoverLoader {
   int get encodedCount => _encoded.length;
   int get decodedCount => _decoded.length;
 
-  Future<CoverLoadResult> load(String? serverCoverPath) async {
+  /// [maxWidth] is the displayed width in physical pixels; null keeps the
+  /// source width within [individualDecodedLimit].
+  Future<CoverLoadResult> load(String? serverCoverPath, {int? maxWidth}) async {
+    if (maxWidth != null && maxWidth < 1) {
+      throw ArgumentError.value(maxWidth, 'maxWidth');
+    }
     try {
       _scope.check();
       if (serverCoverPath == null || serverCoverPath.isEmpty) {
@@ -72,11 +86,12 @@ final class CoverLoader {
       } on FormatException {
         return const CoverPlaceholder(CoverFailure.invalidPath);
       }
-      final key = (session, serverCoverPath);
+      final path = (session, serverCoverPath);
+      final key = (session, serverCoverPath, maxWidth);
       var entry = _decoded.remove(key);
       if (entry != null) _decoded[key] = entry;
-      final encoded = _encoded.remove(key);
-      if (encoded != null) _encoded[key] = encoded;
+      final encoded = _encoded.remove(path);
+      if (encoded != null) _encoded[path] = encoded;
       final _DecodedCover resolved =
           entry ??
           await _scope.wait<_DecodedCover>(
@@ -99,10 +114,11 @@ final class CoverLoader {
     }
   }
 
-  Future<_DecodedCover> _fetch((ServerSession, String) key) async {
-    final disk = _encoded.containsKey(key) ? null : await _disk();
+  Future<_DecodedCover> _fetch(_DecodedKey key) async {
+    final path = (key.$1, key.$2);
+    final disk = _encoded.containsKey(path) ? null : await _disk();
     _scope.check();
-    var cached = _encoded[key];
+    var cached = _encoded[path];
     var fromDisk = false;
     if (cached == null && disk != null) {
       cached = await _bestEffort<Uint8List?>(() => disk.read(_scope, key.$2));
@@ -121,12 +137,12 @@ final class CoverLoader {
       fromDisk = false;
     }
     _scope.check();
-    if (!_encoded.containsKey(key) && bytes.length <= encodedBudget) {
+    if (!_encoded.containsKey(path) && bytes.length <= encodedBudget) {
       while (_encodedBytes + bytes.length > encodedBudget) {
         _encodedBytes -= _encoded.remove(_encoded.keys.first)!.length;
       }
       _scope.publish(() {
-        _encoded[key] = bytes;
+        _encoded[path] = bytes;
         _encodedBytes += bytes.length;
       });
     }

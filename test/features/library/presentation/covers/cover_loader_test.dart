@@ -215,6 +215,76 @@ void main() {
     release(result);
   });
 
+  test(
+    'maxWidth decodes display-sized pixels per width over shared encoded bytes',
+    () async {
+      final bytes = await png(width: 768, height: 1097);
+      setup((_, _) => imageBody(bytes));
+      Future<(int, int)> size(int width) async {
+        final result =
+            await loader.load('/covers/t.webp', maxWidth: width) as CoverLoaded;
+        final image = result.lease.image;
+        release(result);
+        return (image.width, image.height);
+      }
+
+      expect(await size(144), (144, 206));
+      expect(await size(360), (360, 514));
+      expect(await size(1000), (768, 1097)); // Never upscales.
+      expect(await size(144), (144, 206));
+      expect(adapter.requests.length, 1);
+      expect(loader.encodedCount, 1);
+      expect(loader.decodedCount, 3);
+      await expectLater(
+        loader.load('/covers/t.webp', maxWidth: 0),
+        throwsArgumentError,
+      );
+    },
+  );
+
+  test(
+    'default budgets keep a whole folder of 768 px thumbnails visible',
+    () async {
+      // Device regression: undecoded-width 768 px covers fit only four at once.
+      final bytes = await png(width: 768, height: 1097);
+      adapter = FakeServerAdapter((_, _) => imageBody(bytes));
+      final transport = SessionTransport(active, adapter: adapter);
+      loader = CoverLoader(transport, guard);
+      addTearDown(() {
+        loader.dispose();
+        transport.dispose();
+      });
+      expect(loader.decodedBudget, 128 * 1024 * 1024);
+      expect(loader.encodedBudget, 16 * 1024 * 1024);
+      expect(CoverLoader.individualDecodedLimit, 16 * 1024 * 1024);
+      final results = await Future.wait([
+        for (var i = 0; i < 30; i++)
+          loader.load('/covers/b$i.webp', maxWidth: 144),
+      ]);
+      expect(results, everyElement(isA<CoverLoaded>()));
+      expect(loader.decodedBytes, 30 * 144 * 206 * 4);
+      results.forEach(release);
+    },
+  );
+
+  test(
+    'unbounded width still caps one cover at the individual decoded limit',
+    () async {
+      final bytes = await png(width: 2100, height: 2100);
+      setup(
+        (_, _) => imageBody(bytes),
+        decoded: CoverLoader.defaultDecodedBudget,
+      );
+      final result = await loader.load('/covers/huge') as CoverLoaded;
+      expect(
+        result.lease.image.width * result.lease.image.height * 4,
+        lessThanOrEqualTo(CoverLoader.individualDecodedLimit),
+      );
+      expect(result.lease.image.width, lessThan(2100));
+      release(result);
+    },
+  );
+
   test('concurrent same-path requests coalesce and retirement clears all owned state', () async {
     final bytes = await png();
     setup((_, _) => imageBody(bytes));

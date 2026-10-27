@@ -394,3 +394,54 @@ No commit, staging, push, branch switch, task lifecycle change, oracle fixture
 edit or reference-checkout edit occurred. The temporary probe remains untouched.
 The fix is host-validated; a rebuilt app/live-device retry remains external
 acceptance evidence, and the root analyzer result remains affected by that probe.
+
+## Device-run fix: display-width cover decoding
+
+2026-10-27. On the first app build against the owner's lan-reader, a folder of
+10+ books showed only about four covers at a time, and a different subset after
+scrolling away and back. Read-only analysis of the saved live snapshot (ignored
+`local-evidence/`, no titles copied here) found all 281 books carry both
+thumbnails. Pinned lan-reader `server/src/services/coverStorage.ts:28-29,318-323`
+renders them as 384 px and 768 px wide WebP (`fit: 'inside'`,
+`withoutEnlargement: false`). BookCover requested the 768 px thumbnail and the
+loader decoded it at source size: 768x1097x4 ~= 3.37 MB of RGBA per cover
+against a 16 MiB decoded LRU. Visible rows pin their leases, so the fifth
+concurrent decode hit `cacheBusy` and Image.errorBuilder kept the placeholder;
+which four won depended on response order. A temporary host repro with the
+default budget loading twelve 768x1097 covers returned four `CoverLoaded` and
+eight `cacheBusy` (13.5 MB decoded). Host tests had only used 1x1 images.
+
+Changes:
+
+- BookCover passes `ceil(width * devicePixelRatio)` as `maxWidth` and picks
+  `coverThumbnailUrl` (384 px) when that width is at most 384, falling back to
+  the 768 px thumbnail and then `coverUrl`. List rows (48 pt) and the detail
+  cover (120 pt) on a 3x phone both use the 384 px file.
+- CoverLoader decodes to `maxWidth` (proportional height, never upscaled) and
+  caps any single cover at 16 MiB of pixels. Decoded/pending keys add
+  `maxWidth`; the encoded LRU and disk store stay keyed by path, so one
+  download backs several display sizes.
+- The decoded LRU default rises from 16 MiB to 128 MiB on the owner's request.
+  Encoded memory (16 MiB) and disk cover (16 MiB) budgets are unchanged. A
+  48 pt list cover now decodes to 144x206x4 ~= 116 KiB, so the whole 281-book
+  library at list size is ~33 MB; 128 MiB is a ceiling, not an allocation.
+- `design.md` section 7 and the data-layer spec record the new budget, width
+  keying and thumbnail choice. No memory-pressure eviction exists yet: the
+  loader bypasses ImageCache, so iOS memory warnings do not shrink it.
+
+Tests: loader decode sizes per width over one request (144x206, 360x514,
+768x1097 for 1000, cached repeat), `maxWidth: 0` rejected, per-cover pixel cap
+with an unbounded 2100x2100 image, and a regression where default budgets keep
+30 concurrent 768x1097 covers loaded at 144 px. SessionCoverImage keys and
+decodes by `maxWidth`; BookCover widget tests pin the thumbnail choice and
+width for 48/120/200 pt and a missing small thumbnail.
+
+| Command | Result |
+| --- | --- |
+| `dart format --output=none --set-exit-if-changed lib test` | PASS; 526 files, zero changes |
+| `flutter analyze lib test` | PASS; no issues |
+| `flutter test test/features/library test/s3_get_only_inventory_test.dart` (before new tests) | PASS; 502 tests |
+| `flutter test` | PASS; 2220 tests, 2 existing optional skips |
+| `git diff --check` | PASS |
+
+Host-validated only; a rebuilt app on the iPhone remains the acceptance check.

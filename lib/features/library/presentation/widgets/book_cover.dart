@@ -17,8 +17,12 @@ class BookCover extends ConsumerWidget {
   final SnapshotBook book;
   final double width;
 
+  /// lan-reader renders every cover as 384 px and 768 px wide WebP thumbnails.
+  static const smallThumbnailWidth = 384;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final pixelWidth = (width * MediaQuery.devicePixelRatioOf(context)).ceil();
     return Semantics(
       image: true,
       label: context.l10n.libraryCoverLabel(book.title),
@@ -30,9 +34,13 @@ class BookCover extends ConsumerWidget {
             key: ValueKey((session, book.id)),
             image: SessionCoverImage(
               ref.watch(coverLoaderProvider(session)),
-              book.coverThumbnail2xUrl ??
+              (pixelWidth <= smallThumbnailWidth
+                      ? book.coverThumbnailUrl
+                      : null) ??
+                  book.coverThumbnail2xUrl ??
                   book.coverThumbnailUrl ??
                   book.coverUrl,
+              maxWidth: pixelWidth,
             ),
             fit: BoxFit.contain,
             errorBuilder: (context, error, stack) => const _CoverPlaceholder(),
