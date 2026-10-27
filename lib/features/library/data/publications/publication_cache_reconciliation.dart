@@ -38,5 +38,23 @@ extension _PublicationReconciliation on PublicationCache {
     }
     _checkOpen();
     await staging.cleanupAbandoned();
+    _checkOpen();
+    // Covers share admission's queue but never use _reserve, which can evict
+    // publication generations. Their retained file reservations survive sessions.
+    final covers = budget.configureSubBudget(
+      'covers',
+      directories: staging.directories,
+      limit: CacheBudget.coverLimit,
+      individualLimit: CacheBudget.coverIndividualLimit,
+      serialize: _serialize,
+      reserve: (bytes) async {
+        final used = await _files.usedBytes();
+        _checkOpen();
+        return budget.fits(bytes, used)
+            ? budget.reserve(bytes, usedBytes: used)
+            : null;
+      },
+    );
+    await covers.reconcileInQueue();
   }
 }

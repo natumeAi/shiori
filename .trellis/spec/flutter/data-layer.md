@@ -206,7 +206,8 @@ decoded body, then persist the original `response.rawJsonText` from that respons
 After activation, consume the complete library through a session-keyed
 LibrarySnapshotRepository and LibrarySnapshotController. Covers require Flutter
 decode/resource ownership and live under `library/presentation/covers`, outside
-pure DTO/storage code. No product screen or disk cover cache is provided here.
+pure DTO/storage code. D2b adds removable cover persistence below; no product
+screen is provided here.
 
 ### Signatures
 
@@ -272,14 +273,14 @@ values, not wire DTOs. HTTP DTOs retain checked generated decoding.
 - CoverLoader uses bounded SessionTransport.getBytes with an **8 MiB inclusive**
   individual ceiling and a **16 MiB encoded LRU**. Validate actual image decoding
   before admitting bytes; HTML/random bytes never enter either cache. The
-  `_readEncoded` source seam is reserved for Phase D's shared disk quota; C2
-  does not read/write disk cover files or claim a persistent cache budget.
+  `_readEncoded` remains the bounded network source; D2b checks the shared disk
+  sub-budget before that source. Disk writes follow successful image decoding.
 - The decoded LRU has **16 MiB**, accounting RGBA pixels and reservations before
   decoding. Read dimensions with ImageDescriptor, downsample larger images to
   fit before instantiating the codec, keep only the first frame, and dispose the
   codec/descriptor/buffer. Active CoverLeases pin entries; evict oldest unpinned
   entries only. If pinned/reserved bytes prevent admission, return cacheBusy.
-- Both cache keys include ServerSession (ServerKey + generation) and cover path.
+- Both memory cache keys include ServerSession (ServerKey + generation) and path.
   SessionCoverImage uses this loader's LRU directly, bypassing global ImageCache
   whose live images are outside its byte quota. Use the provider directly;
   loader owns pixel sizing. The image stream clones a display handle, retains
@@ -339,6 +340,114 @@ Wrong: a `whenComplete` callback returns `_pending.remove(key)` when the value
 is that same pending Future; it waits on itself. Correct: remove inside a void
 block and test coalesced completion. Wrong: treat global ImageCache's keep-alive
 quota as a bound on live covers. Correct: account pinned decoded leases too.
+
+## Removable cover disk cache (D2b)
+
+### Scope / Trigger
+
+`features/library/data/covers/cover_disk_store.dart` maps validated server cover
+paths and session ownership onto `core/storage/cache_budget.dart`'s disk
+sub-budget. Flutter decoding stays in presentation. Publication reconciliation
+configures the shared admission queue and reconciles covers before returning.
+The loader provider lazily resolves that cache; a storage-open failure falls
+back to memory/network without failing the image.
+
+### Signatures
+
+```dart
+CoverDiskStore.fromBudget(CacheBudget budget);
+Future<Uint8List?> CoverDiskStore.read(LibrarySessionScope scope, String path);
+Future<bool> CoverDiskStore.write(LibrarySessionScope scope, String path, Uint8List bytes);
+Future<void> CoverDiskStore.invalidate(LibrarySessionScope scope, String path);
+Future<void> CoverDiskStore.reconcile();
+CacheDiskSubBudget? CacheBudget.subBudget(String name);
+CacheDiskSubBudget CacheBudget.configureSubBudget(String name, {
+  required AppDirectories directories, required int limit, required int individualLimit,
+  required Future<CacheReservation?> Function(int) reserve,
+  required Future<T> Function<T>(Future<T> Function()) serialize,
+});
+Future<void> CacheDiskSubBudget.reconcileInQueue(); // owner already holds queue
+```
+
+### Contracts
+
+- Files live only under `<Caches>/shiori/v1/covers/<server SHA-256>/
+  <SHA-256 of UTF-8 deployment-relative cover path including query>.cache`.
+  ServerEndpoint.cover validates paths before hashing. No titles, filenames,
+  supplied path components or origins authorize filesystem I/O. Temp files use
+  exclusive random 128-bit `.part` names in the same generated server directory.
+  Flush/close their encoded bytes, then rename atomically on that filesystem.
+- Disk covers share a **16 MiB** encoded sub-budget across all servers, inside
+  the shared **512 MiB** cap. Individual files are **8 MiB inclusive**. Existing
+  memory encoded/decoded budgets remain 16 MiB each; decoded leases still pin.
+  The byte counts are accounting bounds, not device/process-RSS measurements.
+- Every cover read/write/eviction shares publication admission's serial queue.
+  The cover callback measures publication bytes and uses budget.fits/reserve
+  directly; it never calls publication `_reserve` or `reserveBytes`. Evict only
+  the oldest cover files until the sub-budget/shared reservation fits. If it
+  still cannot fit, skip persistence and return the successfully decoded image.
+- Charge encoded bytes before creating/writing a temp, and retain the charge
+  for the full persisted lifetime. Release only after deletion or confirmed
+  absence. Failed cleanup retains its charge and counts toward the sub-budget
+  until reconciliation removes it. Budget-owned sub-budget state survives
+  publication service invalidation, rebinding its queue/admission callbacks.
+- Loader order is decoded/encoded memory -> disk -> session transport GET.
+  Read only regular, registered files whose length matches their charge and
+  stays within both limits; also bound actual streamed bytes before accumulation.
+  Invalid lengths/unregistered external files are removed. Decode disk bytes
+  through the same native image path; nonImage deletes the file and performs
+  one network fetch. Validate successful network decode before write-through.
+  Disk failures are best effort and do not hide a successfully fetched image.
+- Disk LRU follows writes/reads, retaining map order in-process and modification
+  times across restart, with stable path ties. Memory hits need no disk access.
+  Startup removes stray regular files/temps and invalid lengths only below this
+  exact root and its generated server directories. Follow no directory/file
+  links; never visit publication, staging, Documents or durable storage here.
+  Enforce the cover sub-budget and register retained charges before publication
+  admission. If shared capacity is insufficient, discard covers, preserving books.
+- All results/writes check the captured full session. Retirement/disposal clears
+  memory and cancels pending admissions/writes, preserving completed disk files
+  in their server namespace. Own in-flight files are deleted and reservations
+  released after outstanding filesystem I/O finishes. The controllable
+  beforeRename test boundary races retirement, without leaving a temp/charge.
+  Late callbacks cannot publish into a later activation of the same server.
+
+### Validation & Error Matrix
+
+| Condition | Result |
+| --- | --- |
+| Valid disk hit | Decode and lease; zero network requests |
+| Missing/invalid-length/unregistered disk file | Miss; remove invalid bytes and fetch |
+| Disk bytes cannot decode | Delete, one network fetch; persist only valid replacement |
+| Cover/shared capacity unavailable | Skip persistence; decoded image succeeds |
+| Disk write/rename/open failure | Best-effort memory/network; own temp cleanup |
+| Session retired during write | Silent cancellation; clean own files/charge after I/O |
+| Restart or provider replacement | Restore/preserve charges before admitting books |
+
+### Good / Base / Bad Cases
+
+Base: first network decode persists; a cold loader reuses disk without HTTP.
+Good: A -> B -> A reuses A's disk namespace while rejecting late first-A work.
+Bad: a cover write evicts an unleased publication, or releases its reservation
+immediately after rename and admits more than the shared disk cap.
+
+### Tests Required
+
+Use temporary Caches and the real SQLite/publication owner. Assert cold disk hit
+without HTTP, decode-corruption replacement, cross-server same-path separation,
+sub-budget read-touch LRU, startup temp/length cleanup and sibling sentinels,
+shared pressure preserving unleased publication bytes/heads, startup charges
+blocking publication admission, provider invalidation retaining charges,
+retirement at beforeRename removing the temp/reservation, successful images on
+storage failure, memory priority, invalid network images never persisted, and
+the existing GET-only network inventory. Existing pixel/lease/session tests pass.
+
+### Wrong vs Correct
+
+Wrong: call reserveBytes for covers, allowing publication eviction, or nest the
+public reconcile method while already holding the shared admission queue.
+Correct: configure the non-evicting callback and call reconcileInQueue from
+publication startup; ordinary cover operations enter that same queue once.
 
 ## Bounded publication downloads and staging (D1)
 
@@ -556,11 +665,11 @@ Future<void> touchGeneration(BookKey key, String sha256, DateTime at);
   row together, then delete its file. DB failure preserves the file; deletion
   failure leaves an orphan and a typed storage error. Same-digest reuse needs
   zero extra bytes. Never evict the attempt's fallback or destination being reused.
-- Future covers reserve through reserveBytes before admission and hold that
-  reservation while their bytes exist outside publications. Release after
-  deletion, not after writing. Cover restoration must register its existing
-  bytes before publication admission; cover LRU integration is the next slice.
-  External reservations survive service invalidation within the container.
+- D2b covers use a non-evicting shared reservation callback configured during
+  reconciliation, not reserveBytes (which may evict publications). Hold their
+  reservations until deletion; restore their charges before publication admission.
+  The sub-budget and external reservations survive service invalidation within
+  the container. See the cover disk contract below.
 - Reconcile each record against validation/path metadata and file existence/
   length. Startup intentionally omits full digest hashing; same-length external
   corruption is detected by later digest verification, not promised at startup.

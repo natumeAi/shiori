@@ -265,3 +265,109 @@ SHIORI_NATIVE_CFI_OUT. Logs are ignored `build/phase-d2a-*.log` files. Initial
 analysis found initializing-formal and braces lints, fixed before the final
 clean run. No remaining D2a implementation issue. No commit, stage, push,
 branch switch, worker-import/device/LAN or near-limit iPhone acceptance claim.
+
+## D2b cover disk cache
+
+Implemented directly on Windows, 2026-10-27, over D2a HEAD `c9e1b67` on
+`ios-build/s3-runtime-server`. No sub-agents, Git-state mutations, dependencies,
+fixtures, transport, schema, snapshots, reader code or other worktrees changed.
+
+### Changed files and ownership
+
+- `lib/core/storage/cache_budget.dart`: disk LRU sub-budget, generated-name I/O,
+  atomic writes, length/stream bounds and lifetime reservation accounting. The
+  budget retains sub-budget state across publication-provider replacement.
+- `lib/features/library/data/covers/cover_disk_store.dart`: cover identity and
+  session adapter; no Flutter image decoding in storage.
+- `publication_cache_reconciliation.dart`: configure the cover sub-budget on
+  the existing publication queue, supply non-evicting shared admission, and
+  reconcile covers before returning. No publication_cache.dart edit was needed.
+- `presentation/covers/cover_loader.dart` and generated `.g.dart`: lazy
+  production disk wiring, memory -> disk -> session GET, decode validation,
+  corrupt-file recovery and best-effort write-through.
+- Tests add `data/covers/{cover_disk_store_test,cover_disk_integration_test,
+  cover_disk_test_support}.dart` and
+  `presentation/covers/cover_loader_disk_test.dart` (17 new test cases).
+- `data-layer.md`: executable D2b signatures, layout, budget, cancellation,
+  reconciliation, failure and test contracts; remove obsolete disk-seam wording.
+
+### Disk layout and budget
+
+Cover files live under `<Caches>/shiori/v1/covers/<ServerKey SHA-256>/
+<SHA-256 of UTF-8 deployment-relative cover path including query>.cache`.
+Only generated directory/file components authorize I/O. Validate the cover path
+with ServerEndpoint.cover before hashing. Temp names are exclusive random
+128-bit `.part` files in that same server directory; flush/close encoded bytes,
+then rename atomically. Directory/file links are never followed.
+
+Disk covers have a 16 MiB encoded LRU sub-budget across servers, within the
+shared 512 MiB cap, and an inclusive 8 MiB individual bound. Memory retains the
+existing separate 16 MiB encoded and decoded accounting. Reads check registered
+length and actual bounded streamed bytes; invalid/unregistered bytes are removed.
+These are resource-accounting bounds, not device/process-RSS measurements.
+
+The cover admission callback measures publication bytes and uses fits/reserve
+directly on the same serial queue. It does not call publication reserveBytes or
+_reserve and cannot evict a publication. Cover pressure evicts only oldest cover
+files, using write/read order in memory and modification times after restart.
+Insufficient shared capacity skips persistence, leaving the decoded image usable.
+
+Reserve before temp creation and retain the charge while the file exists outside
+the publications subtree. Release after deletion/confirmed absence, including
+cancelled writes. A failed cleanup retains its reservation and counts toward the
+sub-budget until reconciliation removes it. Budget-owned state and callback
+rebinding preserve charges across publication provider invalidation.
+
+### Loader and lifecycle
+
+Use decoded/encoded memory first, then disk, then bounded GET through the captured
+session transport. Disk bytes pass the same native decode path. A nonImage disk
+failure deletes that file and performs one network fetch; only successful network
+decoding enables write-through. Storage-open/write failures remain best effort.
+During write-through an internal pixel pin prevents concurrent decode eviction
+from invalidating the image awaiting persistence.
+
+Results, mutations and admission check the complete session. Retirement/disposal
+clears memory and cancels pending work without deleting completed server-scoped
+disk files. An interrupted write removes only its own temp/new destination and
+releases its charge once outstanding filesystem I/O and cleanup finish. The
+beforeRename test gate races retirement, so its caller completes cancelled and
+cleanup finishes even while the held gate has not resumed. Late completion does
+not recreate a temp, publish pixels or affect a later activation.
+
+### Reconciliation and assertions
+
+Publication open reconciles covers before publication admission. Remove stray
+regular files/temps and invalid lengths only in the covers root and generated
+server directories; enforce the sub-budget and register retained reservations.
+Under shared startup pressure, discard covers while preserving publication
+bytes/heads. Repeated reconciliation does not double-charge files; OS-missing
+files release their old charges. Sibling cache sentinels remain unchanged.
+
+Tests prove disk reuse without HTTP after retirement and cold-loader creation,
+non-decodable replacement, cross-server same-path isolation, sub-budget read-touch
+LRU, no publication eviction under shared pressure, successful images without
+persistence, retirement cleanup, startup cleanup/budget restoration, production
+provider disk wiring and invalidation, memory priority, write-failure cleanup,
+and rejection of non-image network bodies. Existing GET-only inventory passes.
+
+### Commands run
+
+| Command | Final result |
+| --- | --- |
+| `dart run build_runner build` | PASS; only loader generated hash changes semantically |
+| `dart format` on changed Dart files | PASS |
+| `dart format --output=none --set-exit-if-changed` on 9 changed/new Dart files | PASS; zero changes |
+| `flutter analyze` | PASS; no issues |
+| `flutter test --no-pub test/core/storage test/features/library test/s3_get_only_inventory_test.dart --reporter expanded` | PASS; 436 tests, no skips |
+| `flutter test --reporter expanded` | PASS; 1940 passed, 1 existing optional skip |
+| `dart run tool/ci/check_reader_fixtures.dart` | PASS; manifest/privacy guard, exit 0 |
+| `git diff --check` | PASS |
+
+The existing optional native CFI export skip remains due to unset
+SHIORI_NATIVE_CFI_OUT. Logs are ignored `build/phase-d2b-*.log` files. Initial
+focused checking caught nullable generic inference and a synchronous-throw test
+assertion; both were corrected before the successful full gates above.
+
+No remaining D2b implementation issue. Broader S3 product/device/LAN acceptance
+and other phases remain with their owners; these host tests do not close them.

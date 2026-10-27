@@ -8,7 +8,9 @@ import 'package:shiori/core/config/session_publication_guard.dart';
 import 'package:shiori/core/errors/app_exception.dart';
 import 'package:shiori/core/network/request_cancelled.dart';
 import 'package:shiori/core/network/session_transport.dart';
+import 'package:shiori/features/library/data/covers/cover_disk_store.dart';
 import 'package:shiori/features/library/data/library_session_scope.dart';
+import 'package:shiori/features/library/data/publications/publication_cache.dart';
 import 'package:shiori/features/library/presentation/covers/cover_failure.dart';
 import 'package:shiori/features/library/presentation/covers/cover_lease.dart';
 import 'package:shiori/features/library/presentation/covers/cover_load_result.dart';
@@ -17,8 +19,7 @@ import 'package:shiori/features/servers/data/server_activation_dependencies.dart
 part 'cover_loader.g.dart';
 part 'cover_loader_decode.dart';
 
-/// Session-owned memory caches. Phase D may add a disk source behind _readEncoded;
-/// it must share that phase's cross-server quota, not persist here independently.
+/// Session-owned memory caches backed by removable, server-namespaced covers.
 final class CoverLoader {
   CoverLoader(
     this._transport,
@@ -26,6 +27,7 @@ final class CoverLoader {
     this.encodedBudget = defaultBudget,
     this.decodedBudget = defaultBudget,
     this._decodeFrame,
+    this.diskStore,
   }) : _scope = LibrarySessionScope(_transport.session, guard) {
     if (encodedBudget < 1 || decodedBudget < 4) {
       throw ArgumentError('Invalid cover budget');
@@ -33,12 +35,13 @@ final class CoverLoader {
     _unregister = guard.onRetire(session, dispose);
   }
 
-  static const defaultBudget = 16 * 1024 * 1024;
-  static const individualLimit = 8 * 1024 * 1024;
+  static const defaultBudget = CoverDiskStore.defaultLimit;
+  static const individualLimit = CoverDiskStore.individualLimit;
   final SessionTransport _transport;
   final LibrarySessionScope _scope;
   final int encodedBudget;
   final int decodedBudget;
+  final Future<CoverDiskStore?> Function()? diskStore;
   // Allows lifecycle tests to hold a real native frame until retirement.
   final Future<ui.FrameInfo> Function(ui.Codec)? _decodeFrame;
   final _encoded = <(ServerSession, String), Uint8List>{};
@@ -97,8 +100,26 @@ final class CoverLoader {
   }
 
   Future<_DecodedCover> _fetch((ServerSession, String) key) async {
-    final bytes = _encoded[key] ?? await _readEncoded(key.$2);
-    final entry = await _decodeAndCache(key, bytes);
+    final disk = _encoded.containsKey(key) ? null : await _disk();
+    _scope.check();
+    var cached = _encoded[key];
+    var fromDisk = false;
+    if (cached == null && disk != null) {
+      cached = await _bestEffort<Uint8List?>(() => disk.read(_scope, key.$2));
+      fromDisk = cached != null;
+    }
+    var bytes = cached ?? await _readEncoded(key.$2);
+    late _DecodedCover entry;
+    try {
+      entry = await _decodeAndCache(key, bytes);
+    } on CoverFailure catch (failure) {
+      if (!fromDisk || failure != CoverFailure.nonImage) rethrow;
+      await _bestEffort(() => disk!.invalidate(_scope, key.$2));
+      _scope.check();
+      bytes = await _readEncoded(key.$2);
+      entry = await _decodeAndCache(key, bytes);
+      fromDisk = false;
+    }
     _scope.check();
     if (!_encoded.containsKey(key) && bytes.length <= encodedBudget) {
       while (_encodedBytes + bytes.length > encodedBudget) {
@@ -109,10 +130,32 @@ final class CoverLoader {
         _encodedBytes += bytes.length;
       });
     }
+    if (!fromDisk && disk != null) {
+      entry.leases++;
+      try {
+        await _bestEffort(() => disk.write(_scope, key.$2, bytes));
+      } finally {
+        entry.leases--;
+      }
+    }
+    _scope.check();
     return entry;
   }
 
-  // Phase D source seam: any disk lookup must use that phase's shared quota.
+  Future<CoverDiskStore?> _disk() =>
+      _bestEffort<CoverDiskStore?>(() async => diskStore?.call());
+
+  Future<T?> _bestEffort<T>(Future<T> Function() operation) async {
+    try {
+      return await _scope.wait(operation());
+    } on RequestCancelled {
+      rethrow;
+    } catch (_) {
+      _scope.check();
+      return null;
+    }
+  }
+
   Future<Uint8List> _readEncoded(String path) async {
     try {
       return (await _scope.wait(
@@ -168,6 +211,11 @@ CoverLoader coverLoader(Ref ref, ServerSession session) {
   final loader = CoverLoader(
     ref.watch(sessionTransportProvider(session)),
     ref.watch(sessionPublicationGuardProvider),
+    diskStore: () async {
+      final cache = await ref.read(publicationCacheProvider.future);
+      if (!ref.mounted) throw const RequestCancelled();
+      return CoverDiskStore.fromBudget(cache.budget);
+    },
   );
   ref.onDispose(loader.dispose);
   return loader;

@@ -66,7 +66,7 @@ final class CoverLoaderProvider
   }
 }
 
-String _$coverLoaderHash() => r'cad2310f9ba6974549313c1231615d683f3ce3c2';
+String _$coverLoaderHash() => r'75656ed925adc2e77199c9e1e6917e4c646d5eaa';
 
 final class CoverLoaderFamily extends $Family
     with $FunctionalFamilyOverride<CoverLoader, ServerSession> {
