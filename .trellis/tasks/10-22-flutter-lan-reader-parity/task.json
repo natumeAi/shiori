@@ -25,6 +25,6 @@
   ],
   "parent": null,
   "relatedFiles": [],
-  "notes": "Parent requirements/integration owner. S1/S2 archived; S2 conditional S4 GO retains failed/unverified gates. On 2026-10-26 the user included single-image/complex static fixed layout and selected whole-page fit/pinch/pan. R11/AC10 updated; AC11-AC12 added. Proposed S4a-S4c boundaries have explicit dependencies; detailed child feasibility/design review remains before implementation. S3 source-readiness handoff is aligned and awaits renewed review. Parent remains planning; no child activation.",
+  "notes": "Parent requirements/integration owner; remains planning and incomplete. S1/S2/S3 completed; S3 owner-confirmed all-pass device closeout on 2026-10-27, with evidence in its archived research/s3-closeout.md. S2 conditional S4 GO retains all seven conditions. Fixed/mixed-layout scope and fit-page/pinch/pan decisions remain. S4a-S4c require detailed child planning/review; S4-S7 are not activated.",
   "meta": {}
 }

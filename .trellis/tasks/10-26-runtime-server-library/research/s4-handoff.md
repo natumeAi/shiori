@@ -329,18 +329,16 @@ S4 planning must retain owners and evidence for all seven conditions:
 7. Product stays on FlutterMetalLayer. Alternate CAMetalLayer results remain
    non-product evidence and cannot establish physical presentation/touch-to-photon.
 
-## Evidence still owed on iPhone
+## S3 acceptance and remaining S4 device evidence
 
-S3 product entry build/install under the existing identity/free signing route;
-real LAN grant, deny, re-enable and retry; real root/prefixed HTTP(S)/proxy access
-where available; covers and complete preparation; transient failure and session
-switch; relaunch and same-identity update retention. Reconfirm SQLite packaging,
-Support storage/migrations and future-schema refusal in the product build (the
-early SQLite probe gate is separate prior evidence).
+On 2026-10-27 the owner confirmed S3 device tests all passed and requested
+closeout. S3-AC10 is closed on that basis, with the early SQLite probe evidence
+retained separately. See [the closeout report](s3-closeout.md) for attribution,
+the AC mapping and the limits of the aggregate result. Exact build identifiers,
+deployment combinations and measurements are not inferred.
 
-Near-limit synthetic preparation + section preload + decode/layout needs measured
-peak memory and no OS memory termination. Repeated cancel/retire/reopen and actual
-background/foreground cleanup, resource/font bounds and all seven S2 device
-conditions remain open. Host fake HTTP/SQLite/worker tests and Windows memory
-probes do not close these gates. Keep private device/NAS/books/captures ignored
-under `local-evidence/s3/`; publish only redacted counts and synthetic descriptions.
+S4 still owes section preload plus decode/layout peak memory, rendering and
+actual reader lifecycle/resource/font bounds, and all seven S2 conditions above.
+S3 near-limit preparation acceptance does not establish full reader RSS or
+performance. Keep private device/NAS/books/captures ignored under
+`local-evidence/s3/`; publish only redacted results and synthetic descriptions.

@@ -8,12 +8,10 @@ Server changes, interrupted work and cache recovery must not mix libraries or
 damage durable reader state. This is the data foundation of
 `flutter-lan-reader-parity`, not the complete parity release.
 
-Status: **planning; ready for renewed review**, 2026-10-26. The user requested
-S3 planning; the later parent fixed-layout expansion refines the import
-handoff below. The same day's plan review added duplicate-name resolution,
-import layout facts, a file-backed worker archive and an early hosted SQLite
-gate (S3-R7, S3-AC7, S3-AC10). No implementation, task activation, NAS access
-or deployment is authorized by this document.
+Status: **completed**, 2026-10-27. The owner confirmed all S3 device tests
+passed and requested closeout. See [acceptance and evidence boundaries](research/s3-closeout.md).
+The requirements below retain the reviewed fixed-layout import handoff,
+duplicate-name resolution, layout facts, file-backed worker and SQLite gate.
 
 ## Background and Dependencies
 

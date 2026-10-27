@@ -1,7 +1,7 @@
 # Execution plan
 
-Status as of 2026-10-26: S1/S2 completed and archived; S3 detailed planning
-is ready for renewed review with the fixed-layout import handoff. S4 scope now
+Status as of 2026-10-27: S1/S2/S3 completed and archived; S3 device acceptance
+is owner-confirmed in its closeout report. S4 scope
 includes single-image, complex static fixed-layout and mixed publications
 with user-approved fit-page display plus whole-page pinch zoom/pan.
 **Do not run `task.py start` in the planning turn**.
@@ -15,14 +15,14 @@ design/implementation plan where complex, context manifests and review gate.
 | --- | --- | --- | --- |
 | S1 | **Completed/archived:** `../archive/2026-10/10-22-ios-free-device-bootstrap` — fixed app identity, free GitHub Actions release build, Windows signing/update/refresh, diagnostic entry point and file-based metric export. | Parent plan approval; user-confirmed pushes to the public repository and user-operated Apple sign-in/device actions when needed. | AC9; establishes evidence availability for AC4. |
 | S2 | **Completed/archived (conditional S4 GO):** `../archive/2026-10/10-22-native-reader-feasibility` — oracle vectors, Dart source/CFI/canonical model, native layout and page proof, turn controller, reader probe and presentation-evidence spike. | S1 runs on the phone; generated interoperability fixtures available. | AC3, AC5, AC8, AC10 and early AC4. |
-| S3 | **Planning:** `../10-26-runtime-server-library` — runtime server connection, typed read APIs, durable configuration, bounded EPUB/cache/worker lifecycle and minimal read-only library/preparation UI. | S1 build/storage foundation; merged S2 source model and its S3 bounded-import carry-forward; exact API audit. Does not waive S2 conditional performance gates. | AC1, client portion of AC7; data foundation for remaining stages. |
+| S3 | **Completed/archived:** `../archive/2026-10/10-26-runtime-server-library` — runtime server connection, typed read APIs, durable configuration, bounded EPUB/cache/worker lifecycle and minimal read-only library/preparation UI. | S1 build/storage foundation; merged S2 source model and its S3 bounded-import carry-forward; exact API audit. Does not waive S2 conditional performance gates. | AC1, client portion of AC7; data foundation for remaining stages. |
 | S4 | Native fixed-layout/mixed-book core, source/position/activity adaptation, then complete reader controls/settings/TOC/image viewer, whole-page zoom/pan and durable delivery. Proposed independently verifiable children S4a-S4c below. | S2 source/motion contracts and retained conditions; S3 server/storage/source-resource handoff. S2's old fixed-layout refusal is not acceptance for the expanded scope. | AC3–AC6, AC8, AC10–AC12, UI09–UI14. |
 | S5 | Main shell, home and statistics visual/behavioral parity. | S3 DTOs and S4 activity semantics; UI baseline recorded. | AC2/UI01–UI03, UI08, UI14. |
 | S6 | Full bookshelf/folder/upload/menu/selection/drag/undo parity. | S3 library data, S5 shell/token foundations; exact mutation semantics. | AC2/UI04–UI07; partial failure and compensating undo checks. |
 | S7 | End-to-end iPhone/NAS parity, cross-client resume, stability and performance acceptance; free update/refresh handoff. | S2–S6 gates passed. | All ACs; final parent integration review. |
 
-S1 and S2 are completed and archived. S3 has its own PRD/design/execution plan
-and curated context manifests, pending review. S4–S7 remain proposed children;
+S1, S2 and S3 are completed and archived. S3 acceptance and evidence limits
+are recorded in its `research/s3-closeout.md`. S4–S7 remain proposed children;
 create them just before their detailed planning/activation. Do not
 silently reorder around failed reader or installation feasibility gates.
 Vertical/RTL reading remains deferred. Simple and complex static fixed layout
@@ -182,15 +182,10 @@ S2's original reflowable corpus cannot stand in for AC11.
 - Broad UI work follows the reader feasibility result, avoiding a polished
   surrounding app whose core reader cannot meet the goal.
 
-## Current pre-activation checklist (S3)
+## Next activation boundary (S4)
 
-- [ ] User has reviewed and explicitly approved the latest S3 planning summary
-  in a subsequent message. The 2026-10-26 request authorizes planning only.
-- [ ] S3 PRD/design/implementation files and its S1/S2 dependencies are read.
-- [ ] S3 review includes the 2026-10-26 fixed-layout import/capability handoff;
-  imported fixed pages are not subjected to the old whole-book refusal.
-- [ ] S3 `implement.jsonl` and `check.jsonl` contain real spec/research entries.
-- [ ] Activate `../10-26-runtime-server-library` only after that review; the
-  parent remains the requirements/integration owner.
-- [ ] Retain all seven S2 conditional S4 items. S3 closes only its assigned
-  bounded-download/import prerequisite, not S4 performance or product release.
+S3 closed on 2026-10-27 following owner confirmation that device tests all
+passed. Read its archived `research/s3-closeout.md` and `research/s4-handoff.md`
+when planning S4. Retain all seven S2 conditions: S3 closes its bounded import
+and product preparation acceptance, not reader rendering/performance/release.
+S4a-S4c still require scoped planning and review before activation.

@@ -1,6 +1,7 @@
 # Design: S3 server, library and publication foundation
 
-Status: planning proposal, 2026-10-26, revised the same day after plan review
+Status: implemented and accepted, 2026-10-27; see `research/s3-closeout.md`.
+Originally proposed 2026-10-26 and revised the same day after plan review
 (duplicate ZIP names, import layout facts, file-backed worker archive, early
 hosted SQLite gate). Requirements/acceptance are in
 `prd.md`; source anchors and external primary sources are in `research/`.

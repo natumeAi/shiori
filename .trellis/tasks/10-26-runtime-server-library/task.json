@@ -2,7 +2,7 @@
   "id": "runtime-server-library",
   "name": "runtime-server-library",
   "title": "S3: Runtime server and library foundation",
-  "description": "Plan runtime NAS configuration, server-isolated typed reads and durable EPUB cache/import foundation for S4-S6; remain in planning.",
+  "description": "Completed runtime NAS configuration, server-isolated typed reads, durable EPUB cache/import and minimal product UI foundation for S4-S6.",
   "status": "in_progress",
   "dev_type": null,
   "scope": "flutter",
@@ -12,7 +12,7 @@
   "assignee": "shiroha",
   "createdAt": "2026-10-26",
   "completedAt": null,
-  "branch": null,
+  "branch": "ios-build/s3-runtime-server",
   "base_branch": "master",
   "worktree_path": null,
   "commit": null,
@@ -26,8 +26,11 @@
     "implement.md",
     "research/contracts.md",
     "research/storage-and-import.md",
-    "research/planning-readiness.md"
+    "research/planning-readiness.md",
+    "research/s3-closeout.md",
+    "research/s3-device-runbook.md",
+    "research/s4-handoff.md"
   ],
-  "notes": "S3 planning requested on 2026-10-26. PRD/design/implementation plan and curated manifests prepared; renewed user review pending after the parent fixed-layout expansion. S3-R7/AC7 preserve valid fixed/mixed source metadata without S2 blanket rejection; rendering and whole-page interaction remain S4. Depends on archived S1 build/storage and merged S2 source model/bounded-import carry-forward. No task start, product edit, NAS access, dependency install or push in planning.",
+  "notes": "2026-10-27: Owner confirmed all S3 device tests passed and requested closeout. S3-AC1 through AC11 accepted using existing host evidence and owner-reported device acceptance; see research/s3-closeout.md. Retain S4 rendering/performance and all seven S2 conditions. No per-step device measurements or installed-build identity inferred.",
   "meta": {}
 }

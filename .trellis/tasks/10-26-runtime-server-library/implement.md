@@ -1,8 +1,10 @@
 # Implementation plan: S3
 
-Status: planning, 2026-10-26. Do not execute this checklist until the user has
-reviewed and approved the latest S3 summary and the child is activated.
-The parent remains the integration owner.
+Status: completed, 2026-10-27; owner-confirmed device acceptance closes Phase F.
+See [closeout and AC mapping](research/s3-closeout.md). The checklist below is
+the original execution plan, retained as planning history; its unchecked boxes
+are superseded by the phase evidence and final acceptance report.
+The parent remains the integration owner; S4 conditions remain open.
 
 ## Entry conditions and work ownership
 

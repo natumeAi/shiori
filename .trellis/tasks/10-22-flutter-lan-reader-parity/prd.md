@@ -197,13 +197,15 @@ are indexed by the implementation/check context manifests.
 - S1: `../archive/2026-10/10-22-ios-free-device-bootstrap` (completed).
 - S2: `../archive/2026-10/10-22-native-reader-feasibility` (completed with
   conditional S4 GO; failed/unverified performance gates remain open).
-- S3: `../10-26-runtime-server-library` (planning, 2026-10-26): runtime server,
+- S3: `../archive/2026-10/10-26-runtime-server-library` (completed, 2026-10-27;
+  owner-confirmed device acceptance): runtime server,
   typed reads, cache/worker foundation and minimal read-only verification UI.
 - S4–S7 remain mapped in `implement.md` and are planned before their execution.
 
-Current planning status was refreshed on 2026-10-26. S1/S2 code and evidence
-exist; the parent is not complete. R11/AC10 were revised and AC11-AC12 added for
+Current planning status was refreshed on 2026-10-27. S1/S2/S3 are completed;
+the parent is not complete. R11/AC10 were revised and AC11-AC12 added for
 the user-approved fixed-layout expansion; other requirements remain in
-force. S3's import handoff is aligned and awaits renewed review. Fixed-page
+force. S3's import handoff is accepted; its archived closeout report records
+the owner-confirmed device result and retained S4 gates. Fixed-page
 viewing is decided; S4 requires detailed child feasibility/design plans and
 review before activation.
