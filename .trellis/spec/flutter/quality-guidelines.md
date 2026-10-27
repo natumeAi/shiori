@@ -225,8 +225,9 @@ the implementation validates both payloads against their separate manifest.
   Both are ignored. Do not promote their contents into task `evidence/`.
 - S4 carry-forward: shared `pubspec.yaml` currently registers
   `assets/reader_fixtures/`, so product builds also carry the synthetic EPUBs.
-  Separate/remove diagnostic fixture assets before a product build; merely
-  selecting `lib/main.dart` does not exclude shared assets.
+  Separate/remove diagnostic fixture assets before a product release; S3
+  engineering app builds still include them. Merely selecting `lib/main.dart`
+  does not exclude shared assets.
 
 S3 Phase A added bounded ZIP directory admission, emitted-byte limits and a
 worker-isolate protocol prototype. Before downloaded books are opened, S3
@@ -237,9 +238,29 @@ resource limits.
 
 ## Unsigned iPhone CI and build identity
 
+### 1. Scope / Trigger
+
 - Workflow: `.github/workflows/ios-unsigned.yml`; build/package command:
   `bash tool/ci/build_ios_unsigned.sh`. Only dispatch and `ios-build/**` push
-  triggers; read-only contents permission, per-ref concurrency, 14-day artifacts.
+  triggers; read-only contents permission and 14-day artifacts. Keep this
+  workflow and its shared run-number counter for both entry points.
+
+### 2. Signatures
+
+- `BUILD_MODE=probe|app bash tool/ci/build_ios_unsigned.sh`; unset defaults to
+  `probe`. An empty or any other value fails before output/host/build setup.
+- `BUILD_MODE=probe|app bash tool/ci/build_ios_unsigned.sh --print-build-plan`
+  prints `mode`, `entryPoint`, `outputDirectory` and one `ipa` line per variant
+  with literal `<BUILD_ID>` placeholders; it exits without Git or build tools.
+  No free-form target argument is accepted.
+- Dispatch `inputs.mode` is a choice (`probe`, `app`; default `probe`). Push
+  always selects `probe`: `${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'probe' }}`.
+  Pass that result as `BUILD_MODE`; use it in concurrency group
+  `ios-unsigned-${{ github.ref }}-<mode>`, retaining cancel-in-progress.
+  App dispatch and probe push on the same branch therefore use separate groups.
+
+### 3. Contracts
+
 - Use an explicit standard macOS label, selected Xcode path and SHA-pinned
   setup action. Current choice: `macos-15`, Xcode `26.3`, Flutter `3.47.7`
   stable. Re-verify against official runner-images docs before changing pins.
@@ -250,23 +271,73 @@ resource limits.
   Resolve the committed lockfile with `flutter pub get --enforce-lockfile`.
 - `BUILD_NUMBER` is the positive CI run number and becomes `CFBundleVersion`.
   `BUILD_ID` is `<12-character commit>-<host>-<run number>` (`host=gha` here).
-  Supply both as `--dart-define`s to the probe build; do not pass SDK,
+  Supply both as `--dart-define`s in either mode; do not pass SDK,
   framework or engine defines: the Flutter tool injects `FLUTTER_VERSION` and
   the revisions itself and rejects them as defines (`diagnostics.md` §3,
   `tool/ci/build_ios_unsigned.sh`). Keep the
   fixed source identifier `io.github.natumeai.shiori` across probe/product
   builds. A new workflow/counter must not regress the installed build number.
+- `probe` targets `lib/main_probe.dart` and retains both existing IPAs:
+  `shiori-probe-<BUILD_ID>.ipa`, `shiori-probe-<BUILD_ID>-cametal.ipa`.
+  `app` targets `lib/main.dart` and packages exactly one
+  `shiori-app-<BUILD_ID>.ipa`, preserving the default Flutter Metal layer with
+  no `FLTUseFlutterMetalLayer` override. This is an S3 engineering build;
+  shared synthetic assets still require separation/removal before release (S4).
+- Outputs: `build/ios-<mode>/`; uploaded artifact:
+  `shiori-<mode>-<full commit>-gha-<run number>`. Probe names and output path
+  remain unchanged. `provenance.json` adds `mode` and `entryPoint` to the
+  existing identity/toolchain/framework/variant facts. Compare all of them
+  before using the S1 runbook's selected signing/install/update route.
 - Validate iphoneos, bundle identifier/version, arm64 executable and both
   Flutter/App framework binaries before packaging `Payload/Runner.app` into
-  `shiori-probe-<BUILD_ID>.ipa`. S2 also stages
-  `shiori-probe-<BUILD_ID>-cametal.ipa` from the same single build: only the
-  alternate copy receives `FLTUseFlutterMetalLayer=false`. Validate both
+  each IPA. Retain the case-insensitive SQLite framework executable arm64
+  checks and `frameworks.txt` inventory in both modes. Probe stages its two
+  variants from one build: only the alternate copy receives
+  `FLTUseFlutterMetalLayer=false`. Validate all staged
   bundles, preserve the source/default plist bytes, and record each variant's
   actual/effective flag and SHA-256 in provenance plus `sha256.txt`.
   Save native status/diff.
   Save newly generated, nonignored iOS file contents in `ios-untracked.zip`;
   status/diff alone cannot recover them after the hosted runner is removed.
   A source push and device signing are separate user-operated review boundaries.
-- Windows validation is **only** `bash -n tool/ci/build_ios_unsigned.sh` using
-  Git Bash. `plutil`, `lipo`, hosted compilation, signing and device behavior
-  remain unverified until exercised on their actual platforms.
+- `ios/Runner/Info.plist` contains English `NSLocalNetworkUsageDescription`
+  explaining connection to the user's own local lan-reader server for library
+  loading/book downloads. Native development region is `en`; there is no
+  `InfoPlist.strings` localization. Flutter ARB does not localize OS permission
+  prompts. Native translations are warranted before a localized product
+  release; add them with Xcode resource registration then. Do not infer a need
+  for ATS exceptions, Bonjour/multicast keys or TLS bypass from this string.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required behavior |
+| --- | --- |
+| Unset mode / push event | Probe target, original two IPA names and probe output directory |
+| App dispatch | App target, app artifact/output names, one default-layer IPA |
+| Empty/unknown mode or free-form target argument | Fail before build/output setup |
+| App source bundle contains a Metal-layer override | Fail before packaging |
+| Identity, build number, toolchain pin or arm64 validation fails | Fail; retain native status/diff and build exit evidence |
+
+### 5. Good/Base/Bad Cases
+
+Good: app dispatch uses the same workflow counter and fixed bundle ID, with
+`mode=app`, `entryPoint=lib/main.dart` and one default variant in provenance.
+Base: unset mode preserves the probe and cametal artifacts. Bad: a separate
+counter, arbitrary target or cametal app artifact breaks this contract.
+
+### 6. Tests Required
+
+On Windows, use Git Bash `bash -n tool/ci/build_ios_unsigned.sh` and
+`bash -n tool/ci/check_ios_build_modes.sh`, then run
+`bash tool/ci/check_ios_build_modes.sh` for exact target/output/IPA selection
+and invalid-input rejection before setup. Parse workflow YAML and plist XML;
+review mode expressions, pins, permissions and shared counter. These are
+host checks only: `plutil`, `lipo`, hosted compilation, signing, iOS permission
+behavior and update retention require their actual platforms. Shell/workflow/
+plist-only edits use these focused checks without Dart code generation/tests.
+
+### 7. Wrong vs Correct
+
+Wrong: accept a caller-supplied source path or create an app workflow with a
+fresh counter. Correct: dispatch `mode=app` through this workflow, select the
+fixed target in the script and verify mode/entry point in provenance.

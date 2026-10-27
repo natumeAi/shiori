@@ -2,6 +2,15 @@ name: Unsigned iPhone probe
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Entry point to build
+        type: choice
+        options:
+          - probe
+          - app
+        default: probe
+        required: true
   push:
     branches:
       - 'ios-build/**'
@@ -10,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ios-unsigned-${{ github.ref }}
+  group: ios-unsigned-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'probe' }}
   cancel-in-progress: true
 
 jobs:
@@ -20,6 +29,7 @@ jobs:
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
       BUILD_NUMBER: ${{ github.run_number }}
+      BUILD_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'probe' }}
       BUILD_HOST: gha
       SOURCE_COMMIT: ${{ github.sha }}
       RUNNER_LABEL: macos-15
@@ -47,7 +57,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: shiori-probe-${{ github.sha }}-gha-${{ github.run_number }}
-          path: build/ios-probe/
+          name: shiori-${{ env.BUILD_MODE }}-${{ github.sha }}-gha-${{ github.run_number }}
+          path: build/ios-${{ env.BUILD_MODE }}/
           if-no-files-found: error
           retention-days: 14

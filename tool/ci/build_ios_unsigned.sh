@@ -2,10 +2,35 @@
 # Host-neutral build logic. Requires macOS, explicitly selected Xcode and Flutter.
 set -euo pipefail
 
+# Validate before touching output, checking the host or invoking build tools.
+readonly BUILD_MODE="${BUILD_MODE-probe}"
+case "$BUILD_MODE" in
+  probe) ENTRY_POINT=lib/main_probe.dart; PACKAGE_VARIANTS=(default cametal) ;;
+  app) ENTRY_POINT=lib/main.dart; PACKAGE_VARIANTS=(default) ;;
+  *) echo 'Invalid BUILD_MODE: expected probe or app.' >&2; exit 1 ;;
+esac
+readonly ENTRY_POINT
+readonly -a PACKAGE_VARIANTS
+readonly OUTPUT_SUBDIR="build/ios-$BUILD_MODE"
+ipa_filename() {
+  local build_id="$1" variant="$2" suffix=''
+  [[ "$variant" != cametal ]] || suffix=-cametal
+  printf 'shiori-%s-%s%s.ipa' "$BUILD_MODE" "$build_id" "$suffix"
+}
+# Read-only selection check; no macOS, Flutter, Git or build identity required.
+if [[ "${1:-}" == --print-build-plan && $# == 1 ]]; then
+  printf 'mode=%s\nentryPoint=%s\noutputDirectory=%s\n' "$BUILD_MODE" "$ENTRY_POINT" "$OUTPUT_SUBDIR"
+  for variant in "${PACKAGE_VARIANTS[@]}"; do
+    printf 'ipa=%s\n' "$(ipa_filename '<BUILD_ID>' "$variant")"
+  done
+  exit 0
+fi
+[[ $# == 0 ]] || { echo 'Usage: build_ios_unsigned.sh [--print-build-plan]' >&2; exit 1; }
+
 cd "$(git rev-parse --show-toplevel)"
 readonly EXPECTED_FRAMEWORK=abaf9c523780a608bd46686fd5e53740a07077f8
 readonly EXPECTED_ENGINE=deb287481e3ce9468f3434937ced4240a70539ca
-readonly OUTPUT_DIR="$PWD/build/ios-probe"
+readonly OUTPUT_DIR="$PWD/$OUTPUT_SUBDIR"
 mkdir -p "$OUTPUT_DIR"
 
 # Also retain native migrations when Flutter/Xcode fails part-way through.
@@ -29,7 +54,8 @@ finish() {
   printf '%s\n' "$result" > "$OUTPUT_DIR/build-exit-code.txt"
   if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
     {
-      printf '### Unsigned probe build\n\n'
+      printf '### Unsigned %s build\n\n' "$BUILD_MODE"
+      printf 'Entry point: `%s`\n\n' "$ENTRY_POINT"
       printf 'Build: `%s`; exit: `%s`\n\n' "${BUILD_ID:-unavailable}" "$result"
       printf '```text\n'
       cat "$OUTPUT_DIR/toolchain.txt" 2>/dev/null || true
@@ -73,18 +99,19 @@ CHANNEL="$(jq -r '.channel' "$OUTPUT_DIR/flutter-version.json")"
 } > "$OUTPUT_DIR/toolchain.txt"
 cat "$OUTPUT_DIR/toolchain.txt"
 jq -n --arg buildId "$BUILD_ID" --arg buildNumber "$BUILD_NUMBER" \
+  --arg mode "$BUILD_MODE" --arg entryPoint "$ENTRY_POINT" \
   --arg commit "$SOURCE_COMMIT" --arg runner "${RUNNER_LABEL:-unavailable}" \
   --arg image "${ImageVersion:-unavailable}" --arg macos "$(sw_vers -productVersion)" \
   --arg xcode "$(xcodebuild -version)" --arg sdk "$(xcrun --sdk iphoneos --show-sdk-version)" \
   --arg flutter "$FRAMEWORK_VERSION" --arg framework "$FRAMEWORK" --arg engine "$ENGINE" \
-  '{buildId:$buildId,buildNumber:$buildNumber,commit:$commit,runner:$runner,image:$image,macos:$macos,xcode:$xcode,iosSdk:$sdk,flutter:$flutter,framework:$framework,engine:$engine,unsigned:true}' \
+  '{buildId:$buildId,buildNumber:$buildNumber,mode:$mode,entryPoint:$entryPoint,commit:$commit,runner:$runner,image:$image,macos:$macos,xcode:$xcode,iosSdk:$sdk,flutter:$flutter,framework:$framework,engine:$engine,unsigned:true}' \
   > "$OUTPUT_DIR/provenance.json"
 
 flutter pub get --enforce-lockfile
 git diff --exit-code -- pubspec.lock
 dart run tool/ci/check_reader_fixtures.dart
 flutter build ios --release --no-codesign --no-pub \
-  --target lib/main_probe.dart \
+  --target "$ENTRY_POINT" \
   --build-number "$BUILD_NUMBER" \
   --dart-define="BUILD_ID=$BUILD_ID" \
   --dart-define="BUILD_NUMBER=$BUILD_NUMBER"
@@ -142,16 +169,19 @@ mv "$OUTPUT_DIR/provenance-frameworks.json" "$OUTPUT_DIR/provenance.json"
 validate_bundle "$APP"
 plutil -p "$APP/Info.plist" > "$OUTPUT_DIR/bundle-info.txt"
 DEFAULT_METAL="$(metal_value "$APP")"
+if [[ "$BUILD_MODE" == app && "$DEFAULT_METAL" != null ]]; then
+  echo 'App mode requires the default Flutter Metal layer with no plist override.' >&2
+  exit 1
+fi
 STAGING="$(mktemp -d "${TMPDIR:-/tmp}/shiori-package.XXXXXX")"
 : > "$OUTPUT_DIR/sha256.txt"
-for variant in default cametal; do
+for variant in "${PACKAGE_VARIANTS[@]}"; do
   stage="$STAGING/$variant"
   mkdir -p "$stage/Payload"
   bundle="$stage/Payload/Runner.app"
   ditto "$APP" "$bundle"
-  filename="shiori-probe-$BUILD_ID.ipa"
+  filename="$(ipa_filename "$BUILD_ID" "$variant")"
   if [[ "$variant" == cametal ]]; then
-    filename="shiori-probe-$BUILD_ID-cametal.ipa"
     if [[ "$DEFAULT_METAL" == null ]]; then
       plutil -insert FLTUseFlutterMetalLayer -bool false "$bundle/Info.plist"
     else
