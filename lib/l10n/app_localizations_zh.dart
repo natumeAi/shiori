@@ -350,6 +350,158 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get commonCancel => '取消';
+
+  @override
+  String get serverSetupTitle => '连接书库';
+
+  @override
+  String get serverChangeTitle => '更换服务器';
+
+  @override
+  String get serverSetupHelp => '输入书库服务器的完整地址。更换连接失败时，仍会保留原来的书库。';
+
+  @override
+  String get serverUrlLabel => '服务器地址';
+
+  @override
+  String serverCurrent(String address) {
+    return '当前服务器：$address';
+  }
+
+  @override
+  String get serverConnect => '连接';
+
+  @override
+  String get serverConnecting => '正在连接…';
+
+  @override
+  String get serverSaving => '正在保存连接…';
+
+  @override
+  String get serverRestoring => '正在恢复连接…';
+
+  @override
+  String get serverRestoreFailed => '无法恢复已保存的连接。请重试；如果刚更新过应用，请确认正在使用兼容的版本。';
+
+  @override
+  String get serverUrlScheme => '地址必须以 http:// 或 https:// 开头。';
+
+  @override
+  String get serverUrlHost => '请填写有效的服务器名称或网络地址。';
+
+  @override
+  String get serverUrlCredentials => '地址中不能包含用户名或密码。';
+
+  @override
+  String get serverUrlQuery => '请移除地址中问号及其后的内容。';
+
+  @override
+  String get serverUrlFragment => '请移除地址中井号及其后的内容。';
+
+  @override
+  String get serverUrlEscape => '地址中的百分号编码不完整，请检查后重试。';
+
+  @override
+  String get serverUrlBackslash => '请将地址中的反斜杠改为正斜杠。';
+
+  @override
+  String get serverUrlPort => '端口号应为 1 到 65535 的整数。';
+
+  @override
+  String get serverUrlZone => '请使用不带网卡标识的 IPv6 地址，或改用服务器名称。';
+
+  @override
+  String get serverUrlInvalid => '地址格式不正确，请检查后重试。';
+
+  @override
+  String get serverConnectionFailed => '连接超时或网络不可用。请确认服务器已开启，并检查网络后重试。';
+
+  @override
+  String get serverTlsFailed => '无法建立安全连接。请检查服务器证书和设备时间后重试。';
+
+  @override
+  String get serverAccessDenied => '服务器拒绝访问。请检查服务器的访问设置后重试。';
+
+  @override
+  String get serverWrongService => '此地址不是受支持的书库服务，请检查服务器地址。';
+
+  @override
+  String get serverLibraryUnconfigured => '服务器尚未设置书库。请先完成服务器设置，再重试。';
+
+  @override
+  String get serverLibraryUnavailable => '服务器暂时无法读取书库。请检查服务器状态后重试。';
+
+  @override
+  String get serverUnsupportedVersion => '此书库版本暂不受支持。请检查应用和服务器版本是否兼容。';
+
+  @override
+  String get serverUnexpectedResponse =>
+      '服务器返回了无法识别的内容，可能是登录页或代理页面。请检查访问设置和服务器地址后重试。';
+
+  @override
+  String get serverFinalAddress => '此地址发生了无法继续的跳转。请填写跳转后书库的完整地址，再重新连接。';
+
+  @override
+  String get serverResponseFailed => '服务器暂时无法完成请求。请检查服务器状态后重试。';
+
+  @override
+  String get serverSaveFailed => '无法保存新的连接。原有连接已保留，请稍后重试。';
+
+  @override
+  String get serverLocalNetworkHelp =>
+      '连接家中或局域网内的服务器时，请确认设备与服务器处于可互通的网络。如果仍无法连接，可在 iPhone 的“设置”→“隐私与安全性”→“本地网络”中允许 Shiori 访问，然后返回重试。网络错误也可能由服务器未开启或地址不正确引起。';
+
+  @override
+  String get libraryTitle => '书库';
+
+  @override
+  String get libraryBookTitle => '书籍信息';
+
+  @override
+  String get libraryRefresh => '刷新书库';
+
+  @override
+  String get libraryRefreshing => '正在刷新书库…';
+
+  @override
+  String get libraryLoading => '正在读取书库…';
+
+  @override
+  String get libraryStale => '正在显示已保存的书库，内容可能不是最新的；离线时仍可浏览。';
+
+  @override
+  String get libraryLoadFailed => '暂时无法读取书库，请重试。';
+
+  @override
+  String get libraryEmpty => '书库里还没有书籍。';
+
+  @override
+  String get libraryFolderEmpty => '此文件夹里还没有书籍。';
+
+  @override
+  String get libraryFolderMissing => '找不到此文件夹，请刷新书库后重试。';
+
+  @override
+  String get libraryBookMissing => '找不到此书籍，请刷新书库后重试。';
+
+  @override
+  String get libraryUnknownAuthor => '作者未知';
+
+  @override
+  String get libraryPreparationPlaceholder => '书籍准备功能即将加入。目前可查看书籍信息。';
+
+  @override
+  String libraryBookCount(int count) {
+    return '$count 本书';
+  }
+
+  @override
+  String libraryCoverLabel(String title) {
+    return '《$title》的封面';
+  }
+
+  @override
   String get appTitle => 'Shiori';
 
   @override

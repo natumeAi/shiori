@@ -148,3 +148,25 @@ Rules:
   do not shrink them with `visualDensity` or tight `SizedBox`es).
 - Never convey state with color alone; pair it with an icon or text.
 - Layouts must survive 200% text scale: no fixed heights around text.
+
+## Minimal server and library UI
+
+- Keep endpoint form controllers local. Validate with `ServerEndpoint.parse`
+  before calling activation, and localize every issue without sending traffic.
+- Candidate feedback accompanies the selected server. Keep the selected
+  address visible on failure; disable edits while validating/committing.
+  Offer cancel during validation and block back navigation during commit.
+- Abandoning a form cancels candidate work. Route disposal may happen during
+  a widget build, so defer its provider notification to a microtask; controller
+  cancellation must tolerate an already disposed provider.
+- Use scrollable safe areas for setup and content. Book rows use an expanded
+  text column rather than fixed tile heights, with session-owned covers and
+  localized image semantics plus placeholders for missing/failed images.
+- Render `LibrarySnapshotState.error` alongside retained content. Show a
+  stale label whenever a cached snapshot is displayed; refresh/retry must keep
+  that content visible until a fresh result arrives. Empty and missing-ID
+  states are distinct from load errors.
+- Product feedback maps typed failures to ordinary localized copy and never
+  displays raw exceptions. Network evidence groups timeout/unreachability;
+  unexpected-response copy may suggest a login/proxy page without asserting
+  its presence. LAN help explains Settings access without detecting denial.

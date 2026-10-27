@@ -1,0 +1,98 @@
+# Phase E1a: connection and read-only library UI
+
+Date: 2026-10-27. Worktree: `shiori-e1`, branch `s3/e1-product-ui`.
+Implemented directly within the assigned E1a presentation scope. No subagents,
+commit, staging, push, branch switch or task lifecycle changes were performed.
+
+## Delivered behavior
+
+- Startup waits for committed-server restoration. Unconfigured state enters
+  setup; a restored selection enters the library. Restore failures preserve
+  selection and offer retry.
+- Typed routes: `/` (`HomeRoute`), `/servers/setup` (`ServerSetupRoute`),
+  `/folders/:id` (`FolderRoute`), `/books/:id` (`BookRoute`) and internal
+  `/startup` (`StartupRoute`). Folder/book routes carry integer IDs only.
+- Successful activation explicitly replaces the complete route stack in the
+  app shell. Page/image identity includes the activation session. A -> B -> A
+  widget coverage confirms no deep routes survive and generations advance.
+  Redirect refresh alone was found insufficient for imperative pushed routes;
+  the final implementation uses `router.go(HomeRoute().location)` in the
+  app's activation listener.
+- Connection form validates every endpoint issue without creating a candidate
+  transport. It shows validation/commit progress, cancel during validation,
+  disabled edits, commit back-navigation protection, and the previous selected
+  server address when a candidate fails.
+- Feedback covers network timeout/unreachability, TLS, access denial,
+  wrong service, unavailable/unconfigured library, unsupported schema,
+  unexpected/login/proxy content, final-address redirects and save failure.
+  LAN troubleshooting explains iOS Settings without inferring permission denial.
+- Root shelf and folder book order come directly from validated snapshot
+  indexes. Refresh button, pull refresh, retry, stale cached data, missing IDs,
+  empty library/folders and load errors are presented explicitly.
+- Book information uses snapshot title, author and cover. The localized
+  preparation placeholder is in `widgets/book_metadata.dart` for the next
+  integration step. No preparation or reader behavior is added here.
+- Every added UI string is in `app_zh.arb`; generated localizations are updated.
+  Dynamic address, count and cover text use localization placeholders.
+  Safe/scrollable layouts, cover/button semantics, 200% text at 320px width,
+  keyboard handling and system light/dark themes are covered.
+
+## Controller fix
+
+`ServerActivationController.cancelCandidate()` now returns immediately if its
+provider is already disposed. Form cleanup must be deferred outside a widget
+build; an uncaught disposed-ref access was reproducible when that cleanup ran
+after container teardown. The controller regression test calls cancellation
+after disposal. All other activation and library controller logic is unchanged.
+Back navigation schedules cancellation immediately; disposal also cancels
+abandoned form work. Commit remains non-cancellable once dispatched.
+
+## Verification
+
+Final gates, all exit code 0:
+
+| Command | Result |
+| --- | --- |
+| `flutter pub get --offline` | Pass; no online fallback needed |
+| `dart run build_runner build` | Pass; final incremental run wrote 6 outputs |
+| `flutter gen-l10n` | Pass |
+| `dart format --set-exit-if-changed` on changed Dart files/directories, including localizations | Pass; 28 files checked, 0 changed |
+| `flutter analyze --no-pub` | Pass; no issues |
+| `flutter test --no-pub` | Pass; 2,088 passed, 4 skipped, 0 failed |
+| `dart run tool/ci/check_reader_fixtures.dart` | Pass; manifests and EPUB privacy guard |
+| `git -c core.safecrlf=false diff --check` | Pass |
+| Protected-directory content diff | Pass; no content changes |
+
+Widget coverage includes startup loading/error/retry, successful connection and
+route reset, all ten endpoint validation issues without traffic, eleven failure
+cases retaining the prior server, cancel/back and late results, root/folder/book
+navigation, both empty states, missing IDs, cached refresh/stale/error/retry,
+pull refresh, missing and non-image cover fallback, and narrow/enlarged text in
+both themes. Existing probe navigation and product presentation-isolation tests
+pass. Tests use fake adapters and in-memory ports; no NAS or live HTTP is used.
+
+HTML, 401/403 and redirect wire handling remains covered by the existing
+adapter-based controller/transport suite. Their new widget cases inject typed
+errors at candidate snapshot validation, because body-discard/cancellation
+futures do not settle under the widget fake clock. Network, health, schema and
+success widget cases exercise the real controller/transport/DTO validation.
+This split is test scaffolding only; product network behavior is unchanged.
+
+## Scope and integration limits
+
+- No hand-written data, core, network, storage, reader, diagnostics, native,
+  CI, dependency, fixture or planning artifacts were changed. Generated files
+  were regenerated by required tools. Unrelated generated/desktop files can
+  appear modified in this read-only-index worktree even with no content diff;
+  review `git diff`, not status-only entries, when integrating.
+- `probe_app.dart` behavior is unchanged. Product startup isolation test now
+  expects restoration and restores test error handlers after `main()` sets up
+  logging; it does not await an unresolved platform storage operation.
+- Timeout and offline share one safe message because existing typed activation
+  feedback does not preserve that distinction. It remains distinct from TLS,
+  access, service, library, schema, response and redirect recovery.
+- Snapshot metadata only; preparation controls belong to the next step.
+  Device LAN permission/transport, iOS purpose text/build selection and the
+  remaining S3 device acceptance are outside E1a and remain unverified here.
+- Session identity and navigation callbacks are provided by `app/routes.dart`;
+  future preparation UI should continue capturing the session with the book ID.

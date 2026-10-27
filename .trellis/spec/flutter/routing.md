@@ -95,6 +95,25 @@ context.pop();                                       // go back
 Dialogs and bottom sheets are not routes: use `showDialog` /
 `showModalBottomSheet` directly.
 
+## Product session routes
+
+- `HomeRoute` (`/`) is the read-only library. `FolderRoute` (`/folders/:id`)
+  and `BookRoute` (`/books/:id`) carry only integer IDs. `ServerSetupRoute`
+  (`/servers/setup`) handles initial setup and changing the selected server.
+- `StartupRoute` (`/startup`) displays restoration progress or a recoverable
+  restore error. `routerProvider` listens without rebuilding the router and
+  redirects unconfigured/restoring states before library data is rendered.
+- `ShioriApp` listens for a changed activation session and calls the existing
+  router's `go(HomeRoute().location)` to discard the entire imperative stack.
+  A refresh redirect alone can leave pushed routes on that stack.
+- Route composition keys library pages by `(session, folderId, bookId)`.
+  Screens receive the captured session and navigation callbacks; feature
+  screens do not import another feature's presentation through the router.
+  Session changes reset deep routes even when the numeric IDs overlap.
+- Covers use the existing session-owned `SessionCoverImage`/`CoverLoader`;
+  retiring the session releases its cache, while page keys replace live images.
+  Do not clear Flutter's global image cache to implement a server switch.
+
 ---
 
 ## Forbidden

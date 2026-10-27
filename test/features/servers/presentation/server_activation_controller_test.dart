@@ -14,6 +14,14 @@ import 'package:shiori/features/servers/presentation/server_activation_controlle
 import '../server_activation_test_support.dart';
 
 void main() {
+  test('delayed form cleanup can cancel after controller disposal', () async {
+    final h = ActivationHarness();
+    await h.restore();
+    final controller = h.controller;
+    h.container.dispose();
+    expect(controller.cancelCandidate, returnsNormally);
+  });
+
   test('switch after relaunch does not rebuild activation through the retired family', () async {
     final store = MemorySelectionStore();
     await store.commitActivation(

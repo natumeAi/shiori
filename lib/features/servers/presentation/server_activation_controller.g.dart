@@ -39,7 +39,7 @@ final class ServerActivationControllerProvider
 }
 
 String _$serverActivationControllerHash() =>
-    r'2f1c1e74b6a41398dc09cc1c7aee644fbd1fab2c';
+    r'a4d23ec55213d0541f32cab3241479985e50d9ca';
 
 abstract class _$ServerActivationController
     extends $AsyncNotifier<ServerActivationState> {

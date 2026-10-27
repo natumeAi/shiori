@@ -116,6 +116,7 @@ class ServerActivationController extends _$ServerActivationController {
 
   /// Cancel validation or queued admission. A dispatched commit finishes first.
   void cancelCandidate() {
+    if (!ref.mounted) return;
     _requestSerial++;
     if (state.isLoading) return;
     if (_commitDone != null) return;

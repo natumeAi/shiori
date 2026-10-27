@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shiori/features/diagnostics/data/method_channel_presentation_probe.dart';
-import 'package:shiori/features/home/presentation/home_screen.dart';
+import 'package:shiori/app/startup_screen.dart';
 import 'package:shiori/main.dart' as product;
 
 void main() {
@@ -23,9 +23,14 @@ void main() {
         null,
       ),
     );
+    final originalErrorHandler = FlutterError.onError;
+    final originalPlatformHandler = tester.platformDispatcher.onError;
     product.main();
-    await tester.pumpAndSettle();
-    expect(find.byType(HomeScreen), findsOneWidget);
+    FlutterError.onError = originalErrorHandler;
+    tester.platformDispatcher.onError = originalPlatformHandler;
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(StartupScreen), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();
     expect(calls, isEmpty);

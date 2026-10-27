@@ -610,6 +610,294 @@ abstract class AppLocalizations {
   /// **'SQLite 编译选项：{options}'**
   String diagnosticsSqliteOptions(String options);
 
+  /// No description provided for @commonCancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get commonCancel;
+
+  /// No description provided for @serverSetupTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接书库'**
+  String get serverSetupTitle;
+
+  /// No description provided for @serverChangeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'更换服务器'**
+  String get serverChangeTitle;
+
+  /// No description provided for @serverSetupHelp.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入书库服务器的完整地址。更换连接失败时，仍会保留原来的书库。'**
+  String get serverSetupHelp;
+
+  /// No description provided for @serverUrlLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器地址'**
+  String get serverUrlLabel;
+
+  /// No description provided for @serverCurrent.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前服务器：{address}'**
+  String serverCurrent(String address);
+
+  /// No description provided for @serverConnect.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接'**
+  String get serverConnect;
+
+  /// No description provided for @serverConnecting.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在连接…'**
+  String get serverConnecting;
+
+  /// No description provided for @serverSaving.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在保存连接…'**
+  String get serverSaving;
+
+  /// No description provided for @serverRestoring.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在恢复连接…'**
+  String get serverRestoring;
+
+  /// No description provided for @serverRestoreFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法恢复已保存的连接。请重试；如果刚更新过应用，请确认正在使用兼容的版本。'**
+  String get serverRestoreFailed;
+
+  /// No description provided for @serverUrlScheme.
+  ///
+  /// In zh, this message translates to:
+  /// **'地址必须以 http:// 或 https:// 开头。'**
+  String get serverUrlScheme;
+
+  /// No description provided for @serverUrlHost.
+  ///
+  /// In zh, this message translates to:
+  /// **'请填写有效的服务器名称或网络地址。'**
+  String get serverUrlHost;
+
+  /// No description provided for @serverUrlCredentials.
+  ///
+  /// In zh, this message translates to:
+  /// **'地址中不能包含用户名或密码。'**
+  String get serverUrlCredentials;
+
+  /// No description provided for @serverUrlQuery.
+  ///
+  /// In zh, this message translates to:
+  /// **'请移除地址中问号及其后的内容。'**
+  String get serverUrlQuery;
+
+  /// No description provided for @serverUrlFragment.
+  ///
+  /// In zh, this message translates to:
+  /// **'请移除地址中井号及其后的内容。'**
+  String get serverUrlFragment;
+
+  /// No description provided for @serverUrlEscape.
+  ///
+  /// In zh, this message translates to:
+  /// **'地址中的百分号编码不完整，请检查后重试。'**
+  String get serverUrlEscape;
+
+  /// No description provided for @serverUrlBackslash.
+  ///
+  /// In zh, this message translates to:
+  /// **'请将地址中的反斜杠改为正斜杠。'**
+  String get serverUrlBackslash;
+
+  /// No description provided for @serverUrlPort.
+  ///
+  /// In zh, this message translates to:
+  /// **'端口号应为 1 到 65535 的整数。'**
+  String get serverUrlPort;
+
+  /// No description provided for @serverUrlZone.
+  ///
+  /// In zh, this message translates to:
+  /// **'请使用不带网卡标识的 IPv6 地址，或改用服务器名称。'**
+  String get serverUrlZone;
+
+  /// No description provided for @serverUrlInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'地址格式不正确，请检查后重试。'**
+  String get serverUrlInvalid;
+
+  /// No description provided for @serverConnectionFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接超时或网络不可用。请确认服务器已开启，并检查网络后重试。'**
+  String get serverConnectionFailed;
+
+  /// No description provided for @serverTlsFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法建立安全连接。请检查服务器证书和设备时间后重试。'**
+  String get serverTlsFailed;
+
+  /// No description provided for @serverAccessDenied.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器拒绝访问。请检查服务器的访问设置后重试。'**
+  String get serverAccessDenied;
+
+  /// No description provided for @serverWrongService.
+  ///
+  /// In zh, this message translates to:
+  /// **'此地址不是受支持的书库服务，请检查服务器地址。'**
+  String get serverWrongService;
+
+  /// No description provided for @serverLibraryUnconfigured.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器尚未设置书库。请先完成服务器设置，再重试。'**
+  String get serverLibraryUnconfigured;
+
+  /// No description provided for @serverLibraryUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器暂时无法读取书库。请检查服务器状态后重试。'**
+  String get serverLibraryUnavailable;
+
+  /// No description provided for @serverUnsupportedVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'此书库版本暂不受支持。请检查应用和服务器版本是否兼容。'**
+  String get serverUnsupportedVersion;
+
+  /// No description provided for @serverUnexpectedResponse.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器返回了无法识别的内容，可能是登录页或代理页面。请检查访问设置和服务器地址后重试。'**
+  String get serverUnexpectedResponse;
+
+  /// No description provided for @serverFinalAddress.
+  ///
+  /// In zh, this message translates to:
+  /// **'此地址发生了无法继续的跳转。请填写跳转后书库的完整地址，再重新连接。'**
+  String get serverFinalAddress;
+
+  /// No description provided for @serverResponseFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器暂时无法完成请求。请检查服务器状态后重试。'**
+  String get serverResponseFailed;
+
+  /// No description provided for @serverSaveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法保存新的连接。原有连接已保留，请稍后重试。'**
+  String get serverSaveFailed;
+
+  /// No description provided for @serverLocalNetworkHelp.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接家中或局域网内的服务器时，请确认设备与服务器处于可互通的网络。如果仍无法连接，可在 iPhone 的“设置”→“隐私与安全性”→“本地网络”中允许 Shiori 访问，然后返回重试。网络错误也可能由服务器未开启或地址不正确引起。'**
+  String get serverLocalNetworkHelp;
+
+  /// No description provided for @libraryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'书库'**
+  String get libraryTitle;
+
+  /// No description provided for @libraryBookTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'书籍信息'**
+  String get libraryBookTitle;
+
+  /// No description provided for @libraryRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新书库'**
+  String get libraryRefresh;
+
+  /// No description provided for @libraryRefreshing.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在刷新书库…'**
+  String get libraryRefreshing;
+
+  /// No description provided for @libraryLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在读取书库…'**
+  String get libraryLoading;
+
+  /// No description provided for @libraryStale.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在显示已保存的书库，内容可能不是最新的；离线时仍可浏览。'**
+  String get libraryStale;
+
+  /// No description provided for @libraryLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时无法读取书库，请重试。'**
+  String get libraryLoadFailed;
+
+  /// No description provided for @libraryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'书库里还没有书籍。'**
+  String get libraryEmpty;
+
+  /// No description provided for @libraryFolderEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'此文件夹里还没有书籍。'**
+  String get libraryFolderEmpty;
+
+  /// No description provided for @libraryFolderMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'找不到此文件夹，请刷新书库后重试。'**
+  String get libraryFolderMissing;
+
+  /// No description provided for @libraryBookMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'找不到此书籍，请刷新书库后重试。'**
+  String get libraryBookMissing;
+
+  /// No description provided for @libraryUnknownAuthor.
+  ///
+  /// In zh, this message translates to:
+  /// **'作者未知'**
+  String get libraryUnknownAuthor;
+
+  /// No description provided for @libraryPreparationPlaceholder.
+  ///
+  /// In zh, this message translates to:
+  /// **'书籍准备功能即将加入。目前可查看书籍信息。'**
+  String get libraryPreparationPlaceholder;
+
+  /// No description provided for @libraryBookCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 本书'**
+  String libraryBookCount(int count);
+
+  /// No description provided for @libraryCoverLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'《{title}》的封面'**
+  String libraryCoverLabel(String title);
+
   /// Application name shown by the OS task switcher and window title.
   ///
   /// In zh, this message translates to:
