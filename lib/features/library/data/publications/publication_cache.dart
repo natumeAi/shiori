@@ -74,6 +74,7 @@ final class PublicationCache {
       now ?? DateTime.now,
       hooks,
     );
+    scope.owner = cache;
     try {
       await cache.reconcile();
       return cache;
@@ -212,10 +213,11 @@ final class PublicationCache {
     final head = await store.readPublicationHead(key);
     checkCurrent();
     if (head == null) return null;
+    if (_scope.corrupt.containsKey(head.relativePath)) return null;
     final matches = await _files.matches(head);
     checkCurrent();
     if (!matches) {
-      await store.deleteGeneration(key, head.sha256);
+      await _invalidate(head);
       checkCurrent();
       return null;
     }
@@ -230,8 +232,28 @@ final class PublicationCache {
       } else {
         _protected[path] = count - 1;
       }
+      final owner = _scope.owner;
+      if (_scope.corrupt.containsKey(path) && owner != null) {
+        unawaited(
+          owner._serialize(owner._removeCorruptUnleased).catchError((
+            Object error,
+          ) {
+            // Keep the recorded path for the next explicit reconciliation, which
+            // reports cleanup failures to its caller.
+            if (error is! PublicationCacheException &&
+                error is! RequestCancelled) {
+              Error.throwWithStackTrace(error, StackTrace.current);
+            }
+          }),
+        );
+      }
     });
   }
+
+  /// Full verification failed. Retire only this physical generation; existing
+  /// leases retain their path until release, including after a same-digest repair.
+  Future<void> markCorrupt(PublicationLease lease) =>
+      _serialize(() => _invalidate(lease.generation));
 
   Future<StoredPublication> publish(
     PublicationAttempt attempt,
@@ -301,11 +323,22 @@ final class PublicationCache {
   Future<CacheReservation> reserveBytes(int bytes) =>
       _serialize(() => _reserve(bytes, _checkOpen));
 
-  Future<void> reconcile() => _serialize(_reconcile);
+  Future<void> reconcile() async {
+    _checkOpen();
+    // Downloads hold staging admission while reporting invalid local files to
+    // this owner. Never wait for that gate while holding the cache queue.
+    try {
+      await staging.cleanupAbandoned();
+    } on DownloadException {
+      throw const PublicationCacheException(PublicationCacheFailure.storage);
+    }
+    await _serialize(_reconcile);
+  }
 
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    if (identical(_scope.owner, this)) _scope.owner = null;
     for (final attempt in _attempts.toList()) {
       attempt.close();
     }
@@ -341,6 +374,8 @@ final class _PublicationCacheScope {
   _PublicationCacheScope(this.budget);
   final CacheBudget budget;
   final protected = <String, int>{};
+  final corrupt = <String, StoredPublication>{};
+  PublicationCache? owner;
   Future<void> tail = Future.value();
 }
 

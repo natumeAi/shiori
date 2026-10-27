@@ -19,6 +19,16 @@ import 'package:shiori/features/servers/data/server_activation_dependencies.dart
 
 part 'publication_download_service.g.dart';
 
+/// One protocol recovery across download and post-304 full verification.
+final class PublicationRecoveryAllowance {
+  bool _used = false;
+
+  void recover(int status) {
+    if (_used) throw ServerException(status);
+    _used = true;
+  }
+}
+
 final class PublicationDownloadService {
   PublicationDownloadService(
     this.transport,
@@ -46,6 +56,8 @@ final class PublicationDownloadService {
     bool refresh = false,
     CancelToken? cancelToken,
     void Function(int received, int? total)? onReceiveProgress,
+    PublicationRecoveryAllowance? recoveryAllowance,
+    Future<void> Function()? onUnusableLocal,
   }) {
     if (key.serverKey != transport.session.serverKey ||
         (local != null && local.key != key)) {
@@ -66,7 +78,15 @@ final class PublicationDownloadService {
     _pending[key] = operation;
     cancelToken?.whenCancel.then((_) => operation.cancel.cancel());
     operation.future = staging
-        .serialize(() => _perform(key, operation, refresh ? null : local))
+        .serialize(
+          () => _perform(
+            key,
+            operation,
+            refresh ? null : local,
+            recoveryAllowance ?? PublicationRecoveryAllowance(),
+            onUnusableLocal,
+          ),
+        )
         .whenComplete(() {
           if (_pending[key]?.generation == operation.generation) {
             _pending.remove(key);
@@ -88,6 +108,8 @@ final class PublicationDownloadService {
     BookKey key,
     _DownloadOperation operation,
     LocalPublication? local,
+    PublicationRecoveryAllowance recoveryAllowance,
+    Future<void> Function()? onUnusableLocal,
   ) async {
     void check() => _check(key, operation);
     StagingFile? owned;
@@ -95,6 +117,10 @@ final class PublicationDownloadService {
       check();
       var usable =
           local != null && await local.isUsable(limits.maxArchiveBytes, check);
+      if (local != null && !usable) {
+        check();
+        await onUnusableLocal?.call();
+      }
       for (var attempt = 0; ; attempt++) {
         check();
         final conditional = usable && attempt == 0;
@@ -131,7 +157,10 @@ final class PublicationDownloadService {
                 await local.isUsable(limits.maxArchiveBytes, check);
             check();
             if (usable) return DownloadNotModified(local);
+            await onUnusableLocal?.call();
+            check();
             // A 304 is admitted only on the first, conditional attempt.
+            recoveryAllowance.recover(304);
             continue;
           }
           final written = response.body!;
@@ -147,10 +176,10 @@ final class PublicationDownloadService {
           return result;
         } on ServerException catch (error) {
           check();
-          if (attempt != 0 ||
-              !const {304, 206, 412, 416}.contains(error.statusCode)) {
+          if (!const {304, 206, 412, 416}.contains(error.statusCode)) {
             rethrow;
           }
+          recoveryAllowance.recover(error.statusCode!);
           usable = false; // Exactly one full unconditional recovery.
         }
       }

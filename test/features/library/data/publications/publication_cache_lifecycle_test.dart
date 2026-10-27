@@ -17,6 +17,33 @@ import 'cache_test_support.dart';
 void main() {
   final key = BookKey(serverA, 7);
 
+  test('corrupt lease release uses the replacement cache owner for cleanup', () async {
+    final f = await CacheFixture.create();
+    addTearDown(f.dispose);
+    final p = await f.publish(key, 'old');
+    f.cache.dispose();
+    final container = ProviderContainer.test(
+      overrides: [
+        sqliteStoreProvider.overrideWith((ref) async => f.store),
+        publicationStagingProvider.overrideWith((ref) => f.staging),
+        sessionPublicationGuardProvider.overrideWith((ref) => f.guard),
+      ],
+      retry: (_, _) => null,
+    );
+    final cache = await container.read(publicationCacheProvider.future);
+    final lease = (await cache.acquireHead(f.session, key))!;
+    await f.file(p).writeAsString('bad');
+    await cache.markCorrupt(lease);
+    container.invalidate(publicationCacheProvider);
+    final replacement = await container.read(publicationCacheProvider.future);
+    expect(await replacement.acquireHead(f.session, key), isNull);
+    expect(f.file(p).readAsStringSync(), 'bad');
+    lease.release();
+    // A subsequent owner command waits for the cleanup queued by last release.
+    expect(await replacement.acquireHead(f.session, key), isNull);
+    expect(f.file(p).existsSync(), isFalse);
+  });
+
   test(
     'provider replacement retains container leases, reservations and queue',
     () async {

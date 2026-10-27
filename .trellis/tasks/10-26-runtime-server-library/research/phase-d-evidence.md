@@ -483,3 +483,87 @@ re-proves positions; product rendering/checkpoint/outbox work remains S4-owned.
 Real iPhone product/LAN permission/HTTP-prefix/update/lifecycle evidence and
 near-limit peak memory/no OS termination remain owed. These host gates do not
 complete S3-AC10 or waive any S2 resource/performance/device condition.
+
+## Phase D review fixes
+
+Implemented directly on 2026-10-27 in `D:/Projects/shiori`, branch
+`ios-build/s3-runtime-server`, from clean HEAD `d2163cf`. Read the independent
+reviewer's `edge_probe_test.dart` and `corrupt_cache_probe_test.dart` under
+`%TEMP%/shiori-phase-d-independent/` without editing them. Their staging,
+same-length corruption and large-file post-304 cases now have project regression
+coverage. No sub-agents, other checkout edits, staging, commits, pushes or branch
+switches were performed.
+
+### Fixes and contracts
+
+1. Staging checks every generated ancestor (`shiori`, `v1`, `staging`) without
+   following links before creation/listing and again before owned-file open,
+   discard and publication rename. Missing ancestors are created one at a time;
+   links/non-directories are content-free DownloadException(storage). Probe
+   paths have no trailing separator: Windows otherwise followed directory links
+   even with followLinks:false. Publication ancestor probes use the same safe
+   form. Root/intermediate-link tests preserve outside .part sentinels; replacing
+   the staging directory after file creation cannot redirect open/discard.
+2. Full verification retires the detected corrupt physical path under the cache
+   queue, removes only matching cache metadata/head and prevents new leases.
+   Existing leases keep that path readable until release. Verified unchanged
+   bytes can publish at `<sha256>.<random 128-bit generation>.epub` while the old
+   path is pinned; an unleased corrupt destination is removed before republishing
+   at its digest path. The generated suffix round-trips through the existing v2
+   relative_path column, with strict path/name validation and no schema migration.
+   Last lease release queues deletion on the current cache owner, including
+   provider replacement. Failed cleanup remains recorded/charged; explicit
+   reconciliation reports storage and retries. Late reports for the old path
+   cannot delete a repaired same-digest row. Content identity stays unchanged.
+3. One PublicationRecoveryAllowance spans D1 and D5 for an entire preparation,
+   including full verification after 304. Small-file D1 failures notify the cache
+   before recovery; large-file D5 failures do likewise. A second protocol anomaly
+   becomes PrepareBookException(server) after two file requests, rather than
+   starting a third request. Successful 304 -> full 200 recovery remains valid.
+   Reconciliation waits for staging cleanup before entering the cache queue,
+   avoiding a staging/cache lock inversion with D1's corruption notification.
+4. The optional pre-seam baseline reports a skip when
+   `build/d4/pre-seam-pages.json` is absent. `D4_REQUIRE_BASELINE=1` makes missing
+   evidence fail explicitly; capture mode remains available. Comparison cannot
+   silently pass if a previously present baseline disappears before reading it.
+
+`data-layer.md` and `s4-handoff.md` now describe actual retirement/recovery,
+generated paths, lease cleanup, staging checks and the shared recovery allowance.
+Startup intentionally retains its length-only check: unknown same-length
+corruption is detected on full verification, while already detected corruption
+is never admitted for reuse. No reader state is removed or rewritten.
+
+### Regression coverage and commands
+
+20 new tests cover linked staging roots/intermediates and post-create swaps;
+normal preparation and reconcile/forced-refresh repair with/without user leases;
+old handles held across recovery; small and large post-304 corruption; mixed
+second statuses 206/304/412/416; recovery-path restart/reuse; unleased digest-path
+repair; failed cleanup retry; concurrent reconciliation; and release after cache
+provider replacement. The former corrupt-destination rejection test now requires
+successful repair while preserving its old-file/no-overwrite assertions, then
+checks deletion after release. No existing safety assertion was weakened.
+
+| Command/check | Final result |
+| --- | --- |
+| `dart run build_runner build` | PASS; generated outputs have no remaining diff |
+| `dart format` on changed Dart files | PASS |
+| `dart format --output=none --set-exit-if-changed lib test tool/reader tool/diag tool/ci` | PASS; 522 files, zero changes |
+| `flutter analyze` | PASS; no issues |
+| `flutter test --no-pub test/features/library/data/publications test/core/storage test/features/reader/engine/pagination/resource_baseline_test.dart --reporter expanded` | PASS; 198 passed, one explicit optional baseline skip |
+| `D4_REQUIRE_BASELINE=1 flutter test --no-pub test/features/reader/engine/pagination/resource_baseline_test.dart --reporter expanded` | Expected failure verified; one test fails with the missing-evidence reason |
+| `flutter test --reporter expanded` | PASS; 2,101 passed, two optional skips, zero failed |
+| `dart run tool/ci/check_reader_fixtures.dart` | PASS; fixture manifests/privacy guard |
+| `git diff --check` and changed-path review | PASS; only authorized publication/cache primitives, related tests and three documentation files |
+
+The two skips are native CFI export without SHIORI_NATIVE_CFI_OUT and the absent
+pre-seam baseline. Logs are ignored `build/phase-d-review-*.log` files. Initial
+focused failures exposed the Windows trailing-separator/link behavior, mixed
+separator staging ownership comparisons and reuse of a retired missing path;
+these were fixed before the final passing runs. Initial analyzer findings
+(redundant null assertion, unnecessary import and missing braces) were fixed.
+No UI/routes/l10n, transport implementation, pubspec/dependencies, fixtures,
+task prd/design/implement/jsonl, or reviewer's temporary files changed.
+
+All four review items are resolved. Existing device/LAN/performance evidence
+boundaries above remain unchanged; these host regressions do not close AC10.

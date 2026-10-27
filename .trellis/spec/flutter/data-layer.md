@@ -469,7 +469,10 @@ Future<TransportResponse<T?>> SessionTransport.getFile<T>(int bookId, {
 });
 Future<DownloadResult> PublicationDownloadService.download(BookKey key, {
   LocalPublication? local, bool refresh = false, CancelToken? cancelToken,
+  PublicationRecoveryAllowance? recoveryAllowance,
+  Future<void> Function()? onUnusableLocal,
 });
+void PublicationRecoveryAllowance.recover(int status); // second call throws ServerException
 Future<void> PublicationStaging.cleanupAbandoned();
 Future<void> StagingFile.discard();
 void StagingFile.releaseAfterMove();
@@ -507,6 +510,11 @@ handwritten infrastructure values, not HTTP DTOs.
   returning. There is no whole-file buffer or second file read for download
   hashing. Staging uses exclusive creation of a secure random 128-bit `.part`
   name under `<Caches>/shiori/v1/staging/`; no supplied title/filename/path is used.
+  Before creation, listing, open, discard or publication rename, probe every
+  generated ancestor (`shiori`, `v1`, `staging`) with `followLinks: false`.
+  Probe paths without a trailing separator (Windows otherwise follows links).
+  Create missing ancestors one at a time; a link or non-directory is a typed
+  DownloadException(storage). Also reject linked staging files before open/move/delete.
 - Only a usable same-book local generation enables conditions. Check expected
   digest shape, existence and length before HTTP and again after 304. Rehash
   generations up to 8 MiB using a file stream both times; larger files rely on
@@ -515,7 +523,12 @@ handwritten infrastructure values, not HTTP DTOs.
   and return null, clearing any implication of previous validators.
 - An unusable 304 or unexpected 206/412/416 permits exactly one unconditional
   recovery. This is one shared recovery allowance, including mixed statuses;
-  a second such response fails. No recursive or automatic network retries.
+  D5 passes the same allowance to every D1 call and consumes it for failed full
+  post-304 verification. A second anomaly fails with ServerException(status),
+  mapped by preparation to PrepareBookException(server). No third file request.
+  D1 awaits onUnusableLocal before recovering an invalid local generation; D5
+  binds it to cache.markCorrupt, including small-file post-304 digest failures.
+  No recursive or automatic network retries.
 - Ordinary duplicates for a BookKey share the same Future/result. Refresh
   cancels/supersedes that book's older operation. Per-call cancellation cancels
   the shared attempt, including its coalesced consumers. Session retirement and
@@ -594,6 +607,7 @@ Future<StoredPublication> publish(PublicationAttempt attempt, StagedDownload sta
     {required int parserVersion, required int canonicalVersion});
 Future<PublicationLease?> acquireHead(ServerSession session, BookKey key);
 Future<PublicationLease?> pinHead(BookKey key);
+Future<void> markCorrupt(PublicationLease lease);
 Future<CacheReservation> reserveBytes(int bytes);
 Future<void> reconcile();
 Stream<PublicationHeadChange> get headChanges;
@@ -615,7 +629,8 @@ Future<void> touchGeneration(BookKey key, String sha256, DateTime at);
 ### Contracts
 
 - Files live at `<Caches>/shiori/v1/publications/<server SHA-256>/<safe book ID>/
-  <byte SHA-256>.epub`. Components are generated from BookKey/digest; titles,
+  <byte SHA-256>.epub`, or `<byte SHA-256>.<32 lowercase hex generation>.epub`
+  for a repair while the old path is leased. Components are generated from BookKey/digest; titles,
   filenames, URLs and stored arbitrary relative paths never authorize file I/O.
   The path version stays v1 when the separate SQLite schema becomes v2.
   Detached StoredPublication carries key, sha256, byteLength, parserVersion,
@@ -635,7 +650,15 @@ Future<void> touchGeneration(BookKey key, String sha256, DateTime at);
   Reserve quota, then rename within Caches before issuing the SQLite command.
   A present same-digest destination must pass full length/digest verification;
   reuse it and discard staging without overwriting it, including on Windows.
-  A corrupt existing destination fails; never repair an open generation in place.
+  Full verification failure records the corrupt physical path in container
+  state and removes its matching metadata/head under the serialized cache owner.
+  New leases cannot acquire it. Never repair an open generation in place: while
+  any pin/lease holds that path, publish the verified stage under its secure
+  random 128-bit generation suffix and atomically upsert the same digest's row.
+  Persist that strictly validated suffix in the existing relative_path column;
+  no schema change or arbitrary stored path is accepted. If unleased, delete
+  the corrupt destination before republishing. Physical repair preserves content
+  identity and emits no preparation ContentChange when bytes/versions match.
 - publishGeneration atomically upserts validated metadata and changes the head
   with bound SQL, preserving old generation rows. A failed COMMIT rolls both
   changes back. Consumers acquire through the serialized cache only after commit.
@@ -653,9 +676,13 @@ Future<void> touchGeneration(BookKey key, String sha256, DateTime at);
   head file length/existence and touches its LRU time. Replacement keeps old
   bytes readable while any lease/pin remains. Release is idempotent; the last
   release makes a non-head generation eligible for later eviction. Closing an
-  attempt releases its fallback pin; it does not delete that generation.
+  attempt releases its fallback pin; valid generations remain eligible for LRU.
   Private container state retains pins, reservations and the serial queue across
   cache provider invalidation. Direct open callers must maintain one owner.
+  Detected-corrupt paths remain readable through existing leases until release;
+  last release queues serialized cleanup. Failed deletion keeps the corruption
+  record and its measured disk bytes; explicit reconcile reports storage and retries.
+  A late report for an old path must not delete a repaired same-digest row.
 - CacheBudget defaults to **512 MiB** across all server namespaces. Admission
   charges actual regular files under publications, including crash orphans,
   plus outstanding reservations. D1's one **256 MiB** staging allowance stays
@@ -678,7 +705,10 @@ Future<void> touchGeneration(BookKey key, String sha256, DateTime at);
   live protected paths. Never follow links or delete directory trees. A removed
   publications directory is an empty cache and is recreated on later publish.
   Call staging.cleanupAbandoned; it retains live staging ownership. Reconciliation
-  is callable later and shares the publication/acquisition queue.
+  runs staging cleanup through its own gate before entering the publication/
+  acquisition queue. Never hold the cache queue while waiting for the staging
+  gate: a download may await a corruption report on that same cache owner.
+  Reconciliation is callable later; metadata/file reconciliation stays serialized.
 - Low-level cache commands are for this owner, not direct product consumers:
   pass every protected path when requesting eviction candidates. All cache
   operations affect only cached_publications/book_cache_heads and cache files.
@@ -691,7 +721,9 @@ Future<void> touchGeneration(BookKey key, String sha256, DateTime at);
 | --- | --- |
 | Individual generation/reservation exceeds total limit | PublicationCacheException(tooLarge); recoverable |
 | Leases, pins or reservations prevent admission | PublicationCacheException(cacheBusy); live bytes retained |
-| Stage hash/length or existing same-digest verification fails | PublicationCacheException(invalidGeneration) |
+| Stage hash/length verification fails | PublicationCacheException(invalidGeneration) |
+| Existing same-digest file fails full verification | Retire that path; publish verified stage separately if leased, otherwise delete then republish |
+| Linked staging ancestor/root/file | DownloadException(storage); no outside file read/write/delete |
 | Filesystem, SQLite, staging cleanup or closed-worker failure | PublicationCacheException(storage), content-free |
 | Retired session, superseded/closed attempt, disposed service | RequestCancelled; no event/retry |
 | Foreign staging owner/book/session or invalid version/digest input | ArgumentError; caller contract violation |
@@ -703,6 +735,8 @@ Future<void> touchGeneration(BookKey key, String sha256, DateTime at);
 Base: validate stage -> reserve -> rename -> generation/head commit -> lease.
 Good: leased A remains readable after B replaces its head; release later allows
 LRU eviction. Rename-before-commit crash leaves a removable orphan and old head.
+Good: unchanged server bytes repair a corrupt cache with the same identity while
+an older lease keeps its corrupt physical file readable until release.
 Bad: COMMIT failure must never point the head at an uncommitted generation or
 delete the old fallback; a same-number book on another server is independent.
 
@@ -716,6 +750,10 @@ LRU/touch, fallback and explicit pins, multiple leases/last release, inclusive
 quota, tooLarge/cacheBusy, orphan charging, cleanup retry, missing/length mismatch,
 legacy invalid/path records and outside sentinel files. Compare exact rows in
 servers/app_state/snapshots and a future-reader sentinel after cache operations.
+Assert linked staging roots/intermediate ancestors are refused with outside .part
+sentinels intact; same-length corruption repairs via prepare and reconcile/forced
+refresh, with/without user leases, open old handles, cleanup retry, recovery-path
+restart, and at most two file requests after small/large post-304 corruption.
 Migration tests reconstruct v1, preserve head/durable/sentinel rows, roll back
 the added column and version together, and retain future-schema refusal tests.
 
@@ -726,6 +764,9 @@ the lease map when a service provider is invalidated. Correct: rename first,
 commit the generation/head together, verify/reuse existing bytes and retain
 protection in container state. Wrong: release a future cover's charge immediately
 after writing; correct: keep it until those outside-subtree bytes are removed.
+Wrong: length-only reconcile forgets a previously detected digest failure, or D5
+starts a fresh recovery allowance after 304. Correct: retire the physical path
+when detection occurs and share the allowance through the complete preparation.
 
 ## Dio and Config
 

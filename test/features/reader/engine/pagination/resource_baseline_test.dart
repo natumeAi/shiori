@@ -9,9 +9,20 @@ import 'resource_parity_snapshot.dart';
 
 void main() {
   initEngineBinding();
+  const path = 'build/d4/pre-seam-pages.json';
+  final capture = Platform.environment['D4_CAPTURE_BASELINE'] == '1';
+  final required = Platform.environment['D4_REQUIRE_BASELINE'] == '1';
+  final missing = !File(path).existsSync();
   test(
     'bundled prepared output matches the optional pre-seam host capture',
     () async {
+      if (required && !capture) {
+        expect(
+          missing,
+          isFalse,
+          reason: 'Required pre-seam evidence is missing: $path',
+        );
+      }
       final snapshots = <String, Object?>{};
       final manifest = jsonDecode(
         File('assets/reader_fixtures/manifest.json').readAsStringSync(),
@@ -36,15 +47,17 @@ void main() {
         book.archive.close();
       }
       expect(snapshots.length, greaterThan(100));
-      const path = 'build/d4/pre-seam-pages.json';
-      if (Platform.environment['D4_CAPTURE_BASELINE'] == '1') {
+      if (capture) {
         File(path).writeAsStringSync(jsonEncode(snapshots));
-      } else if (File(path).existsSync()) {
+      } else {
         expect(
           jsonDecode(jsonEncode(snapshots)),
           jsonDecode(File(path).readAsStringSync()),
         );
       }
     },
+    skip: missing && !capture && !required
+        ? 'Missing optional pre-seam evidence: $path; set D4_REQUIRE_BASELINE=1 to require it.'
+        : false,
   );
 }

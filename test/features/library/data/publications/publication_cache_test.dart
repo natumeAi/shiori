@@ -261,17 +261,21 @@ void main() {
   );
 
   test(
-    'same-length corrupt destination is rejected without overwrite',
+    'same-length corrupt destination recovers without overwriting a lease',
     () async {
       await create();
       final p = await f.publish(key, 'old');
+      final lease = (await f.cache.acquireHead(f.session, key))!;
       await f.file(p).writeAsString('bad');
-      await expectLater(
-        f.publish(key, 'old'),
-        throwsA(cacheFailure(PublicationCacheFailure.invalidGeneration)),
-      );
+      final recovered = await f.publish(key, 'old');
+      expect(recovered.relativePath, isNot(p.relativePath));
+      expect(f.file(recovered).readAsStringSync(), 'old');
       expect(f.file(p).readAsStringSync(), 'bad');
       expect((await f.store.readPublicationHead(key))!.sha256, p.sha256);
+      lease.release();
+      await f.cache.reconcile();
+      expect(f.file(p).existsSync(), isFalse);
+      expect(f.file(recovered).readAsStringSync(), 'old');
     },
   );
 

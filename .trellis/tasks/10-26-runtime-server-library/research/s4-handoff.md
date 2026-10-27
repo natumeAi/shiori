@@ -160,7 +160,25 @@ Never release a shared/coalesced result as though it were a separate owner.
 Replacing/evicting a head cannot remove an older leased generation. OS removal
 or external corruption remains recoverable; a lease cannot prevent OS purge.
 Corrupt existing immutable same-digest destinations are never overwritten while
-leased; release users and reconcile/retry, or accept a valid different digest.
+leased. Full verification retires that physical path through
+`PublicationCache.markCorrupt`: new acquisitions cannot use it, and only its
+matching metadata/head is removed. Preparation downloads and verifies unchanged
+server bytes normally. If the old path is still pinned/leased, publication uses
+`<sha256>.<32 lowercase hex generation>.epub` and atomically publishes that path
+for the same content identity. Existing users keep their original readable path
+until release; last release queues serialized deletion. Unleased corrupt files
+are removed before republishing at the digest path. Failed cleanup remains
+charged and is retried/reported by explicit reconciliation. Startup keeps its
+length-only check; it cannot discover same-length corruption by itself, but
+never restores a previously retired path as usable. Recovery paths round-trip
+through the existing v2 relative_path column with strict generated-name validation;
+there is no schema migration or reader-state write.
+
+D1 and D5 share one `PublicationRecoveryAllowance` for a preparation attempt,
+including D5's full verification after 304. An unusable 304 consumes the one
+unconditional recovery; a subsequent 206/304/412/416 is a typed preparation server
+failure after two file requests. D1 also reports invalid small-file local checks
+to the cache owner before issuing recovery. Retry is a new explicit attempt.
 
 ## Worker, preload and retained resources
 

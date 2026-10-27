@@ -22,7 +22,8 @@ extension _PublicationPublishing on PublicationCache {
       if (staged.key != attempt.key) {
         throw ArgumentError('Staging file belongs to another book');
       }
-      final value = StoredPublication(
+      final existing = await store.readGeneration(staged.key, staged.digest);
+      StoredPublication metadata(String? generation) => StoredPublication(
         key: staged.key,
         sha256: staged.digest,
         byteLength: staged.byteLength,
@@ -31,7 +32,9 @@ extension _PublicationPublishing on PublicationCache {
         accessedAt: now().toUtc(),
         etag: staged.etag,
         lastModified: staged.lastModified,
+        generation: generation,
       );
+      var value = metadata(existing?.generation);
       if (value.byteLength < 1) {
         throw const PublicationCacheException(
           PublicationCacheFailure.invalidGeneration,
@@ -42,6 +45,7 @@ extension _PublicationPublishing on PublicationCache {
       }
       // Caller has completed worker package/source validation. Recheck bytes
       // before moving them, without ever accumulating a second archive buffer.
+      await staged.file.validate();
       if (!await _files.matchesFile(
         File(staged.path),
         value.byteLength,
@@ -54,16 +58,34 @@ extension _PublicationPublishing on PublicationCache {
       }
       check();
       final previous = await store.readPublicationHead(value.key);
-      final destination = await _files.destination(value);
-      final exists =
+      var destination = await _files.destination(value);
+      var exists =
           await FileSystemEntity.type(destination.path, followLinks: false) !=
           FileSystemEntityType.notFound;
       if (exists && !await _files.matches(value, digest: true, check: check)) {
-        // Immutable paths are never repaired in place, especially if open on
-        // Windows. Reconciliation removes invalid, unleased cache bytes later.
-        throw const PublicationCacheException(
-          PublicationCacheFailure.invalidGeneration,
-        );
+        await _invalidate(value);
+        check();
+        exists = false;
+      }
+      if (_scope.corrupt.containsKey(value.relativePath)) {
+        if (_protected.containsKey(value.relativePath)) {
+          // Keep every old lease's path readable. The stage's secure random
+          // filename also supplies a generated physical recovery generation.
+          value = metadata(
+            File(staged.path).uri.pathSegments.last.split('.').first,
+          );
+          destination = await _files.destination(value);
+          if (await FileSystemEntity.type(
+                destination.path,
+                followLinks: false,
+              ) !=
+              FileSystemEntityType.notFound) {
+            throw const PublicationCacheException(
+              PublicationCacheFailure.storage,
+            );
+          }
+        }
+        exists = false;
       }
       reservation = await _reserve(
         exists ? 0 : value.byteLength,
@@ -77,6 +99,8 @@ extension _PublicationPublishing on PublicationCache {
         // Both paths are below the same Caches filesystem. No copy fallback.
         check();
         final rename = hooks?.rename;
+        await staged.file.validate();
+        check();
         if (rename == null) {
           await File(staged.path).rename(destination.path);
         } else {

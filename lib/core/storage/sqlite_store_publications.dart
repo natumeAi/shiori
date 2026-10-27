@@ -12,6 +12,14 @@ StoredPublication _publication(Row row) {
   }
   final key = BookKey(server, row['book_id'] as int);
   final digest = row['byte_digest'] as String;
+  final path = row['relative_path'] as String;
+  final base = StoredPublication.pathFor(key, digest);
+  final suffix = path.startsWith('${base.substring(0, base.length - 5)}.')
+      ? path.substring(base.length - 4)
+      : '';
+  final generation = RegExp(r'^([0-9a-f]{32})\.epub$')
+      .firstMatch(suffix)
+      ?.group(1);
   return StoredPublication(
     key: key,
     sha256: digest,
@@ -22,8 +30,9 @@ StoredPublication _publication(Row row) {
     etag: row['etag'] as String?,
     lastModified: row['last_modified'] as String?,
     isValidated: row['validation_status'] == 'validated',
+    generation: generation,
     hasExpectedPath:
-        row['relative_path'] == StoredPublication.pathFor(key, digest),
+        path == StoredPublication.pathFor(key, digest, generation: generation),
   );
 }
 

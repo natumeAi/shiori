@@ -32,8 +32,32 @@ final class PublicationStaging {
   }
 
   Future<Directory> directory() async {
-    final root = await directories.caches();
-    return Directory('${root.path}/shiori/v1/staging').create(recursive: true);
+    try {
+      var dir = await directories.caches();
+      for (final part in ['shiori', 'v1', 'staging']) {
+        // A trailing separator can make Windows follow a directory link even
+        // with followLinks:false. Probe the component without that separator.
+        dir = Directory('${dir.path}/$part');
+        final type = await FileSystemEntity.type(dir.path, followLinks: false);
+        if (type == FileSystemEntityType.notFound) {
+          await dir.create();
+        } else if (type != FileSystemEntityType.directory) {
+          throw const DownloadException(DownloadFailure.storage);
+        }
+      }
+      return dir;
+    } on FileSystemException {
+      throw const DownloadException(DownloadFailure.storage);
+    }
+  }
+
+  Future<void> _validateFile(File file) async {
+    final dir = await directory();
+    if (file.parent.absolute.uri != dir.absolute.uri ||
+        await FileSystemEntity.type(file.path, followLinks: false) !=
+            FileSystemEntityType.file) {
+      throw const DownloadException(DownloadFailure.storage);
+    }
   }
 
   Future<StagingFile> create() async {
@@ -46,10 +70,14 @@ final class PublicationStaging {
         16,
         (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
       ).join();
-      final file = await File('${dir.path}/$name.part').create(exclusive: true);
+      final file = await File.fromUri(dir.uri.resolve('$name.part'))
+          .create(exclusive: true);
       final owned = StagingFile._(file, this);
       _owned.add(owned);
       return owned;
+    } on FileSystemException {
+      _reserved = false;
+      throw const DownloadException(DownloadFailure.storage);
     } catch (_) {
       _reserved = false;
       rethrow;
@@ -85,13 +113,25 @@ final class StagingFile {
   String get path => _file.path;
   bool _released = false;
 
-  Future<StagingWriter> open() async => _owner.openWriter != null
-      ? _owner.openWriter!(_file)
-      : _FileWriter(await _file.open(mode: FileMode.write));
+  Future<void> validate() => _owner._validateFile(_file);
+
+  Future<StagingWriter> open() async {
+    try {
+      await validate();
+      return _owner.openWriter != null
+          ? await _owner.openWriter!(_file)
+          : _FileWriter(await _file.open(mode: FileMode.write));
+    } on FileSystemException {
+      throw const DownloadException(DownloadFailure.storage);
+    }
+  }
 
   Future<void> discard() async {
     if (_released) return;
     try {
+      await _owner.directory();
+      final type = await FileSystemEntity.type(_file.path, followLinks: false);
+      if (type != FileSystemEntityType.notFound) await validate();
       if (await _file.exists()) await _file.delete();
       releaseAfterMove();
     } on FileSystemException {

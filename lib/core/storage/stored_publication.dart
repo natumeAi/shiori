@@ -13,11 +13,14 @@ final class StoredPublication {
     this.lastModified,
     this.isValidated = true,
     this.hasExpectedPath = true,
+    this.generation,
   }) {
     if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(sha256) ||
         byteLength < 0 ||
         parserVersion < 1 ||
-        canonicalVersion < 1) {
+        canonicalVersion < 1 ||
+        (generation != null &&
+            !RegExp(r'^[0-9a-f]{32}$').hasMatch(generation!))) {
       throw ArgumentError('Invalid publication metadata');
     }
   }
@@ -35,9 +38,11 @@ final class StoredPublication {
   /// without ever resolving their supplied paths.
   final bool isValidated;
   final bool hasExpectedPath;
+  final String? generation;
 
-  String get relativePath => pathFor(key, sha256);
+  String get relativePath => pathFor(key, sha256, generation: generation);
 
-  static String pathFor(BookKey key, String sha256) =>
-      'shiori/v1/publications/${key.serverKey.value}/${key.bookId}/$sha256.epub';
+  static String pathFor(BookKey key, String sha256, {String? generation}) =>
+      'shiori/v1/publications/${key.serverKey.value}/${key.bookId}/'
+      '$sha256${generation == null ? '' : '.$generation'}.epub';
 }

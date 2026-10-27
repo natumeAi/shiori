@@ -33,16 +33,23 @@ extension _PrepareBookFlow on PrepareBookService {
       // Compatibility and a complete streamed digest check precede conditions,
       // including for large files whose D1 fast check only checks length.
       final local = attempt.previousHead?.local;
-      final usable =
-          previous != null &&
-          _identity(previous).isCurrent &&
-          await _verify(attempt.previousHead!, check);
+      final verified =
+          previous != null && await _verify(attempt.previousHead!, check);
+      if (previous != null && !verified) {
+        await publications.markCorrupt(attempt.previousHead!);
+      }
+      final usable = verified && _identity(previous).isCurrent;
       check();
+      final recoveryAllowance = PublicationRecoveryAllowance();
       final download = await downloads.download(
         key,
         local: usable ? local : null,
         refresh: refresh,
         cancelToken: operation.http,
+        recoveryAllowance: recoveryAllowance,
+        onUnusableLocal: usable
+            ? () => publications.markCorrupt(attempt.previousHead!)
+            : null,
         onReceiveProgress: (received, total) {
           check();
           guard.publish(
@@ -64,10 +71,14 @@ extension _PrepareBookFlow on PrepareBookService {
         case DownloadNotModified():
           if (!await _verify(attempt.previousHead!, check)) {
             // Loss during the conditional round trip gets one full recovery.
+            await publications.markCorrupt(attempt.previousHead!);
+            check();
+            recoveryAllowance.recover(304);
             final recovery = await downloads.download(
               key,
               refresh: true,
               cancelToken: operation.http,
+              recoveryAllowance: recoveryAllowance,
             );
             if (recovery is StagedDownload) staged = recovery;
             check();

@@ -22,7 +22,7 @@ final class _PublicationFiles {
   Future<bool> _directories(List<String> parts, {bool create = false}) async {
     var dir = caches;
     for (final part in parts) {
-      dir = Directory.fromUri(dir.uri.resolve('$part/'));
+      dir = Directory('${dir.path}/$part');
       final type = await FileSystemEntity.type(dir.path, followLinks: false);
       if (type == FileSystemEntityType.notFound) {
         if (!create) return false;
