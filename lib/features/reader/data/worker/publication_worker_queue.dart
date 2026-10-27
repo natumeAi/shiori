@@ -36,6 +36,10 @@ extension _WorkerQueue on PublicationWorker {
   }
 
   void _invalidate(PublicationWorkerFailure failure) {
+    for (final session in _resourceSessions.values) {
+      session.retire();
+    }
+    _resourceSessions.clear();
     _running?.fail(failure);
     for (final pending in _pending) {
       pending.fail(failure);

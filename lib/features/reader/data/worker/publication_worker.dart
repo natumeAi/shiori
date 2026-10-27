@@ -5,8 +5,11 @@ import 'dart:typed_data';
 
 import 'package:shiori/core/config/content_identity.dart';
 import 'package:shiori/features/reader/data/epub/epub_archive.dart';
+import 'package:shiori/features/reader/data/resources/reader_resource_budget.dart';
+import 'package:shiori/features/reader/data/resources/reader_resource_source.dart';
 import 'package:shiori/features/reader/data/source/source_document.dart';
 import 'package:shiori/features/reader/data/worker/prepared_publication.dart';
+import 'package:shiori/features/reader/data/worker/preloaded_publication_section.dart';
 import 'package:shiori/features/reader/data/worker/publication_cancellation.dart';
 import 'package:shiori/features/reader/data/worker/publication_snapshot.dart';
 import 'package:shiori/features/reader/data/worker/publication_tag.dart';
@@ -14,8 +17,10 @@ import 'package:shiori/features/reader/data/worker/publication_worker_exception.
 import 'package:shiori/features/reader/data/worker/publication_worker_protocol.dart';
 import 'package:shiori/features/reader/data/worker/publication_worker_runtime.dart';
 import 'package:shiori/features/reader/data/worker/publication_worker_test_hooks.dart';
+import 'package:shiori/features/reader/engine/style/reader_settings.dart';
 
 part 'publication_worker_queue.dart';
+part 'publication_worker_preload.dart';
 
 /// One long-lived file-backed publication owner. Root-side code only queues,
 /// validates envelopes and materializes already decompressed transferable bytes.
@@ -74,6 +79,7 @@ final class PublicationWorker {
   bool _closing = false;
   bool _closeAcknowledged = false;
   Completer<void>? _closeDone;
+  final Map<ReaderResourceBudget, ReaderResourceSession> _resourceSessions = {};
 
   bool get isClosed => _closed || _closing;
 

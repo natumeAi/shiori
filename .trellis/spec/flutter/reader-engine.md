@@ -193,8 +193,169 @@ closure, Flutter object or lazy read crosses the port.
 
 Fixed, mixed, RTL-progression, RTL-language and vertical facts never fail import.
 `prepare` does not call `detectBookLayout` or `requireSupported`; S4 owns renderer
-verdicts. D4 owns the preloaded source/resource seam, leases and resource-cache
-accounting. File-backed import is not a total worker RSS or iPhone memory proof.
+verdicts. D4 adds the source/resource seam, preloaded values, section leases and
+resource-cache accounting below; both archive and detached preparation are tested.
+File-backed import is not a total worker RSS or iPhone memory proof.
+
+### Preloaded resources and retained budget (S3 D4)
+
+#### 1. Scope / Trigger
+
+Downloaded publications need synchronous, already-preloaded resource access
+without root-isolate archive inflation. The complete seam-routed engine list
+is below; paths are relative to `lib/features/reader/engine/`.
+
+| File | Seam-only change |
+| --- | --- |
+| `pagination/section_preparer.dart` | Accept detached href/CFI/source/styles and resources; route fonts, presence and intrinsic-image reads; transfer/release the resource lease on success/failure. |
+| `pagination/prepared_section.dart` | Own the resource source, use it for later image reads and release it once on disposal; ignore image requests after disposal. |
+| `layout/font_registry.dart` | Adapt the legacy archive entry point and route unchanged size/byte checks through `loadResources`. |
+| `layout/block_builder.dart` | Adapt the legacy archive argument and route image/SVG presence checks through the source. |
+| `surface/page_surface_pool.dart` | Read encoded images from the prepared section's resource source. |
+| `style/css_style_resolver.dart` | Route archive text/presence reads through the archive adapter. |
+| `support/layout_flags.dart` | Route display-option text reads through the archive adapter. |
+| `support/unsupported_layout.dart` | Route OPF language text reads through the archive adapter. |
+
+The added disposal guards enforce lease lifetime. Layout, shaping, pagination,
+painting, capability decisions and probe output keep their existing behavior.
+
+#### 2. Signatures
+
+`data/resources/reader_resource_source.dart` defines `ReaderResourceSource`:
+synchronous `bytes(path)`, `contains(path)`, `size(path)` and idempotent
+`dispose()`. `ArchiveReaderResourceSource` delegates all reads, presence and
+declared sizes to the existing archive and does not close its caller's archive.
+It preserves the probe's in-memory resource behavior and work guard. The
+`ReaderResourceText.text` extension uses the archive's exact UTF-8 replacement/
+BOM behavior, with the same storage work guard. All engine encoded-byte,
+declared-size, presence and text reads go through this interface.
+
+Use `PrepareRequest.resources(resources, sectionHref, sectionBase, ...)` with
+the worker plan's source/styles and captured settings/content ID. It needs no
+root `EpubBook`, archive or lazy callback. The existing `PrepareRequest(book:
+...)`, `LayoutBlockBuilder(archive: ...)` and `FontRegistry.load(archive, ...)`
+remain compatibility paths that immediately adapt archive access; existing
+tests need no edits. The probe explicitly passes `ArchiveReaderResourceSource`.
+`FontRegistry.loadResources` keeps the 32 MiB declared-size check before bytes,
+the same format/load failures, aliasing and missing-font fallback. Image/SVG
+presence, intrinsic sizing, lazy decoded-image leasing and page surfaces all
+read through the section resource owner, with unchanged layout/painting.
+
+#### 3. Contracts
+
+`PublicationWorker.preloadSection(index, {settings, budget, cancellation,
+onMiss}) -> Future<PreloadedPublicationSection>` uses two serialized, tagged,
+generation-checked requests. First the worker loads the projected source,
+discovers that section's CSS/SVG/local references using the D3 inventory and
+resolves its styles at the supplied settings. The detached plan contains source,
+frozen style lookups, href/CFI base, references and local declared lengths.
+Freezing must preserve the original computed-style identity graph with an
+identity-keyed memo: `InlineAccumulator` merges adjacent runs using `identical`.
+Equal style values copied separately split runs and can alter native shaping/
+rounding. Preserve sharing across element/character-data/root style lookups;
+do not weaken geometry assertions to conceal this contract.
+External/data/fragment references are never fetched. No book/archive/loader or
+lazy resource callback crosses the boundary. The root reserves the missing
+encoded bytes before requesting their transfer; existing cache hits are pinned
+and are not retransmitted. The worker preflights the batch, enforces the
+individual worker entry bound (64 MiB by default), inflates/verifies entries
+and sends `TransferableTypedData`. A batch cannot exceed 128 MiB. Root-side
+commit validates exact lengths/backing-buffer sizes and retains read-only views.
+
+`ReaderResourceBudget.shared` is the product default across all adapters and
+workers: `retainedBytes + reservedBytes <= 128 MiB`. Smaller injectable budgets
+are for isolated tests; product composition must share one owner. Entry keys
+include an opaque publication-generation session and exact path, never just a
+book ID or path. Admission pins cache hits, charges missing bytes and evicts
+only unleased entries, oldest last-access first. If pins/reservations prevent
+admission, `ReaderResourceException(budgetExceeded)` occurs before transfer;
+overlapping in-flight keys return `busy`, without duplicate retention.
+
+Each preloaded adapter leases its entries. `dispose()` drops its references and
+immediately evicts any entry whose last lease is released; `releaseToCache()`
+instead leaves unleased LRU candidates for an explicit warm-cache handoff.
+Disposed adapters cannot read again. Reopen/prepare/close/worker failure retire
+the previous generation's reservations, live adapters and idle bytes. Session
+retirement is immediate on the root; normal worker close still drains physical
+work and waits for archive closure/exit. Cancellation discards late replies and
+rolls back reservations, but does not preempt synchronous inflation.
+
+`PreloadedReaderResourceSource` serves only its leased entries. Missing reads
+return null; `miss(path)` distinguishes absent, not-preloaded, disposed and
+retired entries. Optional diagnostics receive only the `ReaderResourceMiss`
+enum, never paths, URLs or resource content. No fallback archive read is allowed.
+Callers must dispose an abandoned preload. Outside a forbidden motion callback,
+`SectionPreparer.prepare` consumes its resource lease: success transfers it to
+`PreparedSection`, and any failure/cancellation disposes it, including before
+block creation. `PreparedSection.dispose()` releases decoded images, blocks
+and encoded resources once. Callers must not share one adapter across multiple
+preparations or dispose a consumed preload early; ask the worker for another
+lease. Independent section adapters share underlying retained entries safely.
+Bind server-session retirement to worker close; close revokes root resource
+leases immediately, then asynchronously drains/joins the worker.
+
+#### 4. Validation & Error Matrix
+
+| Condition | Result |
+| --- | --- |
+| Pinned/reserved bytes prevent admission | `ReaderResourceException(budgetExceeded)` before transfer. |
+| A missing key is already reserved | `ReaderResourceException(busy)`; no duplicate retention. |
+| Wrong transfer keys, lengths or backing-buffer sizes | Reject as protocol/`invalidTransfer`; release reservation. |
+| Publication generation changes or worker closes/fails | Revoke leases/reservations; reject stale work. |
+| Resource absent or not preloaded; adapter disposed/retired | Null read and content-free miss classification; no I/O fallback. |
+| Preparation cancellation/failure | Release encoded lease; preserve existing block cleanup. |
+| Font declared size exceeds 32 MiB | Reject before reading bytes; preserve missing-font fallback. |
+
+#### 5. Good/Base/Bad Cases
+
+Good: independent section leases share cached bytes, and disposing the last
+owner returns accounting to zero. Base: bundled probe/archive callers retain
+the same prepared output. Bad: sharing a consumed adapter between preparations
+or counting the encoded limit as a process-memory ceiling.
+
+#### 6. Tests Required
+
+Host parity covers 14 bundled fixtures, every section and all three gate
+settings: 120 cases / 2,733 pages. Archive-adapter output exactly matches the
+pre-seam host capture, and detached worker preparation matches archive output
+for page/source maps, lines/geometry, text runs, images, unsupported items and
+font chains. New tests wrap actual preloaded resource calls in
+`ReaderWorkGuard.callback`; an archive inflation fallback would assert. Layout,
+font loading and decoding still run normally outside that resource-only zone.
+Image `ensureImages` and `PageSurfacePool.prepare` exercise later encoded reads
+through the same guarded source. All existing tests/vectors remain unchanged.
+
+#### 7. Wrong vs Correct
+
+Wrong: freeze each node's equal style into a separate object, or recover a
+preloaded miss by reading the archive on root. Correct: memoize frozen styles
+by source identity and serve only leased preloaded bytes; report the miss.
+
+#### Host evidence and S4 device gate
+
+Host experiment, Windows/Dart 3.13.5, 2026-10-27:
+`dart run tool/reader/publication_memory_probe.dart` generated a 209,751,801-byte
+EPUB containing 200 stored 1 MiB image entries and preloaded four referenced
+entries (4,194,304 bytes). The final D4 run's process RSS (both isolates) was
+407,011,328 bytes before prepare, 329,207,808 after prepare, 337,805,312 after
+preload and 325,111,808 after close; maximum RSS was 546,168,832. Accounting
+returned to zero. The prior partial-D4 run is retained in task evidence.
+The negative sampled deltas reflect VM/GC/working-set variation; the peak rose
+139,042,816 bytes above the baseline maximum. These are source import/preload
+observations, not section layout/image decode measurements. Compared with A3's
+200 MiB archive-only file-open delta of -7,507,968 bytes (memory-open:
++202,850,304), this broader worker experiment includes loader graph hashing,
+source/style work and transfer overhead and cannot establish an equivalent
+flat-RSS guarantee. Temporary memory-probe files were deleted.
+
+The budget bounds retained encoded buffers, not transient inflate/transfer
+copies, source/style graphs, decoded rasters, registered fonts or process RSS.
+S4 must bind these APIs into the product reader/session owner and prove device
+cancellation/lifecycle cleanup, near-limit peak memory and absence of OS memory
+termination on iPhone, plus the existing font/performance/rendering gates.
+Abrupt isolate kill cannot promise synchronous native file-handle finalization;
+use normal `close()` for
+deterministic file release.
 
 ### CFI and canonical coordinates
 
@@ -363,9 +524,9 @@ release-mode scheduler or an isolation guarantee for unguarded future APIs.
   emitted-byte limits, exact length/CRC-32 checks and file-backed open described
   above. D3's worker import keeps archive/source/style/canonical work off root
   and returns detached readiness/layout facts without a capability verdict.
-  D4 still owns the bounded preloaded source/resource adapter for reader
-  preparation; cache/lease accounting and near-limit worker memory evidence
-  remain separate Phase D integration work.
+  D4's bounded preloaded resource seam, section ownership, cache/lease accounting,
+  prepared-output parity and near-limit host worker measurements are implemented
+  above. Full product/session wiring and device integration remain S4 work.
   Host archive measurements do not establish total worker RSS or iPhone limits;
   downloaded-publication integration and device validation remain required.
 - S4: `FontRegistry` caps each font at 32 MiB but cannot unload engine fonts or

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:shiori/core/errors/app_exception.dart';
 import 'package:shiori/features/diagnostics/data/reader_probe_recorder.dart';
 import 'package:shiori/features/reader/data/epub/epub_book.dart';
+import 'package:shiori/features/reader/data/resources/archive_reader_resource_source.dart';
 import 'package:shiori/features/reader/engine/pagination/preparation.dart';
 import 'package:shiori/features/reader/engine/pagination/prepared_section.dart';
 import 'package:shiori/features/reader/engine/pagination/section_preparer.dart';
@@ -61,8 +62,10 @@ final class ReaderPreparationRepository {
         settings,
       );
       final section = await _preparer.prepare(
-        PrepareRequest(
-          book: book,
+        PrepareRequest.resources(
+          resources: ArchiveReaderResourceSource(book.archive),
+          sectionHref: book.sections[index].item.href,
+          sectionBase: book.sections[index].spine.cfiBase,
           sectionIndex: index,
           document: doc,
           styled: styled,

@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:shiori/features/reader/data/epub/epub_book.dart';
+import 'package:shiori/features/reader/data/resources/archive_reader_resource_source.dart';
+import 'package:shiori/features/reader/data/resources/reader_resource_source.dart';
 import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 import 'package:shiori/features/reader/data/source/source_document.dart';
 import 'package:shiori/features/reader/engine/layout/block_builder.dart';
@@ -25,7 +27,7 @@ const _markerHeight = 32.0;
 /// Inputs of one section preparation.
 final class PrepareRequest {
   const PrepareRequest({
-    required this.book,
+    required EpubBook this._book,
     required this.sectionIndex,
     required this.document,
     required this.styled,
@@ -35,9 +37,37 @@ final class PrepareRequest {
     required this.contentId,
     this.devicePixelRatio = 3,
     this.generation = 0,
-  });
+  }) : _resources = null,
+       _sectionHref = null,
+       _sectionBase = null;
 
-  final EpubBook book;
+  /// Detached worker handoff. Preparation consumes this section's resource
+  /// lease: success transfers it to PreparedSection, failure disposes it.
+  const PrepareRequest.resources({
+    required ReaderResourceSource this._resources,
+    required String this._sectionHref,
+    required this._sectionBase,
+    required this.sectionIndex,
+    required this.document,
+    required this.styled,
+    required this.settings,
+    required this.viewportWidth,
+    required this.viewportHeight,
+    required this.contentId,
+    this.devicePixelRatio = 3,
+    this.generation = 0,
+  }) : _book = null;
+
+  final EpubBook? _book;
+  final ReaderResourceSource? _resources;
+  final String? _sectionHref;
+  final String? _sectionBase;
+  ReaderResourceSource get resources =>
+      _resources ?? ArchiveReaderResourceSource(_book!.archive);
+  String get sectionHref =>
+      _sectionHref ?? _book!.sections[sectionIndex].item.href;
+  String? get sectionBase =>
+      _book == null ? _sectionBase : _book.sections[sectionIndex].spine.cfiBase;
   final int sectionIndex;
   final SourceDocument document;
   final StyledDocument styled;
@@ -69,6 +99,21 @@ final class SectionPreparer {
     void Function(ReaderPage page)? onPageReady,
   }) async {
     ReaderWorkGuard.check(ReaderWork.pagination);
+    final resources = request.resources;
+    try {
+      return await _prepare(request, resources, control, onPageReady);
+    } on Object {
+      resources.dispose();
+      rethrow;
+    }
+  }
+
+  Future<PreparedSection> _prepare(
+    PrepareRequest request,
+    ReaderResourceSource resources,
+    PreparationControl? control,
+    void Function(ReaderPage page)? onPageReady,
+  ) async {
     final checkpoint = control ?? PreparationControl();
     final box = ContentBox.fromViewport(
       request.viewportWidth,
@@ -78,19 +123,18 @@ final class SectionPreparer {
     final scope = request.contentId.length > 12
         ? request.contentId.substring(0, 12)
         : request.contentId;
-    final aliases = await fonts.load(
-      request.book.archive,
+    final aliases = await fonts.loadResources(
+      resources,
       request.styled.fontFaces,
       scope: scope,
     );
     await checkpoint.checkpoint();
     final paragraphFonts = ParagraphFonts(embedded: aliases);
-    final section = request.book.sections[request.sectionIndex];
     final model = LayoutBlockBuilder(
       document: request.document,
       styled: request.styled,
-      sectionHref: section.item.href,
-      archive: request.book.archive,
+      sectionHref: request.sectionHref,
+      resources: resources,
       contentWidth: box.width,
     ).build();
     final identity = LayoutIdentity(
@@ -144,8 +188,8 @@ final class SectionPreparer {
       identity: identity,
       box: box,
       document: request.document,
-      archive: request.book.archive,
-      sectionBase: section.spine.cfiBase,
+      resources: resources,
+      sectionBase: request.sectionBase,
       model: model,
       blocks: laidOut,
       pages: paginator.pages,
@@ -235,7 +279,7 @@ final class SectionPreparer {
           : vector.height;
     } else {
       final path = block.resourcePath!;
-      final bytes = request.book.archive.bytes(path);
+      final bytes = request.resources.bytes(path);
       final size = bytes == null
           ? null
           : await images.intrinsicSize('${request.contentId}:$path', bytes);

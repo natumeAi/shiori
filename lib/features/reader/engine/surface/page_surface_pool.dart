@@ -91,7 +91,7 @@ final class PageSurfacePool {
             leases.containsKey(block.index)) {
           continue;
         }
-        final bytes = section.archive.bytes(block.resourcePath!);
+        final bytes = section.resources.bytes(block.resourcePath!);
         if (bytes == null) continue;
         final dpr = section.identity.devicePixelRatio;
         final lease = await images.lease(

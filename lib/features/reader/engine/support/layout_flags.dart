@@ -3,6 +3,8 @@
 library;
 
 import 'package:shiori/features/reader/data/epub/epub_book.dart';
+import 'package:shiori/features/reader/data/resources/archive_reader_resource_source.dart';
+import 'package:shiori/features/reader/data/resources/reader_resource_source.dart';
 
 const _displayOptionFiles = [
   'META-INF/com.apple.ibooks.display-options.xml',
@@ -21,7 +23,7 @@ String? packageLayout(EpubBook book) {
   final declared = book.package.rendition['layout']?.trim();
   if (declared != null && declared.isNotEmpty) return declared;
   for (final path in _displayOptionFiles) {
-    final text = book.archive.text(path);
+    final text = ArchiveReaderResourceSource(book.archive).text(path);
     if (text == null) continue;
     return _fixedLayoutOption.hasMatch(text) ? 'pre-paginated' : null;
   }

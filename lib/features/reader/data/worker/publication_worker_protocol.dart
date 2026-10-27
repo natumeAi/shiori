@@ -3,8 +3,10 @@ import 'dart:isolate';
 import 'package:shiori/core/config/content_identity.dart';
 import 'package:shiori/features/reader/data/source/source_document.dart';
 import 'package:shiori/features/reader/data/worker/prepared_publication.dart';
+import 'package:shiori/features/reader/data/worker/preloaded_publication_section.dart';
 import 'package:shiori/features/reader/data/worker/publication_snapshot.dart';
 import 'package:shiori/features/reader/data/worker/publication_tag.dart';
+import 'package:shiori/features/reader/engine/style/reader_settings.dart';
 
 /// The generation also distinguishes reopens with an identical caller tag.
 sealed class PublicationRequest {
@@ -56,6 +58,28 @@ final class ClosePublication extends PublicationRequest {
   const ClosePublication(super.id, super.tag, super.generation);
 }
 
+final class PlanPublicationResources extends PublicationRequest {
+  const PlanPublicationResources(
+    super.id,
+    super.tag,
+    super.generation,
+    this.index,
+    this.settings,
+  );
+  final int index;
+  final ReaderSettings settings;
+}
+
+final class PreloadPublicationResources extends PublicationRequest {
+  PreloadPublicationResources(
+    super.id,
+    super.tag,
+    super.generation,
+    Map<String, int> lengths,
+  ) : lengths = Map.unmodifiable(lengths);
+  final Map<String, int> lengths;
+}
+
 sealed class PublicationResponse {
   const PublicationResponse(this.id, this.tag, this.generation);
   final int id;
@@ -104,6 +128,26 @@ final class PublicationResourceRead extends PublicationResponse {
 
 final class PublicationClosed extends PublicationResponse {
   const PublicationClosed(super.id, super.tag, super.generation);
+}
+
+final class PublicationResourcesPlanned extends PublicationResponse {
+  const PublicationResourcesPlanned(
+    super.id,
+    super.tag,
+    super.generation,
+    this.plan,
+  );
+  final PublicationSectionResourcePlan plan;
+}
+
+final class PublicationResourcesPreloaded extends PublicationResponse {
+  PublicationResourcesPreloaded(
+    super.id,
+    super.tag,
+    super.generation,
+    Map<String, TransferableTypedData> bytes,
+  ) : bytes = Map.unmodifiable(bytes);
+  final Map<String, TransferableTypedData> bytes;
 }
 
 final class PublicationFailed extends PublicationResponse {

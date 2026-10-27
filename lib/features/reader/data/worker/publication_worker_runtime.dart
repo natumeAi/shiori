@@ -5,10 +5,12 @@ import 'package:shiori/features/reader/data/canonical/canonical_text.dart';
 import 'package:shiori/features/reader/data/epub/epub_archive.dart';
 import 'package:shiori/features/reader/data/epub/epub_book.dart';
 import 'package:shiori/features/reader/data/epub/epub_package.dart';
+import 'package:shiori/features/reader/data/resources/reader_resource_budget.dart';
 import 'package:shiori/features/reader/data/source/source_document.dart';
 import 'package:shiori/features/reader/data/source/source_parser.dart';
 import 'package:shiori/features/reader/data/source/xml_parser.dart';
 import 'package:shiori/features/reader/data/worker/prepared_publication.dart';
+import 'package:shiori/features/reader/data/worker/preloaded_publication_section.dart';
 import 'package:shiori/features/reader/data/worker/publication_import_exception.dart';
 import 'package:shiori/features/reader/data/worker/publication_import_facts.dart';
 import 'package:shiori/features/reader/data/worker/publication_resource_discovery.dart';
@@ -17,8 +19,10 @@ import 'package:shiori/features/reader/data/worker/publication_tag.dart';
 import 'package:shiori/features/reader/data/worker/publication_worker_exception.dart';
 import 'package:shiori/features/reader/data/worker/publication_worker_protocol.dart';
 import 'package:shiori/features/reader/data/worker/publication_worker_test_hooks.dart';
+import 'package:shiori/features/reader/engine/style/css_style_resolver.dart';
 
 part 'publication_worker_import.dart';
+part 'publication_worker_resources.dart';
 
 final class PublicationWorkerBootstrap {
   const PublicationWorkerBootstrap(
@@ -103,6 +107,14 @@ final class _PublicationOwner {
   Future<PublicationResponse> execute(PublicationRequest request) async {
     try {
       if (request is PreparePublication) return await _prepare(request);
+      if (request is PlanPublicationResources) {
+        _requirePublication(request);
+        return await _planResources(request);
+      }
+      if (request is PreloadPublicationResources) {
+        _requirePublication(request);
+        return await _preloadResources(request);
+      }
       return _execute(request);
     } on PublicationImportException catch (error) {
       return PublicationFailed(
@@ -112,6 +124,13 @@ final class _PublicationOwner {
         error,
       );
     } on PublicationWorkerException catch (error) {
+      return PublicationFailed(
+        request.id,
+        request.tag,
+        request.generation,
+        error,
+      );
+    } on ReaderResourceException catch (error) {
       return PublicationFailed(
         request.id,
         request.tag,
@@ -158,9 +177,7 @@ final class _PublicationOwner {
         rethrow;
       }
     }
-    if (_archive == null || _tag != tag || _generation != generation) {
-      throw const PublicationWorkerException(PublicationWorkerFailure.notOpen);
-    }
+    _requirePublication(request);
     switch (request) {
       case LoadPublicationSection(:final index):
         _work(PublicationWorkerWork.sectionParse);
@@ -192,6 +209,14 @@ final class _PublicationOwner {
         throw const PublicationWorkerException(
           PublicationWorkerFailure.protocol,
         );
+    }
+  }
+
+  void _requirePublication(PublicationRequest request) {
+    if (_archive == null ||
+        _tag != request.tag ||
+        _generation != request.generation) {
+      throw const PublicationWorkerException(PublicationWorkerFailure.notOpen);
     }
   }
 

@@ -2,6 +2,8 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:shiori/features/reader/data/epub/epub_archive.dart';
+import 'package:shiori/features/reader/data/resources/archive_reader_resource_source.dart';
+import 'package:shiori/features/reader/data/resources/reader_resource_source.dart';
 import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 import 'package:shiori/features/reader/engine/style/style_resolver.dart';
 
@@ -58,6 +60,15 @@ final class FontRegistry {
     EpubArchive archive,
     List<StyleFontFace> faces, {
     required String scope,
+  }) =>
+      loadResources(ArchiveReaderResourceSource(archive), faces, scope: scope);
+
+  /// Same font validation/loading through encoded resources. The caller owns
+  /// the source lease; the registry retains only font records/engine aliases.
+  Future<Map<String, String>> loadResources(
+    ReaderResourceSource resources,
+    List<StyleFontFace> faces, {
+    required String scope,
   }) async {
     ReaderWorkGuard.check(ReaderWork.fontLoad);
     final aliases = <String, String>{};
@@ -71,10 +82,10 @@ final class FontRegistry {
       }
       FontLoadRecord record;
       try {
-        if (archive.size(face.archivePath) > maxFontBytes) {
+        if (resources.size(face.archivePath) > maxFontBytes) {
           throw const FormatException('font too large');
         }
-        final bytes = archive.bytes(face.archivePath);
+        final bytes = resources.bytes(face.archivePath);
         if (bytes == null) throw const FormatException('font missing');
         if (!_isSfnt(bytes)) throw const FormatException('font format');
         if (_loaded.add(key)) {

@@ -1,4 +1,4 @@
-import 'package:shiori/features/reader/data/epub/epub_archive.dart';
+import 'package:shiori/features/reader/data/resources/reader_resource_source.dart';
 import 'package:shiori/features/reader/data/source/source_document.dart';
 import 'package:shiori/features/reader/engine/layout/image_cache.dart';
 import 'package:shiori/features/reader/engine/layout/layout_model.dart';
@@ -28,7 +28,7 @@ final class PreparedSection {
     required this.identity,
     required this.box,
     required this.document,
-    required this.archive,
+    required this.resources,
     required this.sectionBase,
     required this.model,
     required this.blocks,
@@ -59,7 +59,7 @@ final class PreparedSection {
   final LayoutIdentity identity;
   final ContentBox box;
   final SourceDocument document;
-  final EpubArchive archive;
+  final ReaderResourceSource resources;
 
   /// Package CFI of the spine item (`epubcfi(/6/4[id])`), from the OPF.
   final String? sectionBase;
@@ -91,13 +91,14 @@ final class PreparedSection {
   /// Leases decoded rasters for the image boxes of page [pageIndex] at the
   /// device pixel size. Call during preparation, never from paint.
   Future<void> ensureImages(int pageIndex, ReaderImageCache cache) async {
+    if (_disposed) return;
     for (final fragment in pages[pageIndex].fragments) {
       if (fragment is! BoxFragment) continue;
       final laid = blocks[fragment.blockIndex];
       final block = laid.block;
       if (block is! ImageBlock || block.resourcePath == null) continue;
       if (_leases.containsKey(laid.index)) continue;
-      final bytes = archive.bytes(block.resourcePath!);
+      final bytes = resources.bytes(block.resourcePath!);
       if (bytes == null) continue;
       final dpr = identity.devicePixelRatio;
       final lease = await cache.lease(
@@ -126,10 +127,12 @@ final class PreparedSection {
   }
 
   void dispose() {
+    if (_disposed) return;
     _disposed = true;
     releaseImages();
     for (final laid in blocks) {
       laid.dispose();
     }
+    resources.dispose();
   }
 }

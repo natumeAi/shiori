@@ -4,6 +4,8 @@
 library;
 
 import 'package:shiori/features/reader/data/epub/epub_book.dart';
+import 'package:shiori/features/reader/data/resources/archive_reader_resource_source.dart';
+import 'package:shiori/features/reader/data/resources/reader_resource_source.dart';
 import 'package:shiori/features/reader/data/source/source_document.dart';
 import 'package:shiori/features/reader/data/source/source_node.dart';
 import 'package:shiori/features/reader/engine/style/computed_style.dart';
@@ -114,7 +116,8 @@ final _languageElement = RegExp(
 );
 
 String? _primaryLanguage(EpubBook book) {
-  final opf = book.archive.text(book.package.opfPath);
+  final opf = ArchiveReaderResourceSource(book.archive)
+      .text(book.package.opfPath);
   if (opf == null) return null;
   final match = _languageElement.firstMatch(opf);
   final tag = match?.group(1)?.trim().toLowerCase();

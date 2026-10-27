@@ -4,6 +4,8 @@ library;
 
 import 'package:shiori/features/reader/data/epub/epub_book.dart';
 import 'package:shiori/features/reader/data/epub/epub_url.dart';
+import 'package:shiori/features/reader/data/resources/archive_reader_resource_source.dart';
+import 'package:shiori/features/reader/data/resources/reader_resource_source.dart';
 import 'package:shiori/features/reader/data/source/source_document.dart';
 import 'package:shiori/features/reader/data/source/source_node.dart';
 import 'package:shiori/features/reader/data/source/source_parser.dart';
@@ -80,7 +82,7 @@ final class CssStyleResolver implements StyleResolver {
 
     String? read(String path) {
       try {
-        return book.archive.text(path);
+        return ArchiveReaderResourceSource(book.archive).text(path);
       } on Object {
         return null;
       }
@@ -205,7 +207,7 @@ List<String>? _originalStyleTexts(
   String? mediaType,
 ) {
   try {
-    final raw = book.archive.text(sectionPath);
+    final raw = ArchiveReaderResourceSource(book.archive).text(sectionPath);
     if (raw == null) return null;
     final original = const SourceParser().parse(
       raw,
@@ -261,7 +263,7 @@ List<StyleFontFace> _resolveFontFaces(
     for (final url in face.urls) {
       if (isExternalUrl(url) || url.startsWith('data:')) continue;
       final path = _stripFragment(resolveUrl(url, face.basePath));
-      if (!book.archive.contains(path)) continue;
+      if (!ArchiveReaderResourceSource(book.archive).contains(path)) continue;
       fallback ??= path;
       final lower = path.toLowerCase();
       if (lower.endsWith('.ttf') ||

@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:shiori/features/reader/data/epub/epub_archive.dart';
+import 'package:shiori/features/reader/data/resources/archive_reader_resource_source.dart';
+import 'package:shiori/features/reader/data/resources/reader_resource_source.dart';
 import 'package:shiori/features/reader/data/epub/epub_url.dart';
 import 'package:shiori/features/reader/data/source/source_document.dart';
 import 'package:shiori/features/reader/data/source/source_node.dart';
@@ -125,14 +127,16 @@ final class LayoutBlockBuilder {
     required this.document,
     required this.styled,
     required this.sectionHref,
-    required this.archive,
+    EpubArchive? archive,
+    ReaderResourceSource? resources,
     required this.contentWidth,
-  });
+  }) : assert((archive == null) != (resources == null)),
+       resources = resources ?? ArchiveReaderResourceSource(archive!);
 
   final SourceDocument document;
   final StyledDocument styled;
   final String sectionHref;
-  final EpubArchive archive;
+  final ReaderResourceSource resources;
   final double contentWidth;
 
   final List<LayoutBlock> _blocks = [];
@@ -511,7 +515,7 @@ final class LayoutBlockBuilder {
       return;
     }
     final path = resolveUrl(source, sectionHref);
-    if (!archive.contains(path)) {
+    if (!resources.contains(path)) {
       _unsupportedBlock(index, 'image-missing');
       return;
     }
@@ -531,7 +535,7 @@ final class LayoutBlockBuilder {
     final size = svgIntrinsicSize(document, index);
     final wrapper = svgWrapperResource(document, index, sectionHref);
     if (wrapper != null) {
-      if (!archive.contains(wrapper)) {
+      if (!resources.contains(wrapper)) {
         _unsupportedBlock(index, 'image-missing');
         return;
       }

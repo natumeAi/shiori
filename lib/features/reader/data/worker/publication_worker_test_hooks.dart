@@ -8,10 +8,12 @@ final class PublicationWorkerTestHooks {
     this.events, {
     this.pauseRequests = false,
     this.pauseDiscovery = false,
+    this.pausePreload = false,
   });
   final SendPort events;
   final bool pauseRequests;
   final bool pauseDiscovery;
+  final bool pausePreload;
 }
 
 enum PublicationWorkerTestAction { resume, crash }
@@ -43,6 +45,12 @@ enum PublicationWorkerWork {
 /// A gate inside the first-source resource inventory, after source parsing.
 final class PublicationWorkerDiscoveryEvent {
   const PublicationWorkerDiscoveryEvent(this.resume);
+  final SendPort resume;
+}
+
+/// Gate after an actual resource inflation/transfer, before the batch reply.
+final class PublicationWorkerPreloadEvent {
+  const PublicationWorkerPreloadEvent(this.resume);
   final SendPort resume;
 }
 
