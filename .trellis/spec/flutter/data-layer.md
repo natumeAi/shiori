@@ -73,10 +73,22 @@ Unknown additive keys are ignored, including inside nested records/unions.
 
 Use `@ServerTimestampConverter()` on timestamp-bearing DTO constructors.
 `ServerTimestamp` is a handwritten immutable converter value with `raw: String`
-and `utc: DateTime`; it is not an HTTP DTO. SQLite `YYYY-MM-DD HH:mm:ss` is UTC.
-ISO forms must carry `Z` or an explicit `+/-HH:mm` offset. Reject invalid calendar
-components and offset-free ISO strings. Serialization returns `raw` unchanged;
-never use device-local parsing or serialize normalized UTC over the raw value.
+and `utc: DateTime`; it is not an HTTP DTO. SQLite `YYYY-MM-DD HH:mm:ss` with
+optional `.` plus 1–9 fractional digits is UTC. The pinned
+`server/src/routes/reading.ts:208` uses SQLite `%f` (three digits) for
+SnapshotBook.readingUpdatedAt and recent[].progress.updatedAt, while book/folder
+timestamps use second-only CURRENT_TIMESTAMP. Space or `T` forms carrying `Z`
+or an explicit `+/-HH:mm` offset accept the same optional fractions. Offset-free
+`T`, empty/over-nine-digit fractions, letters and out-of-range fields fail with
+`LibraryDecodeException(LibraryInvariant.timestamp)`. Keep the first six
+fractional digits, padding shorter fractions to microseconds; discard further
+digits without rounding into another second. For example, `.999999999` becomes
+999999 microseconds within that second. Compare `.utc` for chronological order,
+retaining `.raw` for exact wire comparisons and unchanged serialization; never
+use device-local parsing or serialize normalized UTC over the raw value.
+Regression tests must cover 1–9 digits, raw/UTC/offset equivalence, second
+boundaries and malformed inputs, plus mixed second-only/`.SSS` snapshots through
+`LibrarySnapshotValidator` / `CachedLibrarySnapshot` validation and restore.
 
 Numeric `fromJson` functions validate before converting to `int`: IDs are in
 `1..9007199254740991`; versions, sizes and counts are nonnegative safe integers;

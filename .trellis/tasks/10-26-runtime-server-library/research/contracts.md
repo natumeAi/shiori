@@ -57,8 +57,19 @@ goals/statistics, upload and library mutations are later-stage owners.
 - `shared/src/shelf.ts`: snapshot shelf entries are typed ID references;
   a book ID and folder ID may be numerically equal without being the same key.
 - `server/src/db/migrations/001_initial_library_schema.sql:5` and `:23`
-  use CURRENT_TIMESTAMP. Their timezone-less text is UTC. Keep raw strings
-  where later acknowledgment comparisons depend on exact representation.
+  use CURRENT_TIMESTAMP (`YYYY-MM-DD HH:mm:ss`, UTC).
+  `server/src/routes/reading.ts:208` writes reading positions using
+  `strftime('%Y-%m-%d %H:%M:%f', 'now')`, emitting UTC
+  `YYYY-MM-DD HH:mm:ss.SSS` in SnapshotBook.readingUpdatedAt and
+  recent[].progress.updatedAt. The initial audit and C1 converter missed this
+  fractional form; corrected after the 2026-10-27 device-run finding.
+  Accept space-separated UTC timestamps with optional 1–9 fractional digits;
+  the same fractions are accepted with `Z` or explicit `+/-HH:mm` offsets
+  (space or `T` separator). Offset-free `T` remains invalid. Retain the first
+  six fractional digits, padding shorter fractions to microseconds; discard
+  further digits without rounding or carrying into another second. Keep raw
+  strings unchanged where later acknowledgment comparisons depend on exact
+  representation; chronological comparisons use the converted UTC instant.
 - IDs, revisions and sizes must be safe integers, not rounded doubles.
   Nullable required fields are not silently supplied when absent.
 

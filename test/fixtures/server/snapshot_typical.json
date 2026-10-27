@@ -39,7 +39,7 @@
         "createdAt": "2026-01-01 00:00:00",
         "updatedAt": "2026-01-02 03:04:05",
         "readingProgress": 0,
-        "readingUpdatedAt": "2026-01-02 03:04:05"
+        "readingUpdatedAt": "2026-01-02 03:04:05.100"
       },
       {
         "id": 9,
@@ -58,7 +58,7 @@
         "createdAt": "2026-01-01 00:00:00",
         "updatedAt": "2026-01-02 03:04:05",
         "readingProgress": 0.375,
-        "readingUpdatedAt": "2026-01-02 03:04:05"
+        "readingUpdatedAt": "2026-01-02 03:04:05.900"
       },
       {
         "id": 10,
@@ -141,7 +141,7 @@
           "chapterLabel": null,
           "chapterCount": null,
           "chapterIndex": null,
-          "updatedAt": "2026-01-02 03:04:05"
+          "updatedAt": "2026-01-02 03:04:05.900"
         }
       },
       {
@@ -154,7 +154,7 @@
           "chapterLabel": null,
           "chapterCount": null,
           "chapterIndex": null,
-          "updatedAt": "2026-01-02 03:04:05"
+          "updatedAt": "2026-01-02 03:04:05.100"
         }
       }
     ]

@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shiori/core/errors/app_exception.dart';
 import 'package:shiori/core/network/request_cancelled.dart';
 import 'package:shiori/core/network/session_transport.dart';
+import 'package:shiori/core/storage/stored_snapshot.dart';
+import 'package:shiori/features/library/data/cached_library_snapshot.dart';
 import 'package:shiori/features/library/data/library_snapshot_validator.dart';
 import 'package:shiori/features/servers/data/snapshot_validation_exception.dart';
 
@@ -29,6 +31,44 @@ void main() {
   final validator = LibrarySnapshotValidator(now: () => now);
   Matcher issue(SnapshotValidationIssue value) => throwsA(
     isA<SnapshotValidationException>().having((e) => e.issue, 'issue', value),
+  );
+
+  test(
+    'SQLite fractional reading times validate and restore unchanged',
+    () async {
+      final raw = fixture('snapshot_typical.json');
+      final validated = await validator.validate(transport(raw));
+      final cached = CachedLibrarySnapshot.restore(
+        StoredSnapshot(
+          payload: validated.payloadText,
+          schemaVersion: validated.schemaVersion,
+          revision: validated.revision,
+          etag: validated.etag,
+          fetchedAt: validated.fetchedAt,
+        ),
+      )!;
+      expect(cached.stored.payload, raw);
+      expect(
+        cached.index.books[8]!.readingUpdatedAt!.raw,
+        '2026-01-02 03:04:05.100',
+      );
+      expect(
+        cached.index.books[8]!.readingUpdatedAt!.utc,
+        DateTime.utc(2026, 1, 2, 3, 4, 5, 100),
+      );
+      expect(
+        cached.index.books[9]!.readingUpdatedAt!.raw,
+        '2026-01-02 03:04:05.900',
+      );
+      expect(cached.index.recent.map((entry) => entry.bookId), [9, 8]);
+      for (final entry in cached.index.recent) {
+        final timestamp = cached.index.books[entry.bookId]!.readingUpdatedAt!;
+        expect(entry.progress.updatedAt.raw, timestamp.raw);
+        expect(entry.progress.updatedAt.utc, timestamp.utc);
+      }
+      expect(cached.index.books[8]!.updatedAt.raw, '2026-01-02 03:04:05');
+      expect(cached.index.folders[7]!.updatedAt.raw, '2026-01-02 03:04:05');
+    },
   );
 
   test(

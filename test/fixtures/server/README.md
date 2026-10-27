@@ -18,7 +18,7 @@ wire casing, envelopes and declared nullable fields follow the pinned source.
 | R | `shared/src/reading.ts:22` ReadingPosition, `:60` SnapshotRecentEntry; `server/src/services/readingLibrary.ts:28` formatter, `:49` recent query; `server/src/services/librarySnapshot.ts:132` normalized recent |
 | D | `shared/src/book.ts:12`, `shared/src/api.ts:29`; `server/src/services/bookLibrary.ts:121` full Book; `server/src/routes/books.ts:130` detail and `:137` missing book |
 | E | `shared/src/api.ts:129`, `server/src/http/httpError.ts:28`, `:32`; `server/src/app.ts:105` middleware; `server/src/http/requestInput.ts:71` invalid ID message |
-| T | `server/src/db/migrations/001_initial_library_schema.sql:5`, `:23`, `:33` raw UTC SQLite timestamps |
+| T | `server/src/db/migrations/001_initial_library_schema.sql:5`, `:23`, `:33` raw UTC SQLite timestamps; `server/src/routes/reading.ts:208` writes reading progress with `strftime('%Y-%m-%d %H:%M:%f', 'now')` (three fractional digits, UTC) |
 | V | `shared/src/librarySnapshot.ts:17`, `:48`, `:57`, `:66`; `shared/src/decode.ts:35`, `:42`; S3 `design.md` section 4 adds strict required-nullable, safe-positive-ID and join validation beyond the reference decoder |
 | HTTP | `server/src/routes/library.ts:20` headers/bodyless 304; `server/src/services/librarySnapshot.ts:33` revision ETag; `server/src/routes/books.ts:207` sendFile; `server/src/app.ts:62` compression and `:65` covers |
 | SEND | Installed `node_modules/send/index.js:514` conditional 304/412, `:549` 416, `:564` 206, `:583` length, `:757` Last-Modified/ETag; `node_modules/etag/index.js:126` size/mtime validator (dependency evidence, not tracked source) |
@@ -38,7 +38,7 @@ decoder rejection.
 | `health_database_error.json` | Actual 500 body when DB check throws | H, E |
 | `health_wrong_service.json` | Synthetic wrong-service mutation | H |
 | `health_additive.json` | Synthetic future additive capability | H |
-| `snapshot_typical.json` | Root books, folder-contained books, empty folder, ordered joins, typed ID collision, recent, null/0/fraction | S, B, F, R, T |
+| `snapshot_typical.json` | Root books, folder-contained books, empty folder, ordered joins, typed ID collision, recent, null/0/fraction; SQLite `.SSS` in readingUpdatedAt and recent progress.updatedAt alongside second-only book/folder timestamps | S, B, F, R, T |
 | `snapshot_minimal.json` | Valid baseline for isolated invalid cases | S, B, F, T |
 | `snapshot_empty.json` | Empty library, revision zero | S |
 | `snapshot_explicit_offset.json` | Explicit +08:00, same instant as raw UTC baseline | S, B, T; design section 4 |

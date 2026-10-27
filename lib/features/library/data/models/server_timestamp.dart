@@ -8,13 +8,12 @@ final class ServerTimestamp {
   final DateTime utc;
 
   static final _pattern = RegExp(
-    r'^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})?$',
+    r'^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(\.\d{1,9})?(Z|[+-]\d{2}:\d{2})?$',
   );
 
   factory ServerTimestamp.parse(String raw) {
     final match = _pattern.firstMatch(raw);
-    if (match == null ||
-        (match[8] == null && (raw[10] != ' ' || match[7] != null))) {
+    if (match == null || (match[8] == null && raw[10] != ' ')) {
       throw const LibraryDecodeException(LibraryInvariant.timestamp);
     }
     final parts = [for (var i = 1; i <= 6; i++) int.parse(match[i]!)];
@@ -36,6 +35,8 @@ final class ServerTimestamp {
     }
     return ServerTimestamp._(
       raw,
+      // Dart keeps the first six fractional digits, padding shorter fractions.
+      // Discard sub-microsecond digits without rounding into another second.
       DateTime.parse(offset == null ? '${raw}Z' : raw).toUtc(),
     );
   }

@@ -337,3 +337,60 @@ C2 has no remaining implementation issue. Cover disk persistence and real EPUB
 transfer/cache are Phase D; product screens are Phase E. Device/LAN acceptance
 remains the existing later gate; these host tests do not close it. The broader
 S3 task stays active and no task/journal/git-state mutation was performed.
+
+## Device-run fix: fractional-second timestamps
+
+2026-10-27. The orchestrator's device-run probe identified
+`LibraryInvariant.timestamp` when validating a real snapshot: reading timestamps
+contained SQLite fractional seconds while book/folder timestamps used whole
+seconds. No live response, endpoint or personal library data was copied here.
+Read-only inspection of pinned lan-reader `a4bda23` confirms
+`server/src/routes/reading.ts:208` writes reading progress with
+`strftime('%Y-%m-%d %H:%M:%f', 'now')`, producing UTC `.SSS` values. The initial
+contract audit and C1 converter missed this form.
+
+`ServerTimestamp` now accepts space-separated SQLite UTC timestamps with an
+optional 1–9 digit fraction and the same fractions in existing space/`T` forms
+with `Z` or explicit `+/-HH:mm`. Offset-free `T`, malformed fractions and invalid
+calendar/time/offset fields remain rejected. Dart's parser retains the first six
+fractional digits (zero-padding shorter fractions), discarding later digits
+without rounding into another second, including before the Unix epoch. Raw
+strings remain unchanged for serialization and exact acknowledgment matching.
+
+The typical synthetic fixture now mixes whole-second book/folder timestamps
+with `.100`/`.900` readingUpdatedAt and recent progress.updatedAt, with README
+provenance. Added converter tests cover every precision from 1 through 9,
+UTC/positive/negative offsets, raw preservation, ordering, second/day boundaries,
+and invalid fractions/fields. A regression drives the fixture through the real
+LibrarySnapshotValidator -> CachedLibrarySnapshot.fromResponse path using fake
+HTTP, then restores the unchanged validated payload through the cache decoder.
+Existing timestamp tests were left unchanged.
+
+Consistency search across `lib/` found that Book, SnapshotBook, SnapshotFolder
+and ReadingPosition already share ServerTimestampConverter. LibraryIndex retains
+the server's recent ordering without parsing/comparing timestamp strings. No
+statistics implementation or separate reading-position parser exists yet.
+The diagnostic probe's DateTime.tryParse handles its own checkedAt value, and
+SQLite storage converts local metadata from epoch microseconds; neither parses
+server wire timestamps. No additional parsing site needed modification.
+`research/contracts.md` and the data-layer timestamp rule now record the source,
+accepted grammar, precision, raw preservation and chronological `.utc` comparison.
+
+| Command | Result |
+| --- | --- |
+| `dart run build_runner build` | PASS; no semantic generated changes; five generated files' checkout CRLF restored after verifying identical tracked content |
+| `dart format lib/features/library/data/models/server_timestamp.dart test/features/library/data/server_timestamp_test.dart test/features/library/data/library_snapshot_validator_test.dart` | PASS; 3 files, 2 formatted |
+| `dart format --output=none --set-exit-if-changed lib test` | PASS; 525 files, zero changes |
+| `flutter test test/features/library/data/server_timestamp_test.dart test/features/library/data/snapshot_models_test.dart test/features/library/data/library_snapshot_validator_test.dart test/features/library/data/wire_contract_test.dart --reporter expanded` | PASS; 196 tests, no skips |
+| `flutter analyze` | FAIL (exit 1); only six pre-existing avoid_print infos in the untracked tool/diag/_live_probe_tmp.dart, which was left untouched as requested |
+| `flutter analyze lib test` | PASS; no issues |
+| `flutter test --reporter expanded` | PASS; 2212 tests, 2 existing optional skips |
+| `git diff --check` | PASS |
+
+Skipped gates: SHIORI_NATIVE_CFI_OUT is unset; optional
+build/d4/pre-seam-pages.json is absent. Local command logs are ignored
+`build/timestamp-{codegen,focused,analyze,analyze-lib-test,full-test}.log`.
+No commit, staging, push, branch switch, task lifecycle change, oracle fixture
+edit or reference-checkout edit occurred. The temporary probe remains untouched.
+The fix is host-validated; a rebuilt app/live-device retry remains external
+acceptance evidence, and the root analyzer result remains affected by that probe.
