@@ -8,20 +8,17 @@ part of 'book_preparation_binding.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Retain preparation and its ready owner across navigation, until retirement.
-/// The route never cancels work or releases a book on behalf of the controller.
+/// Retain in-flight work and detached summaries across navigation, not leases.
 
 @ProviderFor(bookPreparationBinding)
 final bookPreparationBindingProvider = BookPreparationBindingFamily._();
 
-/// Retain preparation and its ready owner across navigation, until retirement.
-/// The route never cancels work or releases a book on behalf of the controller.
+/// Retain in-flight work and detached summaries across navigation, not leases.
 
 final class BookPreparationBindingProvider
     extends $FunctionalProvider<void, void, void>
     with $Provider<void> {
-  /// Retain preparation and its ready owner across navigation, until retirement.
-  /// The route never cancels work or releases a book on behalf of the controller.
+  /// Retain in-flight work and detached summaries across navigation, not leases.
   BookPreparationBindingProvider._({
     required BookPreparationBindingFamily super.from,
     required (ServerSession, BookKey) super.argument,
@@ -75,10 +72,9 @@ final class BookPreparationBindingProvider
 }
 
 String _$bookPreparationBindingHash() =>
-    r'5ade4bcf4fad6e450ca6721f2893a56478074267';
+    r'd839c61b51b5076996c9bcb5b36db4abbb728028';
 
-/// Retain preparation and its ready owner across navigation, until retirement.
-/// The route never cancels work or releases a book on behalf of the controller.
+/// Retain in-flight work and detached summaries across navigation, not leases.
 
 final class BookPreparationBindingFamily extends $Family
     with $FunctionalFamilyOverride<void, (ServerSession, BookKey)> {
@@ -91,8 +87,7 @@ final class BookPreparationBindingFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Retain preparation and its ready owner across navigation, until retirement.
-  /// The route never cancels work or releases a book on behalf of the controller.
+  /// Retain in-flight work and detached summaries across navigation, not leases.
 
   BookPreparationBindingProvider call(ServerSession session, BookKey key) =>
       BookPreparationBindingProvider._(argument: (session, key), from: this);

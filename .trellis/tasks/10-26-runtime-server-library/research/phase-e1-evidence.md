@@ -182,3 +182,70 @@ this bounded assignment does not edit shared specs or archive the S3 task.
 No E1b implementation issue remains. Real iPhone preparation/LAN transport,
 permission, lifecycle and resource evidence remains outside this host UI gate;
 S3-AC10 and the retained S2/S4 conditions are still open.
+
+## Phase E review fix
+
+Date: 2026-10-27. Worktree `shiori-e1`, branch `s3/e1-product-ui`, based on
+`97f9c08`. Implemented directly without subagents, staging, commits, pushes,
+branch switches or task lifecycle changes. The reviewer's temporary reproduction
+was read unchanged; its real-provider capacity case is now a project regression.
+
+### Ownership and return behavior
+
+- The binding retains in-flight work and detached summaries across navigation.
+  Removing the last route listener schedules controller detachment outside
+  widget build. A visible Ready route holds its view lease; leaving releases
+  that owner while keeping immutable PreparedPublication metadata and identity.
+  Independent reader/file leases remain pinned until their owners release them.
+- In-flight preparation continues off-screen. Completion while detached releases
+  the returned PreparedBook immediately and publishes PreparationDetached,
+  preserving display metadata without a file handle or cache pin.
+- Returning joins an ongoing preparation or enters local verification. The
+  controller acquires the current head, compares full identity including both
+  interpretation versions, and incrementally hashes the whole leased file.
+  Matching verified bytes produce Ready with a new owner, without HTTP/import.
+  Missing, evicted, corrupt, changed or incompatible heads return Idle and offer
+  explicit preparation; cache/provider failure maps to sanitized storage feedback.
+- Cancel, supersession, disposal and session retirement reject late verification
+  results. Leaving during verification allows completion but releases its lease.
+  Session switch drops retained summaries as well as pending work and Ready owners.
+- Updated state-management.md with executable signatures, transitions and
+  regression requirements. Updated only the lease-lifetime paragraph in the S4
+  handoff. Earlier E1b Ready-retention statements above are superseded here.
+
+### Regression coverage
+
+15 real-provider binding tests use synthetic HTTP, real SQLite/cache and the
+publication worker. They cover five sequential departed books with capacity for
+two; off-screen progress/completion and actual eviction; unchanged-head return
+with zero additional requests; evicted/missing/same-length-corrupt/changed/
+incompatible heads; return during download; multiple route listeners; independent
+file owners; leave/cancel/retire during local verification; and retirement during
+download. The existing 18 widget cases now assert detached metadata and release/
+reacquisition behavior while retaining progress, recovery, switching and layout
+coverage. No live NAS, private content or fixture changes were used.
+
+Initial focused checking caught that acquireHead verifies existence/length,
+not a complete digest. Added a fresh streamed SHA-256 check for every file size;
+the same-length corruption regression now rejects stale readiness.
+
+### Commands and results
+
+| Command | Final result |
+| --- | --- |
+| `dart run build_runner build` | PASS; final incremental run wrote 8 outputs |
+| `dart format` on changed Dart files | PASS |
+| `dart format --output=none --set-exit-if-changed` on 9 changed/generated Dart files | PASS; zero changes |
+| Focused binding and preparation widget tests (`flutter test --no-pub ... --reporter expanded`) | PASS; 33 passed, zero skipped/failed |
+| `flutter analyze` | PASS; no issues |
+| `flutter test --reporter expanded` | PASS; 2,148 passed, 4 existing optional skips, zero failed |
+| `dart run tool/ci/check_reader_fixtures.dart` | PASS; manifest/privacy guard |
+| `git -c core.safecrlf=false diff --check` | PASS |
+| Allowed-path and five Phase D protected-file content diff | PASS; no out-of-scope changes |
+
+Full-suite log: ignored `build/phase-e-review-flutter-test.log`.
+The five concurrent Phase D implementation files, other data/core/reader code,
+native/CI/dependencies, fixtures and planning/context manifests remain unchanged.
+Only the controller/state and their generated files cross the presentation
+boundary. No remaining implementation issue is known for this fix; existing
+device/LAN/lifecycle and S3-AC10 evidence remains outside this host gate.

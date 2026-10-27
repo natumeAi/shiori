@@ -150,8 +150,13 @@ its verified server-scoped generation remains durable, but no retired ready or
 content event escapes. There is no unsafe rollback/deletion after dispatch.
 
 `PreparedBook.release()` releases its lease and removes service ownership.
-The controller releases its ready book on prepare, cancel, disposal and session
-retirement. Direct service callers release on abandonment; the service also
+The controller releases its ready book on route departure, prepare, cancel,
+disposal and session retirement. Preparation continues after route departure,
+then immediately releases its result if the route is still absent. Retained
+PreparedPublication metadata owns no file; returning routes acquire and fully
+rehash the current head before exposing Ready again, with no HTTP for an
+identical valid head. Missing/changed/incompatible heads require explicit prepare.
+Direct service callers release on abandonment; the service also
 releases every outstanding result on retirement/disposal. S4 must acquire its
 own lease before the UI releases its ready book, verify its full identity still
 matches, and release once all worker/source users of that file have stopped.

@@ -359,7 +359,11 @@ preparationControllerProvider(ServerSession session, BookKey key); // auto-dispo
 publicationContentChangesProvider(ServerSession session); // StreamProvider
 PreparationState PreparationController.build(ServerSession session, BookKey key);
 Future<void> PreparationController.prepare({bool refresh = false});
+void PreparationController.detachRoute();
+Future<void> PreparationController.attachRoute();
 void PreparationController.cancel();
+const PreparationState.detached(PreparedPublication publication);
+bookPreparationBindingProvider(ServerSession session, BookKey key);
 ```
 
 ### Contracts
@@ -379,6 +383,28 @@ void PreparationController.cancel();
 - Controller releases the old ready owner when beginning another prepare. S4
   must acquire/verify an independent file lease before relying on it after that
   transition. A summary remains detached; its file/resource owners do not.
+- The presentation binding listens without rebuilding on progress and retains
+  Preparing, Ready and Detached controllers until session retirement. Its last
+  route listener leaving schedules detachRoute outside widget build; resuming
+  schedules attachRoute. Keep-alive retains metadata/work, never an off-screen
+  Ready lease. Multiple route listeners share the visible view owner until the
+  last leaves. Navigation does not cancel in-flight preparation.
+- detachRoute releases this controller's Ready book and keeps only its immutable
+  PreparedPublication in PreparationDetached. If preparation finishes while
+  detached, release the result immediately and retain that summary. Independent
+  reader/file leases remain their owners' responsibility and stay pinned.
+- attachRoute joins existing work or verifies a detached summary locally: acquire
+  the current cache head, compare BookKey/digest/parser/canonical versions, and
+  stream-rehash the entire leased file at every size. Only an identical current
+  identity and matching digest/length yield Ready with a fresh PreparedBook.
+  This return path sends no HTTP and does not import again. Missing, evicted,
+  corrupt, changed or incompatible heads yield Idle for explicit prepare;
+  cache/provider storage errors yield Failed(storage). Never show detached
+  metadata as proof that a usable file still exists.
+- Local return verification uses the same view/operation/session guards as
+  preparation. Leaving again may finish verification off-screen, but releases
+  its result. Cancel, supersession, disposal or retirement rejects late results;
+  every unsuccessful acquisition path releases its temporary lease in finally.
 - SessionPublicationWorker closes on guard retirement, including a late spawn,
   even if keep-alive providers still have listeners. It is declared outside
   reader/data. Do not depend on view auto-disposal for session cleanup.
@@ -396,6 +422,10 @@ void PreparationController.cancel();
 | Build | idle, zero HTTP |
 | Prepare / chunk receipt | preparing, admitted byte count and nullable total |
 | Validated publish / usable 304 | ready, matching summary and file lease |
+| Last route leaves Ready / preparation finishes off-screen | detached summary; controller lease released |
+| Return with identical verified current head | preparing -> ready with a fresh lease; zero HTTP |
+| Return with missing/corrupt/changed/incompatible head | preparing -> idle; explicit prepare offered, zero HTTP |
+| Local return cache/provider failure | failed(storage); no retained lease or automatic retry |
 | Recoverable failure | failed with sanitized typed reason |
 | Cancel / retirement | idle; no cancellation AsyncError or retry |
 | Dispose / stale callback | no assignment, owned lease released |
@@ -405,6 +435,9 @@ void PreparationController.cancel();
 Base: idle until the UI explicitly prepares. Good: a retained old-session family
 is idle after activation changes. Bad: a late first-A result cannot update a
 later-A view merely because their BookKeys compare equal.
+Good: five departed books can prepare sequentially with a two-book cache budget.
+Bad: retaining every Ready lease until server switch makes unrelated preparation
+fail with cacheBusy; retaining detached summaries must not pin those bytes.
 
 ### Tests Required
 
@@ -412,6 +445,11 @@ Keep family listeners alive with real providers/fake HTTP, real SQLite and
 worker. Assert byte updates, ready/failed/cancel/retry, duplicate coalescing,
 refresh supersession, disposal, retirement during download and actual import,
 A -> B -> A, lease/staging accounting and no late content/state event.
+Cover more departed books than the cache holds; assert successful preparation,
+released owners and actual eviction. Cover off-screen completion, return during
+work, verified return with unchanged request counts, missing/corrupt/changed and
+incompatible heads, last-route removal, independent leases, and leave/cancel/
+retirement during local verification. Session switch drops retained summaries.
 
 ### Wrong vs Correct
 
@@ -419,6 +457,9 @@ Wrong: store RequestCancelled in AsyncError or check only serverKey. Correct:
 consume cancellation, check session generation plus view/operation lifetime and
 release abandoned results. Wrong: hold the worker's staged handle across rename.
 Correct: drain/detach before publication; S4 reopens the leased immutable path.
+Wrong: retain PreparedBook merely to remember a successful preparation, or trust
+acquireHead's length check as digest proof. Correct: retain PreparedPublication,
+release the view lease on departure, then reacquire and stream-rehash on return.
 
 ## Forbidden
 

@@ -50,6 +50,7 @@ class FakePreparationController extends PreparationController {
   int cancellations = 0;
   bool disposed = false;
   PreparedBook? owned;
+  bool attached = true;
   late BookKey capturedKey;
   late ServerSession capturedSession;
 
@@ -88,11 +89,33 @@ class FakePreparationController extends PreparationController {
     if (ref.mounted &&
         ref.read(sessionPublicationGuardProvider).isCurrent(capturedSession)) {
       owned = book;
-      state = PreparationState.ready(book);
+      if (attached) {
+        state = PreparationState.ready(book);
+      } else {
+        book.release();
+        owned = null;
+        state = PreparationState.detached(book.publication);
+      }
     } else {
       book.release();
     }
     return book;
+  }
+
+  @override
+  void detachRoute() {
+    attached = false;
+    if (state case PreparationReady(:final book)) {
+      book.release();
+      owned = null;
+      state = PreparationState.detached(book.publication);
+    }
+  }
+
+  @override
+  Future<void> attachRoute() async {
+    attached = true;
+    if (state is PreparationDetached) complete();
   }
 
   @override

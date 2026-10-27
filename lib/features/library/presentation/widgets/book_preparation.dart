@@ -36,7 +36,8 @@ class BookPreparation extends ConsumerWidget {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             switch (state) {
-              PreparationIdle() => Text(l10n.libraryPreparationHelp),
+              PreparationIdle() ||
+              PreparationDetached() => Text(l10n.libraryPreparationHelp),
               PreparationPreparing() => _PreparationProgress(state: state),
               PreparationReady() => Semantics(
                 liveRegion: true,

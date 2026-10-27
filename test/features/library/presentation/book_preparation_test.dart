@@ -97,7 +97,7 @@ void main() {
   };
 
   testWidgets(
-    'leaving the route retains progress and the controller ready owner',
+    'leaving the route retains progress and metadata, releasing ready owners',
     (tester) async {
       final h = PreparationUiHarness();
       await h.open(tester);
@@ -113,14 +113,16 @@ void main() {
       final book = controller.complete();
       await tester.pumpAndSettle();
       expect(controller.disposed, isFalse);
-      expect(book.isReleased, isFalse);
+      expect(book.isReleased, isTrue);
       await tester.tap(find.text('Fixture Book 7'));
       await tester.pumpAndSettle();
       expect(h.controllers, hasLength(1));
       expect(find.text(l10n.libraryPreparationReady), findsOneWidget);
+      final reacquired = controller.owned!;
+      expect(reacquired.isReleased, isFalse);
       h.app.container.read(routerProvider).pop();
       await tester.pumpAndSettle();
-      expect(book.isReleased, isFalse);
+      expect(reacquired.isReleased, isTrue);
       await tester.tap(find.byTooltip(l10n.serverChangeTitle));
       await tester.pumpAndSettle();
       await h.app.connect(tester);
