@@ -14,6 +14,7 @@ extension _TurnControllerDrag on ReaderTurnController {
     _write(0);
     if (_bound) session.unbind();
     _bound = false;
+    _refreshDemand();
     for (final preview in _neighbors.values) {
       preview.release();
     }
@@ -46,41 +47,52 @@ extension _TurnControllerDrag on ReaderTurnController {
 
   Future<PreparedTurn?> _prepareDirection(TurnDirection next, int token) async {
     final input = _current;
-    final existing = _neighbors[next];
-    _event(TurnTimingEvent.preparationStart);
-    _event(
-      existing != null && _bound
-          ? TurnTimingEvent.preparationHit
-          : TurnTimingEvent.preparationMiss,
-    );
-    if (existing != null && _bound) return existing;
-    // A cold reversal first parks the foreground in a control task.
-    if (_bound) _clearPair();
-    final epoch = _pairGeneration;
-    final origin = _accepted;
-    final prepared = await _bounded(session.prepare(origin, next));
-    if (prepared == null) return null;
-    if (!_alive(token, input: input) || epoch != _pairGeneration) {
-      if (token == _generation && epoch != _pairGeneration) {
-        _event(TurnTimingEvent.staleCallbackRejected, input: input);
+    _event(TurnTimingEvent.preparationBarrierStart, input: input);
+    try {
+      final existing = _neighbors[next];
+      final ready = existing != null && _bound
+          ? null
+          : session.ready(_accepted, next);
+      final cacheHit = ready != null;
+      // Probe readiness without changing the existing preparation/drain order.
+      ready?.release();
+      _event(TurnTimingEvent.preparationStart);
+      _event(
+        (existing != null && _bound) || cacheHit
+            ? TurnTimingEvent.preparationHit
+            : TurnTimingEvent.preparationMiss,
+      );
+      if (existing != null && _bound) return existing;
+      // A cold reversal first parks the foreground in a control task.
+      if (_bound) _clearPair();
+      final epoch = _pairGeneration;
+      final origin = _accepted;
+      final prepared = await _bounded(session.prepare(origin, next));
+      if (prepared == null) return null;
+      if (!_alive(token, input: input) || epoch != _pairGeneration) {
+        if (token == _generation && epoch != _pairGeneration) {
+          _event(TurnTimingEvent.staleCallbackRejected, input: input);
+        }
+        prepared.release();
+        return null;
       }
-      prepared.release();
-      return null;
-    }
-    await session.stopAndDrain();
-    await _controlTask();
-    if (!_alive(token, input: input) || epoch != _pairGeneration) {
-      if (token == _generation && epoch != _pairGeneration) {
-        _event(TurnTimingEvent.staleCallbackRejected, input: input);
+      await session.stopAndDrain();
+      await _controlTask();
+      if (!_alive(token, input: input) || epoch != _pairGeneration) {
+        if (token == _generation && epoch != _pairGeneration) {
+          _event(TurnTimingEvent.staleCallbackRejected, input: input);
+        }
+        prepared.release();
+        return null;
       }
-      prepared.release();
-      return null;
+      _neighbors[next] = prepared;
+      session.bind(origin, _neighbors.values.toList());
+      _bound = true;
+      _event(TurnTimingEvent.prepared);
+      return prepared;
+    } finally {
+      _event(TurnTimingEvent.preparationBarrierEnd, input: input);
     }
-    _neighbors[next] = prepared;
-    session.bind(origin, _neighbors.values.toList());
-    _bound = true;
-    _event(TurnTimingEvent.prepared);
-    return prepared;
   }
 
   Future<void> _admitWarm(_TurnPointer pointer) async {
@@ -93,6 +105,7 @@ extension _TurnControllerDrag on ReaderTurnController {
     }
     if (warm.isEmpty) return;
     pointer.preparing = true;
+    _event(TurnTimingEvent.preparationBarrierStart, input: pointer.intent);
     try {
       await session.stopAndDrain();
       await _controlTask();
@@ -113,8 +126,10 @@ extension _TurnControllerDrag on ReaderTurnController {
       session.bind(_accepted, warm);
       _bound = true;
       pointer.dirty = true;
+      _refreshDemand();
       onChanged?.call();
     } finally {
+      _event(TurnTimingEvent.preparationBarrierEnd, input: pointer.intent);
       pointer.preparing = false;
       final latest = pointer.latest;
       if (_pointer == pointer &&
@@ -134,6 +149,7 @@ extension _TurnControllerDrag on ReaderTurnController {
       _setPhase(TurnPhase.dragging);
       if (_covers(latest!)) {
         pointer.dirty = true;
+        _refreshDemand();
         return;
       }
       if (latest.boundary) {
@@ -153,6 +169,7 @@ extension _TurnControllerDrag on ReaderTurnController {
         pointer.catchUp = DragCatchUp(_offset);
       }
       pointer.dirty = true;
+      _refreshDemand();
       onChanged?.call();
     } finally {
       pointer.preparing = false;

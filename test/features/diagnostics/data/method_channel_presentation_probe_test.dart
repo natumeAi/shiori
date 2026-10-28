@@ -72,6 +72,56 @@ void main() {
     expect(report.toJson()['unmatchedCallbacks'], 4);
   });
 
+  test(
+    'loss capability is explicit and survives the strict channel boundary',
+    () async {
+      await probe.install();
+      await probe.start(runId: 'loss', mode: PresentationMode.a1);
+      payload = {
+        ...presentationPayload(PresentationMode.a1),
+        'lossAccountingVersion': 1,
+      };
+      final report = await probe.stop();
+      expect(report.lossAccountingVersion, 1);
+      expect(report.toJson()['lossAccountingVersion'], 1);
+    },
+  );
+  test('unknown loss capability is rejected rather than promoted', () async {
+    await probe.install();
+    await probe.start(runId: 'loss', mode: PresentationMode.a1);
+    payload = {
+      ...presentationPayload(PresentationMode.a1),
+      'lossAccountingVersion': 2,
+    };
+    await expectLater(probe.stop(), throwsA(isA<ParseException>()));
+  });
+  test(
+    'versioned native capacity admits more than the legacy sample limit',
+    () async {
+      await probe.install();
+      await probe.start(runId: 'long', mode: PresentationMode.a1);
+      final p = presentationPayload(PresentationMode.a1);
+      (p['inventory'] as Map<String, Object?>)
+        ..['ringCapacity'] = 262144
+        ..['captureBudgetVersion'] = 1;
+      p['samples'] = List.generate(
+        16385,
+        (i) => {'kind': 'layer_commit', 'timestamp': i / 120},
+      );
+      payload = p;
+      final report = await probe.stop();
+      expect(report.samples, hasLength(16385));
+      expect(report.inventory['captureBudgetVersion'], 1);
+    },
+  );
+  test('a larger native ring without its version is rejected', () async {
+    await probe.install();
+    await probe.start(runId: 'legacy', mode: PresentationMode.a1);
+    final p = presentationPayload(PresentationMode.a1);
+    (p['inventory'] as Map<String, Object?>)['ringCapacity'] = 262144;
+    payload = p;
+    await expectLater(probe.stop(), throwsA(isA<ParseException>()));
+  });
   test('negative unmatched callback count is rejected', () async {
     await probe.install();
     await probe.start(runId: 'test', mode: PresentationMode.b);

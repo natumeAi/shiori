@@ -1,0 +1,382 @@
+{
+  "authoritative": "webkit",
+  "differences": [
+    {
+      "elementsIdentical": true,
+      "id": "metadata-positive",
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "metadata-boundary",
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "metadata-nested",
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "metadata-unsupported",
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "dimensions-positive",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": true
+    },
+    {
+      "elementsIdentical": true,
+      "id": "dimensions-boundary",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": true
+    },
+    {
+      "elementsIdentical": true,
+      "id": "dimensions-nested",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": true
+    },
+    {
+      "elementsIdentical": true,
+      "id": "cascade-positive",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "cascade-boundary",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "cascade-nested",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "cascade-unsupported",
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": false,
+      "id": "box-positive",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "box-boundary",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": false,
+      "id": "box-nested",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": false,
+      "id": "box-unsupported",
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": false,
+      "id": "text-positive",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": false,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "text-boundary",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": false,
+      "id": "text-nested",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": false,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": false,
+      "id": "text-unsupported",
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "paint-positive",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "paint-boundary",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "paint-nested",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "paint-unsupported",
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": false,
+      "id": "stacking-positive",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": false,
+      "id": "stacking-boundary",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": false,
+      "id": "stacking-nested",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": false,
+      "id": "stacking-unsupported",
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "clip-mask-positive",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": true
+    },
+    {
+      "elementsIdentical": true,
+      "id": "clip-mask-boundary",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": true
+    },
+    {
+      "elementsIdentical": true,
+      "id": "clip-mask-nested",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": true
+    },
+    {
+      "elementsIdentical": true,
+      "id": "svg-graphics-positive",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": true
+    },
+    {
+      "elementsIdentical": true,
+      "id": "svg-graphics-boundary",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": false,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": true
+    },
+    {
+      "elementsIdentical": true,
+      "id": "svg-graphics-nested",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": true
+    },
+    {
+      "elementsIdentical": true,
+      "id": "svg-graphics-unsupported",
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": true
+    },
+    {
+      "elementsIdentical": false,
+      "id": "svg-text-positive",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": false,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": false,
+      "id": "svg-text-boundary",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": false,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": false,
+      "id": "svg-text-nested",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": false,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": false,
+      "id": "svg-text-unsupported",
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": false,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "foreign-object-positive",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "foreign-object-boundary",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "foreign-object-nested",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "foreign-object-unsupported",
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "filters-positive",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": true
+    },
+    {
+      "elementsIdentical": true,
+      "id": "filters-boundary",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": true
+    },
+    {
+      "elementsIdentical": true,
+      "id": "filters-nested",
+      "paintRasterIdentical": false,
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": true
+    },
+    {
+      "elementsIdentical": true,
+      "id": "mixed-navigation-positive",
+      "paintSamplesIdentical": false,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "mixed-navigation-boundary",
+      "paintSamplesIdentical": false,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "mixed-navigation-nested",
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    },
+    {
+      "elementsIdentical": true,
+      "id": "mixed-navigation-unsupported",
+      "paintSamplesIdentical": true,
+      "svgTextGeometryIdentical": true,
+      "textGeometryIdentical": false
+    }
+  ],
+  "fontsIdentical": false
+}

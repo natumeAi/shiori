@@ -1,0 +1,7 @@
+{"file":".trellis/spec/flutter/index.md","reason":"Authoritative index conventions for implement; larger reader/data contracts load by phase per implement.md."}
+{"file":".trellis/spec/flutter/directory-structure.md","reason":"Authoritative directory-structure conventions for implement; larger reader/data contracts load by phase per implement.md."}
+{"file":".trellis/spec/flutter/state-management.md","reason":"Authoritative state-management conventions for implement; larger reader/data contracts load by phase per implement.md."}
+{"file":".trellis/spec/flutter/error-handling.md","reason":"Authoritative error-handling conventions for implement; larger reader/data contracts load by phase per implement.md."}
+{"file":".trellis/spec/flutter/quality-guidelines.md","reason":"Authoritative quality-guidelines conventions for implement; larger reader/data contracts load by phase per implement.md."}
+{"file":".trellis/tasks/10-27-reader-position-activity/research/position-activity-contracts.md","reason":"Task-specific source evidence, contracts, feasibility gates and preserved decisions."}
+{"file":".trellis/tasks/10-22-flutter-lan-reader-parity/research/occlusion-parity-exception.md","reason":"User-approved narrow actual-visible coverage exception, paired fixture requirement and separate reference frontend handoff; all other parity remains exact."}

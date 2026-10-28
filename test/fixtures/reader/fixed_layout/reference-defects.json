@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "authority": ".trellis/tasks/10-27-native-fixed-layout-core/research/reference-defect-exceptions.md",
+  "exceptions": [
+    {
+      "id": "RD-1",
+      "engine": "webkit",
+      "engineVersion": "27.2",
+      "cases": ["filters-positive", "filters-boundary", "filters-nested", "clip-mask-positive", "clip-mask-boundary", "clip-mask-nested", "svg-text-positive", "svg-text-boundary", "svg-text-nested", "foreign-object-positive", "foreign-object-boundary", "foreign-object-nested", "svg-text-path-none", "svg-text-path-spacing", "svg-text-path-spacingAndGlyphs"],
+      "scopeRule": "Only (0,0); XHTML SVG; own reference PNG and WebKit XHTML emptySVG control both equal black alpha 38; native is transparent; same reference engine/version.",
+      "pixel": [0, 0],
+      "referenceRGBA": [0, 0, 0, 38],
+      "controlIds": ["webkit/application/xhtml+xml/emptySVG", "webkit/application/xhtml+xml/empty", "webkit/text/html/emptySVG", "chromium/application/xhtml+xml/emptySVG"],
+      "handoff": "Owner may file upstream WebKit report with isolated empty XHTML SVG repro; no lan-reader edit. Device Safari must reproduce before device exemption."
+    },
+    {
+      "id": "RD-2",
+      "engine": "webkit",
+      "engineVersion": "27.2",
+      "cases": ["foreign-object-positive", "foreign-object-boundary", "foreign-object-nested"],
+      "scopeRule": "Only the Z span glyph box at the CSS/native position and reference-painted position, each expanded by 1 px. Translate both by (7,9) for nested. Native foreignStatic HTML control must pass D4 without exemptions; relative controls reproduce the displaced glyph in HTML and XHTML.",
+      "element": "foreignObject span Z",
+      "boxExpansionPx": 1,
+      "nativeOffsetFromStatic": [0, 3],
+      "controlIds": ["webkit/text/html/foreignStatic", "webkit/application/xhtml+xml/foreignStatic", "webkit/text/html/foreignRelative", "webkit/application/xhtml+xml/foreignRelative"],
+      "handoff": "Owner may file upstream WebKit report with foreignRelative repro: paint contradicts top:3px layout. Device Safari must reproduce before device exemption."
+    }
+  ]
+}

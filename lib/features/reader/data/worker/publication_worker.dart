@@ -21,6 +21,7 @@ import 'package:shiori/features/reader/engine/style/reader_settings.dart';
 
 part 'publication_worker_queue.dart';
 part 'publication_worker_preload.dart';
+part 'publication_worker_reservation.dart';
 
 /// One long-lived file-backed publication owner. Root-side code only queues,
 /// validates envelopes and materializes already decompressed transferable bytes.
@@ -79,14 +80,34 @@ final class PublicationWorker {
   bool _closing = false;
   bool _closeAcknowledged = false;
   Completer<void>? _closeDone;
+  PublicationWorkerReservation? _reader;
+  int _deferred = 0;
+  Future<void>? _deferredClose;
   final Map<ReaderResourceBudget, ReaderResourceSession> _resourceSessions = {};
 
   bool get isClosed => _closed || _closing;
 
+  /// Acquire inside the shared preparation queue, before reopening reader bytes.
+  PublicationWorkerReservation reserveReader() {
+    if (isClosed || _deferredClose != null) {
+      throw const PublicationWorkerException(PublicationWorkerFailure.closed);
+    }
+    if (_reader != null ||
+        _running != null ||
+        _pending.isNotEmpty ||
+        _deferred != 0) {
+      throw const PublicationWorkerException(PublicationWorkerFailure.reserved);
+    }
+    return _reader = PublicationWorkerReservation._(this);
+  }
+
   /// Waits behind canceled physical work, then releases its file handle.
   /// The caller must serialize prepare/detach pairs on this session worker.
-  Future<void> detach() {
-    if (isClosed) return close();
+  Future<void> detach({PublicationWorkerReservation? reservation}) {
+    if (_blocked(reservation, detaching: true)) {
+      return _defer(() => detach(), null);
+    }
+    if (isClosed) return _closeUnreserved();
     _invalidate(PublicationWorkerFailure.stale);
     _tag ??= const PublicationTag('');
     return _enqueue(DetachPublication(++_nextId, _tag!, _generation), (reply) {
@@ -103,7 +124,14 @@ final class PublicationWorker {
     String path,
     PublicationTag tag, {
     PublicationCancellation? cancellation,
+    PublicationWorkerReservation? reservation,
   }) {
+    if (_blocked(reservation)) {
+      return _defer(
+        () => open(path, tag, cancellation: cancellation),
+        cancellation,
+      );
+    }
     if (isClosed) return _failure(PublicationWorkerFailure.closed);
     if (cancellation?.isCanceled ?? false) {
       return _failure(PublicationWorkerFailure.canceled);
@@ -124,19 +152,25 @@ final class PublicationWorker {
   Future<SourceDocument> loadSection(
     int index, {
     PublicationCancellation? cancellation,
-  }) => _enqueue(
-    LoadPublicationSection(
-      ++_nextId,
-      _tag ?? const PublicationTag(''),
-      _generation,
-      index,
-    ),
-    (reply) => switch (reply) {
-      PublicationSectionLoaded(:final document) => document,
-      _ => throw _protocol,
-    },
-    cancellation,
-  );
+    PublicationWorkerReservation? reservation,
+  }) {
+    if (_blocked(reservation)) {
+      return _failure(PublicationWorkerFailure.reserved);
+    }
+    return _enqueue(
+      LoadPublicationSection(
+        ++_nextId,
+        _tag ?? const PublicationTag(''),
+        _generation,
+        index,
+      ),
+      (reply) => switch (reply) {
+        PublicationSectionLoaded(:final document) => document,
+        _ => throw _protocol,
+      },
+      cancellation,
+    );
+  }
 
   /// Imports an immutable file whose actual SHA-256 was verified by its owner.
   /// Supply a session tag in product flows; internal generations also protect
@@ -147,6 +181,12 @@ final class PublicationWorker {
     PublicationTag? tag,
     PublicationCancellation? cancellation,
   }) {
+    if (_blocked(null)) {
+      return _defer(
+        () => prepare(path, identity, tag: tag, cancellation: cancellation),
+        cancellation,
+      );
+    }
     if (isClosed) return _failure(PublicationWorkerFailure.closed);
     if (cancellation?.isCanceled ?? false) {
       return _failure(PublicationWorkerFailure.canceled);
@@ -180,26 +220,41 @@ final class PublicationWorker {
   Future<Uint8List?> readResource(
     String path, {
     PublicationCancellation? cancellation,
-  }) => _enqueue(
-    ReadPublicationResource(
-      ++_nextId,
-      _tag ?? const PublicationTag(''),
-      _generation,
-      path,
-    ),
-    (reply) {
-      if (reply is! PublicationResourceRead) throw _protocol;
-      if (reply.length < 0 || reply.length > _maxResourceBytes) throw _protocol;
-      final bytes = reply.bytes?.materialize().asUint8List();
-      if ((bytes?.length ?? 0) != reply.length) throw _protocol;
-      return bytes?.asUnmodifiableView();
-    },
-    cancellation,
-  );
+    PublicationWorkerReservation? reservation,
+  }) {
+    if (_blocked(reservation)) {
+      return _failure(PublicationWorkerFailure.reserved);
+    }
+    return _enqueue(
+      ReadPublicationResource(
+        ++_nextId,
+        _tag ?? const PublicationTag(''),
+        _generation,
+        path,
+      ),
+      (reply) {
+        if (reply is! PublicationResourceRead) throw _protocol;
+        if (reply.length < 0 || reply.length > _maxResourceBytes) {
+          throw _protocol;
+        }
+        final bytes = reply.bytes?.materialize().asUint8List();
+        if ((bytes?.length ?? 0) != reply.length) throw _protocol;
+        return bytes?.asUnmodifiableView();
+      },
+      cancellation,
+    );
+  }
 
   /// Waits for the running synchronous operation, closes its archive, and
   /// waits for isolate exit. Pending/running caller futures finish as closed.
   Future<void> close() {
+    if (_reader != null) {
+      return _deferredClose ??= _reader!._released.future.then((_) => close());
+    }
+    return _closeUnreserved();
+  }
+
+  Future<void> _closeUnreserved() {
     if (_closeDone != null) return _closeDone!.future;
     if (_closed) return Future.value();
     _closeDone = Completer<void>();

@@ -77,6 +77,40 @@ final class InlineAccumulator {
 
   bool get sawBreak => _sawBreak;
 
+  /// Atomic authored inline box. It occupies one synthetic paragraph unit;
+  /// its source remains an element anchor, never invented character data.
+  void addPlaceholder(
+    int nodeIndex,
+    ComputedStyle style, {
+    required double width,
+    required double height,
+    required double baseline,
+  }) {
+    if (![width, height, baseline].every((v) => v.isFinite) ||
+        width < 0 ||
+        height < 0) {
+      throw ArgumentError('Invalid inline placeholder');
+    }
+    final start = _length++;
+    _text.write('\uFFFC');
+    _runs.add(
+      _RunBuilder(
+        start,
+        _length,
+        style,
+        1,
+        placeholderWidth: width,
+        placeholderHeight: height,
+        placeholderBaseline: baseline,
+      ),
+    );
+    _entries.add(
+      _MutableEntry(MapKind.synthetic, start, _length, nodeIndex, 0, 0),
+    );
+    _atLineStart = false;
+    _endsWithSpace = false;
+  }
+
   void _appendText(String value, ComputedStyle style, double scale) {
     if (value.isEmpty) return;
     _text.write(value);
@@ -336,6 +370,9 @@ final class InlineAccumulator {
           end: run.end + shift,
           style: run.style,
           scale: run.scale,
+          placeholderWidth: run.placeholderWidth,
+          placeholderHeight: run.placeholderHeight,
+          placeholderBaseline: run.placeholderBaseline,
         ),
       );
     }
@@ -354,11 +391,20 @@ final class InlineAccumulator {
 }
 
 class _RunBuilder {
-  _RunBuilder(this.start, this.end, this.style, this.scale);
+  _RunBuilder(
+    this.start,
+    this.end,
+    this.style,
+    this.scale, {
+    this.placeholderWidth,
+    this.placeholderHeight = 1,
+    this.placeholderBaseline = 1,
+  });
 
   final int start;
   int end;
   final ComputedStyle style;
   final double scale;
-  final double? placeholderWidth = null;
+  final double? placeholderWidth;
+  final double placeholderHeight, placeholderBaseline;
 }

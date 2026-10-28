@@ -10,6 +10,7 @@ import 'package:shiori/core/config/server_endpoint.dart';
 import 'package:shiori/core/config/server_key.dart';
 import 'package:shiori/features/reader/data/epub/epub_archive.dart';
 import 'package:shiori/features/reader/data/epub/epub_book.dart';
+import 'package:shiori/features/reader/data/layout/section_rendition.dart';
 import 'package:shiori/features/reader/data/worker/publication_worker.dart';
 
 const _values = {
@@ -26,6 +27,9 @@ const _values = {
   'PublicationMetadata',
   'PublicationLayoutFacts',
   'SectionLayoutFacts',
+  // Audited final values and defensive unmodifiable copies; no lazy state.
+  'SectionRendition',
+  'RenditionIssue',
   'SectionSourceFacts',
   'SectionStyleFacts',
   'SvgSourceDimensions',
@@ -83,12 +87,50 @@ int audit(Object? root) {
 
 Future<void> main(List<String> args) async {
   final file = File(args.single);
-  final key = BookKey(ServerKey(ServerEndpoint.parse('https://fixture.invalid/library').endpoint!), 7);
-  final identity = ContentIdentity(key, crypto.sha256.convert(file.readAsBytesSync()).toString());
+  final key = BookKey(
+    ServerKey(
+      ServerEndpoint.parse('https://fixture.invalid/library').endpoint!,
+    ),
+    7,
+  );
+  final identity = ContentIdentity(
+    key,
+    crypto.sha256.convert(file.readAsBytesSync()).toString(),
+  );
   final worker = await PublicationWorker.spawn();
   try {
     final result = await worker.prepare(file.path, identity);
     final fields = audit(result);
+    // The ordinary publication has no rendition issues. Traverse an invalid
+    // value too, so RenditionIssue's own final fields are actually inspected.
+    final rawPackage = <String, String?>{'layout': 'future-layout'};
+    final rawItemref = <String>['rendition:spread-diagonal'];
+    final rendition = resolveSectionRendition(
+      package: rawPackage,
+      itemref: rawItemref,
+    );
+    if (audit(rendition) < 10 || rendition.issues.isEmpty) {
+      throw StateError('Rendition audit did not visit issue values');
+    }
+    rawPackage.clear();
+    rawItemref.clear();
+    if (rendition.rawPackage.isEmpty || rendition.rawItemref.isEmpty) {
+      throw StateError('Rendition retained mutable inputs');
+    }
+    for (final mutate in <void Function()>[
+      () => rendition.rawPackage.clear(),
+      () => rendition.rawItemref.clear(),
+      () => rendition.effective.clear(),
+      () => rendition.issues.clear(),
+    ]) {
+      var refused = false;
+      try {
+        mutate();
+      } on UnsupportedError {
+        refused = true;
+      }
+      if (!refused) throw StateError('Mutable rendition collection');
+    }
     if (fields < 50) throw StateError('Audit did not visit the nested graph');
     final lazy = EpubBook.open(file.readAsBytesSync());
     for (final forbidden in <Object>[lazy, lazy.archive]) {

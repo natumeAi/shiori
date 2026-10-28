@@ -3,6 +3,7 @@
 library;
 
 import 'package:shiori/features/reader/data/epub/epub_book.dart';
+import 'package:shiori/features/reader/data/layout/section_rendition.dart';
 import 'package:shiori/features/reader/data/resources/archive_reader_resource_source.dart';
 import 'package:shiori/features/reader/data/resources/reader_resource_source.dart';
 
@@ -38,3 +39,11 @@ bool isFixedLayoutSection(EpubBook book, int sectionIndex) {
   if (properties.contains('rendition:layout-pre-paginated')) return true;
   return packageLayout(book) == 'pre-paginated';
 }
+
+/// Validated per-item facts, separate from S2's legacy renderer refusal.
+SectionRendition sectionRendition(EpubBook book, int sectionIndex) =>
+    resolveSectionRendition(
+      package: book.package.rendition,
+      itemref: book.sections[sectionIndex].spine.properties ?? const [],
+      legacyLayout: packageLayout(book),
+    );

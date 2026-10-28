@@ -39,6 +39,7 @@ final class _PreparedReaderState extends State<PreparedReader>
   void Function(double)? _oldOffset;
   int? _pointer;
   bool _suspended = false;
+  int _mutation = 0;
   ReaderTurnController get controller => widget.controller;
   @override
   void initState() {
@@ -60,39 +61,48 @@ final class _PreparedReaderState extends State<PreparedReader>
     _offset.value = value;
     _oldOffset?.call(value);
     final sink = controller.timing;
-    if (sink is! TurnFrameSink || !controller.needsTick || value == 0) return;
+    if (sink is! TurnFrameSink) return;
     final frameSink = sink as TurnFrameSink;
     final epoch = frameSink.frameEpoch;
     final input = controller.inputIdentity;
     final binding = SchedulerBinding.instance;
-    // Control tasks can rewrite the offset between frames. The next ticker
-    // samples that value; scheduler timestamps only exist inside a frame.
-    if (binding.schedulerPhase == SchedulerPhase.idle ||
-        binding.schedulerPhase == SchedulerPhase.postFrameCallbacks) {
-      return;
-    }
-    final schedulerUs = binding.currentFrameTimeStamp.inMicroseconds;
-    final rawUs = binding.currentSystemFrameTimeStamp.inMicroseconds;
     final generation = controller.generation;
     final owner = controller;
-    binding.addPostFrameCallback((_) {
-      if (!mounted ||
-          owner != controller ||
-          generation != controller.generation ||
-          epoch != frameSink.frameEpoch) {
-        return;
-      }
-      frameSink.submitted(
-        frameNumber:
-            widget.frameNumberForTesting?.call() ??
-            ui.PlatformDispatcher.instance.frameData.frameNumber,
-        schedulerUs: schedulerUs,
-        rawSchedulerUs: rawUs,
-        generation: generation,
-        offset: value,
-        input: input,
-      );
-    });
+    final mutation = ++_mutation;
+    void enqueue() {
+      final schedulerUs = binding.currentFrameTimeStamp.inMicroseconds;
+      final rawUs = binding.currentSystemFrameTimeStamp.inMicroseconds;
+      binding.addPostFrameCallback((_) {
+        if (!mounted ||
+            owner != controller ||
+            generation != controller.generation ||
+            epoch != frameSink.frameEpoch ||
+            mutation != _mutation) {
+          return;
+        }
+        frameSink.submitted(
+          frameNumber:
+              widget.frameNumberForTesting?.call() ??
+              ui.PlatformDispatcher.instance.frameData.frameNumber,
+          schedulerUs: schedulerUs,
+          rawSchedulerUs: rawUs,
+          generation: generation,
+          offset: value,
+          input: input,
+        );
+      });
+    }
+
+    // A final settle or a control-task reset is still a visual mutation.
+    // Coalesce writes before painting, then sample its actual submission frame.
+    if (binding.schedulerPhase == SchedulerPhase.idle ||
+        binding.schedulerPhase == SchedulerPhase.postFrameCallbacks) {
+      binding.scheduleFrameCallback((_) {
+        if (mounted && mutation == _mutation) enqueue();
+      });
+    } else {
+      enqueue();
+    }
   }
 
   void _changed() {

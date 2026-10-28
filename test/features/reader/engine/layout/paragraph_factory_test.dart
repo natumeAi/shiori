@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shiori/features/reader/data/epub/epub_book.dart';
 import 'package:shiori/features/reader/engine/layout/font_registry.dart';
 import 'package:shiori/features/reader/engine/layout/layout_model.dart';
 import 'package:shiori/features/reader/engine/pagination/section_preparer.dart';
@@ -42,7 +43,24 @@ void main() {
   });
 
   test('@font-face fonts load from the archive once and are used', () async {
-    final book = openFixture('styles');
+    // The styles fixture's body font is intentionally replaced by reader
+    // settings. Request its embedded font on a descendant, with Latin glyphs
+    // actually covered by that face, without changing any corpus fixture.
+    final font = openFixture('styles').archive
+        .bytes('EPUB/fonts/Roboto-Regular.ttf')!;
+    final book = EpubBook.open(
+      buildEpub(
+        sections: {
+          's.xhtml': xhtml(
+            '<p style="font-family:FixtureRoboto">Ab fi e\u0301 Z</p>',
+            head:
+                '<style>@font-face {font-family:FixtureRoboto;'
+                'src:url("fonts/Roboto-Regular.ttf")}</style>',
+          ),
+        },
+        files: {'fonts/Roboto-Regular.ttf': font},
+      ),
+    );
     final registry = FontRegistry();
     final preparer = SectionPreparer(fonts: registry);
     final first = await prepareSection(
@@ -53,21 +71,45 @@ void main() {
     );
     final loaded = registry.records.where((r) => r.loaded).toList();
     expect(loaded, isNotEmpty);
-    expect(
-      loaded.every((r) => r.alias.startsWith('shiori-test-content-')),
-      isTrue,
-    );
+    expect(loaded.every((r) => r.alias.startsWith('shiori-face-')), isTrue);
     expect(
       first.fontChains,
-      contains('FixtureRoboto -> embedded EPUB/fonts/Roboto-Regular.ttf'),
+      contains('FixtureRoboto -> embedded OEBPS/fonts/Roboto-Regular.ttf'),
     );
-    // Roboto glyphs are not the 18-px squares of the test font, so a line
-    // set in the embedded family is not a multiple of 18.
-    final styled = first.blocks
-        .where((b) => b.paragraph != null)
-        .map((b) => b.paragraph!.lines.first.width)
-        .where((w) => w % 18 > 0.5 && (w % 18) < 17.5);
-    expect(styled, isNotEmpty);
+    // Compare identical paragraph inputs through the actual consumer. Merely
+    // registering the alias (or mentioning it in diagnostics) cannot pass.
+    var shapedDifferently = false;
+    for (final laid in first.blocks) {
+      if (laid.block case final TextBlock block) {
+        final painted = laid.paragraph!;
+        final absent = buildParagraph(
+          block,
+          painted.layoutWidth,
+          ParagraphFonts(
+            embedded: {
+              for (final record in loaded)
+                record.family.toLowerCase(): 'shiori-absent-font-control',
+            },
+          ),
+        );
+        try {
+          shapedDifferently |=
+              (painted.paragraph.maxIntrinsicWidth -
+                          absent.paragraph.maxIntrinsicWidth)
+                      .abs() >
+                  0.5 ||
+              painted.lines.length != absent.lines.length ||
+              List.generate(painted.lines.length, (i) => i).any(
+                (i) =>
+                    (painted.lines[i].width - absent.lines[i].width).abs() >
+                    0.5,
+              );
+        } finally {
+          absent.dispose();
+        }
+      }
+    }
+    expect(shapedDifferently, isTrue);
     final count = registry.records.length;
     final second = await prepareSection(
       book,

@@ -1,0 +1,5 @@
+{"file":".trellis/spec/flutter/quality-guidelines.md","reason":"Authoritative quality-guidelines conventions for check; larger reader/data contracts load by phase per implement.md."}
+{"file":".trellis/spec/flutter/testing.md","reason":"Authoritative testing conventions for check; larger reader/data contracts load by phase per implement.md."}
+{"file":".trellis/spec/flutter/state-management.md","reason":"Authoritative state-management conventions for check; larger reader/data contracts load by phase per implement.md."}
+{"file":".trellis/tasks/10-27-reader-position-activity/research/position-activity-contracts.md","reason":"Task-specific source evidence, contracts, feasibility gates and preserved decisions."}
+{"file":".trellis/tasks/10-22-flutter-lan-reader-parity/research/occlusion-parity-exception.md","reason":"User-approved narrow actual-visible coverage exception, paired fixture requirement and separate reference frontend handoff; all other parity remains exact."}

@@ -27,6 +27,7 @@ final class CssToken {
     this.number = 0,
     this.unit = '',
     this.color = 0,
+    this.arguments = const [],
   });
 
   /// Lowercase for identifiers; unquoted for strings; the path for `url()`;
@@ -41,6 +42,7 @@ final class CssToken {
 
   /// 0xAARRGGBB for [CssTokenKind.color].
   final int color;
+  final List<CssToken> arguments;
 
   bool isIdent(String name) => kind == CssTokenKind.ident && text == name;
 
@@ -158,7 +160,13 @@ int? _hexColor(String text) {
 CssToken? _function(FunctionTerm term) {
   final name = term.text.toLowerCase();
   if (name != 'rgb' && name != 'rgba') {
-    return CssToken(CssTokenKind.function, text: name);
+    final collector = _FunctionArguments();
+    term.visit(collector);
+    return CssToken(
+      CssTokenKind.function,
+      text: name,
+      arguments: List.unmodifiable(collector.tokens ?? const []),
+    );
   }
   final printer = CssPrinter();
   term.visit(printer);
@@ -199,4 +207,12 @@ CssToken? _function(FunctionTerm term) {
     CssTokenKind.color,
     color: (alpha << 24) | (red << 16) | (green << 8) | blue,
   );
+}
+
+final class _FunctionArguments extends Visitor {
+  List<CssToken>? tokens;
+  @override
+  void visitExpressions(Expressions node) {
+    tokens = convertExpression(node);
+  }
 }

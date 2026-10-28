@@ -6,6 +6,10 @@ import 'package:shiori/features/reader/engine/style/computed_style.dart';
 import 'package:shiori/features/reader/engine/style/css_values.dart';
 import 'package:shiori/features/reader/engine/style/style_diagnostic.dart';
 
+import 'dart:math' as math;
+
+part 'css_authored_properties.dart';
+
 /// CSS-wide keywords.
 enum CssKeyword { inherit, initial, unset }
 
@@ -179,7 +183,11 @@ List<CssDeclaration>? expandDeclaration(
 }
 
 List<(String, List<CssToken>)>? _expand(String name, List<CssToken> tokens) {
-  if (_longhands.contains(name)) return [(name, tokens)];
+  if (_longhands.contains(name) || authoredLonghands.contains(name)) {
+    return [(name, tokens)];
+  }
+  final authored = _expandAuthored(name, tokens);
+  if (authored != null) return authored;
   switch (name) {
     case 'margin':
     case 'padding':
@@ -337,22 +345,7 @@ List<(String, List<CssToken>)> _expandFont(List<CssToken> tokens) {
 }
 
 List<(String, List<CssToken>)> _expandBackground(List<CssToken> tokens) {
-  final keyword = _wideKeyword(tokens);
-  if (keyword != null) return [('background-color', tokens)];
-  CssToken? color;
-  for (final token in tokens) {
-    if (token.kind == CssTokenKind.color ||
-        token.isIdent('transparent') ||
-        token.isIdent('currentcolor')) {
-      color = token;
-    }
-  }
-  return [
-    (
-      'background-color',
-      [color ?? const CssToken(CssTokenKind.ident, text: 'transparent')],
-    ),
-  ];
+  return _authoredBackground(tokens);
 }
 
 List<(String, List<CssToken>)> _expandTextDecoration(List<CssToken> tokens) {
@@ -387,6 +380,7 @@ Object _parseLonghand(
 ) {
   final keyword = _wideKeyword(tokens);
   if (keyword != null) return keyword;
+  if (authoredLonghands.contains(name)) return _parseAuthored(name, tokens);
   switch (name) {
     case 'display':
       return _display(_ident(tokens, name), sink);
@@ -554,7 +548,9 @@ StyleDisplay _display(String value, StyleDiagnosticSink? sink) {
       return StyleDisplay.inline;
     case 'list-item':
       return StyleDisplay.listItem;
-    case 'inline-block' || 'inline-flex' || 'inline-table' || 'contents':
+    case 'inline-block':
+      return StyleDisplay.inlineBlock;
+    case 'inline-flex' || 'inline-table' || 'contents':
     case 'ruby' || 'ruby-base' || 'ruby-text' || 'ruby-text-container':
       sink?.add(StyleDiagnosticKind.approximatedValue, 'display:$value');
       return StyleDisplay.inline;
@@ -593,6 +589,9 @@ CssLength _length(
   bool allowPercent = true,
   bool allowNegative = true,
 }) {
+  if (!token.number.isFinite) {
+    throw _Invalid(StyleDiagnosticKind.invalidValue, name);
+  }
   switch (token.kind) {
     case CssTokenKind.ident when token.text == 'auto' && allowAuto:
       return const CssLength.auto();

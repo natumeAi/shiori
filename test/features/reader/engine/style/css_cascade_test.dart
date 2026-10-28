@@ -336,7 +336,8 @@ void main() {
           '${d.kind.name}:${d.detail}': d.count,
       };
       expect(byDetail['unsupportedProperty:float'], 2);
-      expect(byDetail['unsupportedProperty:border'], 1);
+      expect(byDetail['unsupportedProperty:border'], isNull);
+      expect(sample['x'].authored.borderWidth('top'), _px(1));
       expect(byDetail['unsupportedAtRule:@page'], 1);
       expect(
         sample.styled.diagnostics.map((d) => d.detail).join(),

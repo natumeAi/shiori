@@ -138,6 +138,30 @@ void main() {
       }
     },
   );
+  testWidgets('final settle and control-task zero reset both submit', (
+    tester,
+  ) async {
+    final sink = _EpochSink();
+    final active = await SurfaceHarness.open(timing: sink);
+    addTearDown(active.close);
+    await tester.pumpWidget(_view(active, frameNumber: () => 123));
+    final result = active.controller.turnPage(TurnDirection.next);
+    await active.clock.flush();
+    await tester.pump();
+    active.clock.now = 0;
+    await tester.pump(const Duration(milliseconds: 16));
+    active.clock.now = 100;
+    await tester.pump(const Duration(milliseconds: 16));
+    active.clock.now = 600;
+    await tester.pump(const Duration(milliseconds: 16));
+    await active.clock.flush();
+    await result;
+    await tester.pump();
+    expect(sink.offsets, contains(-400.0));
+    expect(sink.offsets.last, 0.0);
+    await tester.pumpWidget(const SizedBox());
+    await active.clock.flush();
+  });
   for (final invalidate in ['capture', 'generation']) {
     testWidgets('queued post-frame submission ignores changed $invalidate', (
       tester,
@@ -161,7 +185,11 @@ void main() {
       });
       await tester.pump(const Duration(milliseconds: 16));
       await h.clock.flush();
-      expect(sink.submissions, 0);
+      expect(sink.offsets, isEmpty);
+      if (invalidate == 'generation') {
+        await tester.pump();
+        expect(sink.offsets, [0.0]);
+      }
       h.controller.cancel();
       await h.clock.flush();
       await turn;
@@ -229,6 +257,7 @@ final class _RecordingSink
 
 final class _EpochSink implements TurnTimingSink, TurnFrameSink {
   int epoch = 0, submissions = 0;
+  final offsets = <double>[];
   @override
   int get frameEpoch => epoch;
   @override
@@ -248,5 +277,6 @@ final class _EpochSink implements TurnTimingSink, TurnFrameSink {
     Object? input,
   }) {
     submissions++;
+    offsets.add(offset);
   }
 }

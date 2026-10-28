@@ -34,6 +34,8 @@ final class TextStyleRun {
     required this.style,
     this.scale = 1,
     this.placeholderWidth,
+    this.placeholderHeight = 1,
+    this.placeholderBaseline = 1,
   });
 
   final int start;
@@ -41,6 +43,7 @@ final class TextStyleRun {
   final ComputedStyle style;
   final double scale;
   final double? placeholderWidth;
+  final double placeholderHeight, placeholderBaseline;
 }
 
 sealed class LayoutBlock {

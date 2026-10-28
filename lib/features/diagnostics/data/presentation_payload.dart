@@ -1,5 +1,6 @@
 import 'package:shiori/core/errors/app_exception.dart';
 import 'package:shiori/features/diagnostics/data/presentation_probe.dart';
+import 'package:shiori/features/diagnostics/data/reader_capture_budget.dart';
 
 /// Strict native-channel boundary. Timestamps are raw native seconds.
 abstract final class PresentationPayload {
@@ -27,7 +28,15 @@ abstract final class PresentationPayload {
     }
     _integer(inventory['maximumFramesPerSecond'], 'maximumFramesPerSecond');
     _integer(inventory['thermalState'], 'thermalState');
-    if (_integer(inventory['ringCapacity'], 'ringCapacity') != 16384) {
+    final budgetVersion = inventory['captureBudgetVersion'];
+    if (budgetVersion != null &&
+        (budgetVersion is! int || budgetVersion != 1)) {
+      _invalid('captureBudgetVersion');
+    }
+    final capacity = budgetVersion == 1
+        ? ReaderCaptureBudget.nativeCapacity
+        : 16384;
+    if (_integer(inventory['ringCapacity'], 'ringCapacity') != capacity) {
       _invalid('ringCapacity');
     }
     if (available) {
@@ -46,7 +55,7 @@ abstract final class PresentationPayload {
       }
     }
     final raw = p['samples'];
-    if (raw is! List<Object?> || raw.length > 16384) _invalid('samples');
+    if (raw is! List<Object?> || raw.length > capacity) _invalid('samples');
     final samples = <Map<String, Object?>>[];
     for (final entry in raw) {
       final s = _map(entry, 'sample');
@@ -95,6 +104,10 @@ abstract final class PresentationPayload {
       'unmatchedCallbacks',
     );
     if (contention > overflow) _invalid('contentionDrops');
+    final lossVersion = p['lossAccountingVersion'];
+    if (lossVersion != null && (lossVersion is! int || lossVersion != 1)) {
+      _invalid('lossAccountingVersion');
+    }
     return PresentationReport(
       available: available,
       evidence: mode.evidence,
@@ -111,11 +124,13 @@ abstract final class PresentationPayload {
           'ringCapacity',
         ])
           key: inventory[key],
+        'captureBudgetVersion': ?budgetVersion,
       }),
       samples: List.unmodifiable(samples),
       overflow: overflow,
       contentionDrops: contention,
       unmatchedCallbacks: unmatched,
+      lossAccountingVersion: lossVersion as int?,
     );
   }
 

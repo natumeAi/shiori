@@ -69,6 +69,10 @@ Json nativeAnalysis(Json presentation) {
       'Invalid presentation mode/evidence/availability',
     );
   }
+  final lossVersion = presentation['lossAccountingVersion'];
+  if (lossVersion != null && (lossVersion is! int || lossVersion != 1)) {
+    throw const FormatException('Unsupported native loss accounting version');
+  }
   final overflow = integer(presentation['overflow'], 'presentation.overflow');
   final contention = integer(
     presentation['contentionDrops'],
@@ -165,6 +169,7 @@ Json nativeAnalysis(Json presentation) {
     'available': presentation['available'],
     'omission': presentation['omission'],
     'overflow': presentation['overflow'],
+    'lossAccountingVersion': lossVersion,
     'contentionDrops': presentation['contentionDrops'],
     'unmatchedCallbacks': unmatched,
     'inventory': presentation['inventory'],

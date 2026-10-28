@@ -1,6 +1,7 @@
 import 'package:shiori/features/reader/data/epub/epub_archive.dart';
 import 'package:shiori/features/reader/data/epub/epub_book.dart';
 import 'package:shiori/features/reader/data/epub/epub_package.dart';
+import 'package:shiori/features/reader/data/layout/section_source_facts.dart';
 import 'package:shiori/features/reader/data/source/source_document.dart';
 import 'package:shiori/features/reader/data/source/source_node.dart';
 import 'package:shiori/features/reader/data/source/xml_parser.dart';
@@ -84,7 +85,7 @@ PublicationLayoutFacts importLayoutFacts(
         : document.attribute(body, 'dir'),
     rtlRunCount: rtlRuns,
   );
-  final source = _sourceFacts(document);
+  final source = importSectionSourceFacts(document);
   return PublicationLayoutFacts(
     pageProgressionDirection: book.package.direction,
     primaryLanguage: metadata.languages.firstOrNull,
@@ -99,6 +100,7 @@ PublicationLayoutFacts importLayoutFacts(
               : PublicationLayoutMode.reflowable,
           itemrefProperties: book.sections[i].spine.properties ?? const [],
           rendition: _rendition(book, i),
+          renditionResolution: sectionRendition(book, i),
           source: i == firstIndex ? source : null,
           style: i == firstIndex ? styleFacts : null,
         ),
@@ -113,59 +115,10 @@ String _writingMode(StyleWritingMode mode) => switch (mode) {
 };
 
 Map<String, String?> _rendition(EpubBook book, int index) {
-  final result = Map<String, String?>.of(book.package.rendition);
-  result['layout'] = isFixedLayoutSection(book, index)
-      ? 'pre-paginated'
-      : 'reflowable';
-  for (final token in book.sections[index].spine.properties ?? <String>[]) {
-    for (final name in ['orientation', 'spread', 'page-spread']) {
-      final prefix = 'rendition:$name-';
-      if (token.startsWith(prefix)) {
-        result[name == 'page-spread' ? 'pageSpread' : name] = token.substring(
-          prefix.length,
-        );
-      }
-    }
-    if (token.startsWith('page-spread-')) {
-      result['pageSpread'] = token.substring('page-spread-'.length);
-    }
-  }
-  return result;
+  return sectionRendition(book, index).effective;
 }
 
-SectionSourceFacts _sourceFacts(SourceDocument document) {
-  final viewports = <String>[];
-  final sourceViewports = <String>[];
-  final svg = <SvgSourceDimensions>[];
-  for (final node in document.nodes) {
-    if (node.kind != SourceNodeKind.element) continue;
-    if (node.localName == 'meta') {
-      final name = node.attribute('name') ?? node.attribute('property');
-      final value = node.attribute('content');
-      if (value != null) {
-        if (name == 'viewport' || name == 'rendition:viewport') {
-          viewports.add(value);
-        }
-        if (name == 'source-viewport' || name == 'rendition:source-viewport') {
-          sourceViewports.add(value);
-        }
-      }
-    }
-    if (node.localName == 'svg' &&
-        node.namespaceUri == 'http://www.w3.org/2000/svg') {
-      svg.add(
-        SvgSourceDimensions(
-          nodeIndex: node.index,
-          width: node.attribute('width'),
-          height: node.attribute('height'),
-          viewBox: node.attribute('viewBox'),
-        ),
-      );
-    }
-  }
-  return SectionSourceFacts(
-    viewports: viewports,
-    sourceViewports: sourceViewports,
-    svgDimensions: svg,
-  );
+/// Detached dimensions for later sections as well as the initial import.
+SectionSourceFacts importSectionSourceFacts(SourceDocument document) {
+  return extractSectionSourceFacts(document);
 }

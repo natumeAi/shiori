@@ -1,6 +1,7 @@
-{"file": ".trellis/spec/flutter/quality-guidelines.md", "reason": "Full repository quality and dependency requirements."}
-{"file": ".trellis/spec/flutter/testing.md", "reason": "Meaningful repository/controller/widget tests and no live network in unit tests."}
-{"file": ".trellis/spec/flutter/directory-structure.md", "reason": "Architecture/import boundaries."}
-{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/ui-parity-plan.md", "reason": "Full visual and interaction parity coverage."}
-{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/performance-acceptance.md", "reason": "Do not turn incomplete or proxy metrics into performance acceptance."}
-{"file": ".trellis/tasks/10-22-flutter-lan-reader-parity/research/fixed-layout-expansion.md", "reason": "Verify complex fixed-layout scope, whole-page pinch/pan, mixed-book/source correctness and unchanged performance requirements."}
+{"file":".trellis/spec/flutter/quality-guidelines.md","reason":"Parent integration quality-guidelines constraints; child plans own detailed phase-specific loading."}
+{"file":".trellis/spec/flutter/testing.md","reason":"Parent integration testing constraints; child plans own detailed phase-specific loading."}
+{"file":".trellis/tasks/10-22-flutter-lan-reader-parity/research/ui-parity-plan.md","reason":"Authoritative integration scope, evidence and S4 planning decisions."}
+{"file":".trellis/tasks/10-22-flutter-lan-reader-parity/research/performance-acceptance.md","reason":"Authoritative integration scope, evidence and S4 planning decisions."}
+{"file":".trellis/tasks/10-22-flutter-lan-reader-parity/research/fixed-layout-expansion.md","reason":"Authoritative integration scope, evidence and S4 planning decisions."}
+{"file":".trellis/tasks/10-22-flutter-lan-reader-parity/research/s4-readiness.md","reason":"Authoritative integration scope, evidence and S4 planning decisions."}
+{"file":".trellis/tasks/10-22-flutter-lan-reader-parity/research/occlusion-parity-exception.md","reason":"User-approved narrow actual-visible coverage exception, paired fixture requirement and separate reference frontend handoff; all other parity remains exact."}

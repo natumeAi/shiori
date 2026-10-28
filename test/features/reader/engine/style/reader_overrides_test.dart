@@ -192,7 +192,7 @@ void main() {
   });
 
   group('fixed layout', () {
-    test('layout CSS is omitted, theme CSS stays', () {
+    test('fixed profile keeps authored typography and colors', () {
       final sample = _html(
         'body { font-size: 12px; line-height: 3 } p { letter-spacing: 5px }',
         const ReaderSettings(
@@ -209,9 +209,8 @@ void main() {
       expect(sample['p'].lineHeight, const StyleLineHeight.multiplier(3));
       expect(sample['p'].letterSpacing, 5);
       expect(sample.styled.rootStyle.fontFamilies, isEmpty);
-      // Theme stays.
-      expect(sample['p'].color, 0xFF2F271D);
-      expect(sample.styled.rootStyle.backgroundColor, 0xFFF4ECD9);
+      expect(sample['p'].color, 0xFF000000);
+      expect(sample.styled.rootStyle.backgroundColor, isNull);
     });
 
     test('the reference CSS text omits the layout part for fixed books', () {

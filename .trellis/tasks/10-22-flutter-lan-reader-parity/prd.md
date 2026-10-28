@@ -14,6 +14,10 @@ prototype or installation experiment works.
 
 ## Background and Evidence
 
+The following source anchors preserve the initial 2026-10-22 audit. S1-S3
+have since delivered the installation, core and runtime-server/preparation
+foundations; their current status and S4 handoff are in the delivery map.
+
 | Confirmed reference fact | Evidence |
 | --- | --- |
 | shiori has Riverpod, Dio, typed routing, localization, errors and tests, with a placeholder home and compile-time API address. | `lib/core/config/env.dart:1`; `lib/core/network/dio_provider.dart:11`; `lib/features/home/presentation/home_screen.dart:6` |
@@ -23,8 +27,9 @@ prototype or installation experiment works.
 | Reading appearance is local to the browser today. | `D:/Projects/lan-reader/client/src/hooks/useReaderSettings.ts:224` |
 | Reference task archival does not prove 120 Hz acceptance; physical-device evidence was outstanding. | `D:/Projects/lan-reader/.trellis/tasks/archive/2026-09/09-23-reader-high-refresh-slide/prd.md:50` |
 
-The local reference checkout reports version 3.3.0; the deployed NAS version
-has not been contacted or verified. Technical research and source anchors
+The initial reference audit reported version 3.3.0. The deployed NAS version
+and reference Git identity were not reverified in this S4 planning turn.
+Technical research and source anchors
 are indexed by the implementation/check context manifests.
 
 ## Accepted Decisions and Constraints
@@ -65,6 +70,28 @@ are indexed by the implementation/check context manifests.
   available separately; zoomed-page gestures must not cause accidental turns.
 - `D:/Projects/lan-reader` is read-only for this work. Required changes there
   are described for the user to implement/deploy separately.
+- On 2026-10-27, the user chose local priority for conflicting offline
+  progress: a pending, verified local position may overwrite a newer
+  server/web position. This applies to unsent accepted reading intent, not
+  an old acknowledged cache record. Server/book/content identity and CFI
+  revalidation remain mandatory; an invalid candidate never gains priority.
+- On 2026-10-27, the user chose actual-visible native text coverage and an
+  explicit parity exception for the reference's inter-element occlusion
+  overcounting. Reproducible covered-text interval/count differences are
+  recorded and handed off separately; the reference fix does not block S4.
+  Canonical text/signatures, time, completion, idempotency and all other
+  shared behavior retain exact compatibility. Existing NAS history is not
+  rewritten to compensate for the reference defect.
+- On 2026-10-28 the user approved a second narrow coverage exception (D6).
+  The reference classifies visibility on WebKit's integer-snapped rectangles,
+  while native uses unsnapped geometry. A character may differ only when its
+  native box lies within 1 px of a clip edge, and the reference rule applied
+  to unsnapped geometry must reproduce the native verdict. Each case is
+  recorded with its paired fixture.
+- On 2026-10-27 the user decided how fixed-layout fidelity is compared after A0
+  (D1-D4 in `s4-plan.md`). Reproducible WebKit raster defects become narrow
+  recorded exceptions with a reference-fix handoff. Cross-engine pixel edges
+  follow a conservative edge rule. Curved SVG text stays required.
 
 ## Requirements
 
@@ -113,6 +140,13 @@ are indexed by the implementation/check context manifests.
   canonical text, signatures, intervals and server totals. Duplicate delivery
   adds nothing; preview pages and background gaps do not count. Date/hour/DST,
   partial outcomes, signature mismatch and completion cases are covered.
+  The user-approved 2026-10-27 exception permits only demonstrated interval/
+  character-total differences caused by the reference counting occluded text:
+  native actual-visible coverage is authoritative for those fixtures, with
+  both results and the separate reference-fix handoff recorded. The
+  2026-10-28 D6 exception likewise permits only edge-character differences
+  attributable to reference integer snapping. Other parity mismatches remain
+  failures; neither exception changes canonical v1.
 - **AC7 (R7):** `backend-handoff.md` is sufficient for separate backend work
   and accurately separates optional enhancements from existing functionality.
   No lan-reader files or deployment are modified by this task.
@@ -139,7 +173,9 @@ are indexed by the implementation/check context manifests.
   or omitting pages. Fixed-page text has correct canonical coverage; image
   pixels are not counted as text. The same AC4 performance thresholds and
   bounded-resource requirements apply to this corpus; S2's earlier success
-  on other books does not establish these new results.
+  on other books does not establish these new results. Geometry and pixels
+  are compared per S4a's per-channel contract. Only reproducible WebKit
+  raster defects recorded as narrow exceptions are exempt.
 - **AC12 (R2, R5, R6, R8, R11):** Fixed pages initially fit the reading area
   without cropping, support pinch zoom and bounded panning, and can return to
   fit-page display. A drag while enlarged pans content instead of turning
@@ -200,12 +236,18 @@ are indexed by the implementation/check context manifests.
 - S3: `../archive/2026-10/10-26-runtime-server-library` (completed, 2026-10-27;
   owner-confirmed device acceptance): runtime server,
   typed reads, cache/worker foundation and minimal read-only verification UI.
-- S4–S7 remain mapped in `implement.md` and are planned before their execution.
+- S4: `s4-plan.md` integrates the three planned children:
+  `../10-27-native-fixed-layout-core` (S4a),
+  `../10-27-reader-position-activity` (S4b), and
+  `../10-27-product-reader-acceptance` (S4c). All remain planning.
+- S5–S7 remain mapped in `implement.md` and are planned before execution.
 
 Current planning status was refreshed on 2026-10-27. S1/S2/S3 are completed;
 the parent is not complete. R11/AC10 were revised and AC11-AC12 added for
 the user-approved fixed-layout expansion; other requirements remain in
 force. S3's import handoff is accepted; its archived closeout report records
 the owner-confirmed device result and retained S4 gates. Fixed-page
-viewing is decided; S4 requires detailed child feasibility/design plans and
-review before activation.
+viewing and local-priority pending-progress delivery are decided. S4 child
+PRDs, designs, execution plans, research and context manifests are prepared;
+review of the latest summary is required before activating S4a. S4b/S4c
+retain their explicit dependency gates and later review boundaries.

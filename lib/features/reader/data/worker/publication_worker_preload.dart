@@ -9,7 +9,11 @@ extension PublicationWorkerPreload on PublicationWorker {
     ReaderResourceBudget? budget,
     PublicationCancellation? cancellation,
     void Function(ReaderResourceMiss)? onMiss,
+    PublicationWorkerReservation? reservation,
   }) async {
+    if (_blocked(reservation)) {
+      throw const PublicationWorkerException(PublicationWorkerFailure.reserved);
+    }
     final generation = _generation;
     final tag = _tag ?? const PublicationTag('');
     final plan = await _enqueue(
@@ -28,22 +32,24 @@ extension PublicationWorkerPreload on PublicationWorker {
     }
     final owner = budget ?? ReaderResourceBudget.shared;
     final session = _resourceSessions.putIfAbsent(owner, owner.createSession);
-    final reservation = session.reserve(plan.lengths);
+    final resourceReservation = session.reserve(plan.lengths);
     try {
       final source = await _enqueue(
         PreloadPublicationResources(
           ++_nextId,
           tag,
           generation,
-          reservation.missingLengths,
+          resourceReservation.missingLengths,
         ),
         (reply) {
           if (reply is! PublicationResourcesPreloaded ||
-              reply.bytes.length != reservation.missingLengths.length ||
-              !reply.bytes.keys.every(reservation.missingLengths.containsKey)) {
+              reply.bytes.length != resourceReservation.missingLengths.length ||
+              !reply.bytes.keys.every(
+                resourceReservation.missingLengths.containsKey,
+              )) {
             throw PublicationWorker._protocol;
           }
-          return reservation.commit(
+          return resourceReservation.commit(
             {
               for (final entry in reply.bytes.entries)
                 entry.key: entry.value.materialize().asUint8List(),
@@ -72,7 +78,7 @@ extension PublicationWorkerPreload on PublicationWorker {
       }
       return PreloadedPublicationSection(plan, source);
     } finally {
-      reservation.dispose();
+      resourceReservation.dispose();
     }
   }
 }

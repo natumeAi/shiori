@@ -16,6 +16,7 @@ import 'package:shiori/features/diagnostics/data/method_channel_presentation_pro
 import 'package:shiori/features/diagnostics/data/presentation_probe.dart';
 import 'package:shiori/features/diagnostics/data/probe_book_repository.dart';
 import 'package:shiori/features/diagnostics/data/reader_export_repository.dart';
+import 'package:shiori/features/diagnostics/data/reader_capture_budget.dart';
 import 'package:shiori/features/diagnostics/data/reader_feasibility_record.dart';
 import 'package:shiori/features/diagnostics/data/reader_probe_recorder.dart';
 import 'package:shiori/features/diagnostics/presentation/reader_probe/reader_probe_controller.dart';
@@ -79,8 +80,8 @@ class _ReaderProbeScreenState extends ConsumerState<ReaderProbeScreen> {
           engine: DiagnosticRecorder(
             clock: SystemProbeClock(),
             source: SchedulerFrameSource(),
-            capacity: 65536,
-            maximumDuration: const Duration(minutes: 10),
+            capacity: ReaderCaptureBudget.engineCapacity,
+            maximumDuration: ReaderCaptureBudget.maximumDuration,
           ),
         );
     _reader = ReaderProbeController(

@@ -43,7 +43,9 @@ private struct PresentationSample {
 // One process-wide hook owner. All shared state is guarded by lock. Hook writes
 // only try the lock; contention is counted atomically instead of waiting.
 private final class PresentationBuffer {
-  static let sampleCapacity = 16384
+  // A4: 10 minutes at 120 Hz, up to 3 samples/frame plus drain.
+  // CI-compile pending: Windows cannot compile this Swift/C boundary.
+  static let sampleCapacity = 262144
   let capacity = PresentationBuffer.sampleCapacity
   private let lock = NSLock()
   private let entries: UnsafeMutablePointer<PresentationSample>
@@ -51,7 +53,6 @@ private final class PresentationBuffer {
   private var count = 0, head = 0, overflow = 0
   private var unmatchedCallbacks = 0
   private let contention: UnsafeMutablePointer<Int64>
-  private var contentionStart: Int64 = 0
   private var generation: UInt64 = 0
   private var mode = "inventory"
   private weak var layer: CALayer?
@@ -82,13 +83,15 @@ private final class PresentationBuffer {
     self.enabled = enabled
     count = 0; head = 0; overflow = 0; unmatchedCallbacks = 0
     // Atomic snapshot: failed try-locks may still increment concurrently.
-    contentionStart = OSAtomicAdd64Barrier(0, contention)
+    if enabled { ShioriProbeCounterBegin(contention) }
+    else { _ = ShioriProbeCounterEnd(contention) }
     for index in 0..<capacity { lookup[index] = -1 }
   }
 
   private func enter() -> Bool {
+    let ticket = ShioriProbeCounterTicket(contention)
     if lock.try() { return true }
-    OSAtomicIncrement64Barrier(contention)
+    ShioriProbeCounterDrop(contention, ticket)
     return false
   }
 
@@ -101,7 +104,7 @@ private final class PresentationBuffer {
   }
 
   func commit(_ object: AnyObject) {
-    guard Thread.isMainThread, enter() else { return }
+    guard enter() else { return }
     defer { lock.unlock() }
     guard enabled, object === layer, mode == "a1" || mode == "a2" else { return }
     _ = append(PresentationSample(kind: 1, timestamp: CACurrentMediaTime()))
@@ -144,7 +147,7 @@ private final class PresentationBuffer {
   func end() -> ([[String: Any]], Int, Int, Int) {
     lock.lock()
     enabled = false
-    let lost = Int(OSAtomicAdd64Barrier(0, contention) - contentionStart)
+    let lost = Int(ShioriProbeCounterEnd(contention))
     // Allocate/export only after disabling capture. No channel traffic per frame.
     var samples = [[String: Any]]()
     for offset in 0..<count {
@@ -295,6 +298,7 @@ private final class PresentationProbeNative: NSObject {
       "thermalState": ProcessInfo.processInfo.thermalState.rawValue,
       "iosVersion": UIDevice.current.systemVersion,
       "ringCapacity": PresentationBuffer.sampleCapacity,
+      "captureBudgetVersion": 1,
     ]
   }
 
@@ -312,6 +316,7 @@ private final class PresentationProbeNative: NSObject {
       "evidence": evidence, "omission": omission as Any? ?? NSNull(),
       "inventory": inventory, "samples": samples, "overflow": overflow,
       "contentionDrops": contention,
+      "lossAccountingVersion": 1,
       "unmatchedCallbacks": unmatched,
     ]
   }

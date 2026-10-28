@@ -21,10 +21,13 @@
   "children": [
     "10-22-ios-free-device-bootstrap",
     "10-22-native-reader-feasibility",
-    "10-26-runtime-server-library"
+    "10-26-runtime-server-library",
+    "10-27-native-fixed-layout-core",
+    "10-27-reader-position-activity",
+    "10-27-product-reader-acceptance"
   ],
   "parent": null,
   "relatedFiles": [],
-  "notes": "Parent requirements/integration owner; remains planning and incomplete. S1/S2/S3 completed; S3 owner-confirmed all-pass device closeout on 2026-10-27, with evidence in its archived research/s3-closeout.md. S2 conditional S4 GO retains all seven conditions. Fixed/mixed-layout scope and fit-page/pinch/pan decisions remain. S4a-S4c require detailed child planning/review; S4-S7 are not activated.",
+  "notes": "Parent requirements/integration owner; remains planning/incomplete. S1/S2/S3 completed. S4a/S4b/S4c plans and contexts prepared with explicit dependencies and seven retained S2 conditions. User decisions 2026-10-27: pending verified local position wins remote conflict; actual-visible native coverage with narrow documented reference-occlusion exception. No blocking product question; final latest-plan review pending. No S4 task activated. See s4-plan.md.",
   "meta": {}
 }

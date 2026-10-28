@@ -9,10 +9,63 @@ import 'package:shiori/features/diagnostics/data/reader_probe_recorder.dart';
 import 'package:shiori/features/diagnostics/data/reader_export_repository.dart';
 import 'package:shiori/features/reader/engine/motion/turn_session.dart';
 
+import '../../../../tool/diag/reader_export_analysis.dart';
 import '../../../helpers/diagnostics_fixtures.dart';
 import '../../../helpers/reader_probe_fixtures.dart';
 
 void main() {
+  test('100 synthetic dirty-drag turns expose all Dart ring loss', () async {
+    final rec = readerRecorder(capacity: 16384);
+    addTearDown(rec.dispose);
+    await startReader(rec);
+    for (var turn = 0; turn < 100; turn++) {
+      final input = Object();
+      for (final event in [
+        TurnTimingEvent.inputReceived,
+        TurnTimingEvent.inputRecognized,
+        TurnTimingEvent.recognizedAdmission,
+      ]) {
+        rec.recordTurn(event, 0, turn, 0, input);
+      }
+      for (var frame = 0; frame < 50; frame++) {
+        for (final event in [
+          TurnTimingEvent.dragDirty,
+          TurnTimingEvent.frameDemandStart,
+          TurnTimingEvent.dragClean,
+          TurnTimingEvent.visualMutation,
+          TurnTimingEvent.frameDemandEnd,
+          TurnTimingEvent.holdStart,
+          TurnTimingEvent.holdEnd,
+        ]) {
+          rec.recordTurn(event, 0, turn, 0, input);
+        }
+        rec.submitted(
+          frameNumber: turn * 50 + frame,
+          schedulerUs: frame * 8333,
+          rawSchedulerUs: frame * 8333,
+          generation: turn,
+          offset: frame.toDouble(),
+          input: input,
+        );
+      }
+    }
+    final record = (await rec.stop())!;
+    expect(record.readerEvents, hasLength(16384));
+    expect(record.overflow['events'], 24016);
+    final analysis = ReaderExportAnalysis(record.toJson());
+    expect(
+      analysis.gates.singleWhere((g) => g.name == 'motion stalls').status,
+      'unavailable',
+    );
+    expect(
+      analysis.gates
+          .singleWhere(
+            (g) => g.name == 'warm admitted input to first submission',
+          )
+          .status,
+      'unavailable',
+    );
+  });
   test('first submission identity includes the capture epoch', () async {
     final rec = readerRecorder(capacity: 20);
     addTearDown(rec.dispose);
@@ -159,7 +212,7 @@ void main() {
       expect(record.engine.frames.length, 2);
       expect(record.engine.motion.length, 2);
       expect(record.overflow, {
-        'events': 8,
+        'events': 13,
         'layoutCosts': 3,
         'resources': 3,
         'frames': 3,

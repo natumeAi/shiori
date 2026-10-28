@@ -8,6 +8,49 @@
 /// covers the case where a mapped family is missing.
 library;
 
+import 'package:shiori/features/reader/engine/style/style_resolver.dart';
+import 'package:shiori/features/reader/engine/style/computed_style.dart';
+
+/// A descriptor and its own admitted native alias, never a family-wide alias.
+typedef AdmittedFontFace = ({StyleFontFace face, String alias});
+
+/// CSS style matching precedes weight matching within each ordered family.
+ResolvedFontFamilies resolveFontFaces(
+  List<String> families, {
+  required int weight,
+  required StyleFontStyle style,
+  required List<AdmittedFontFace> faces,
+}) {
+  final selected = <String, String>{};
+  for (final raw in families) {
+    final key = _unquote(raw).toLowerCase();
+    var candidates = faces
+        .where((entry) => entry.face.family.toLowerCase() == key)
+        .toList();
+    if (candidates.isEmpty) continue;
+    final matchingStyle = candidates
+        .where((e) => e.face.style == style)
+        .toList();
+    if (matchingStyle.isNotEmpty) candidates = matchingStyle;
+    int rank(int value) {
+      if (weight < 400) return value <= weight ? weight - value : 2000 + value;
+      if (weight > 500) return value >= weight ? value - weight : 2000 - value;
+      if (value >= weight && value <= 500) return value - weight;
+      return value < weight ? 2000 - value : 4000 + value;
+    }
+
+    var best = candidates.first;
+    for (final candidate in candidates.skip(1)) {
+      // A later equally matching @font-face wins in source order.
+      if (rank(candidate.face.weight) <= rank(best.face.weight)) {
+        best = candidate;
+      }
+    }
+    selected[key] = best.alias;
+  }
+  return resolveFontFamilies(families, embedded: selected);
+}
+
 /// Result of resolving a CSS family list.
 final class ResolvedFontFamilies {
   const ResolvedFontFamilies({

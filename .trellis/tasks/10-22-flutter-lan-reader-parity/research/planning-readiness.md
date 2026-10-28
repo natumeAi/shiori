@@ -1,6 +1,16 @@
 # Planning readiness record
 
-## Current scope revision: 2026-10-26
+## Current S4 planning revision: 2026-10-27
+
+S1/S2/S3 are completed and archived. S4a/S4b/S4c now have scoped PRD/design/
+execution plans, persisted source research and curated real context manifests.
+The current integration plan is `../s4-plan.md`; detailed convergence and
+validation are in `s4-readiness.md`. Both user decisions are recorded: pending
+verified local progress wins remote conflicts, and actual-visible native
+coverage has a narrow documented reference-occlusion exception. No child is
+activated; final review of the latest plan precedes S4a start.
+
+## Historical scope revision: 2026-10-26
 
 Status: parent scope/interaction revision recorded, detailed S4 child planning
 pending. S1/S2 are archived; S3 remains planned and awaits renewed review.
@@ -71,7 +81,7 @@ expanded scope or task status.
   dependency installation, native build, device measurement, NAS mutation,
   deployment or code-test suite execution occurred in this planning phase.
 
-Outstanding next action: present the final planning summary and wait for a
+Historical next action on 2026-10-22: present the final planning summary and wait for a
 subsequent explicit user approval before activating S1. Technical feasibility
 is deliberately tested in S1/S2; its uncertainty is not an implementation
 result or a reason to silently relax the original performance goal.

@@ -26,6 +26,8 @@ final class TurnIntent {
   TurnDirection? direction;
   final Completer<TurnResult> _done = Completer();
   bool accepted = false;
+  bool recognized = false;
+  bool recognizedAdmitted = false;
   bool get completed => _done.isCompleted;
   Future<TurnResult> get future => _done.future;
 

@@ -31,6 +31,7 @@ final class PresentationReport {
     this.overflow = 0,
     this.contentionDrops = 0,
     this.unmatchedCallbacks = 0,
+    this.lossAccountingVersion,
   });
   final bool available;
   final String evidence;
@@ -40,6 +41,7 @@ final class PresentationReport {
   final int overflow;
   final int contentionDrops;
   final int unmatchedCallbacks;
+  final int? lossAccountingVersion;
   Map<String, Object?> toJson() => {
     'available': available,
     'evidence': evidence,
@@ -48,6 +50,8 @@ final class PresentationReport {
     'samples': samples,
     'overflow': overflow,
     'contentionDrops': contentionDrops,
+    if (lossAccountingVersion != null)
+      'lossAccountingVersion': lossAccountingVersion,
     // Additive loss detail; preserve existing zero-loss fixture exports.
     if (unmatchedCallbacks > 0) 'unmatchedCallbacks': unmatchedCallbacks,
     'clock': 'native_monotonic_seconds; epoch not correlated with Dart',

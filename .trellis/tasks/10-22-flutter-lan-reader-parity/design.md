@@ -1,9 +1,9 @@
 # Design: native Flutter client for lan-reader
 
-Status: planning revision on 2026-10-26. S1/S2 are archived and S3 remains
-planned. The user expanded S4 to include simple and complex static fixed
-layout with initial fit-page display plus whole-page pinch zoom/pan. Detailed
-S4 child feasibility/design review remains before implementation. Primary
+Status: planning revision on 2026-10-27. S1/S2/S3 are completed and archived.
+The user expanded S4 to include simple and complex static fixed layout with
+initial fit-page display plus whole-page pinch zoom/pan. S4a/S4b/S4c now have
+detailed plans; their review gates remain before implementation. Primary
 target: iPhone 14 Pro Max, built from a Windows workflow.
 The requirements and acceptance ownership remain in `prd.md`.
 
@@ -234,6 +234,10 @@ features distinct from layout classification.
 Text remains indexed by canonical v1. Credit only proven foreground visible
 source ranges after placement, clipping and any accepted display transform;
 do not count offscreen/occluded content merely because its page was loaded.
+The 2026-10-27 user-approved AC6 exception permits only demonstrated reference
+occlusion overcounts to differ; paired fixtures and the separate frontend
+handoff are in `research/occlusion-parity-exception.md`. Other canonical and
+activity semantics remain exact, with no historical-data rewrite.
 SVG text retains the reference canonical exclusion until a separately
 reviewed cross-client contract changes it. Image-only pages may have a source
 anchor and reading time without acquiring invented text coverage. Test the
@@ -301,10 +305,14 @@ explicit chapter-start recovery; do not overwrite it with page one.
 Position and activity are different streams. Serialize/coalesce position
 writes per server/book. Keep a durable accepted checkpoint and acknowledge
 only a matching submitted snapshot. Re-read after an uncertain write before
-reconciling a pending position; do not blindly flush stale offline progress
-over a newer server checkpoint. Backward reading is valid, so `max(progress)`
+reconciling a pending position. By the user's 2026-10-27 decision, a still
+pending, verified local checkpoint wins a conflict with newer server/web
+progress and may overwrite it after identity and source-proof checks. Do not
+prompt for a conflict choice or let an old acknowledged cache record acquire
+new write intent. Invalid/content-mismatched candidates remain preserved for
+recovery instead of delivery. Backward reading is valid, so `max(progress)`
 is not a merge rule. Existing API remains last-write-wins for concurrent
-clients; a new universal concurrency guarantee requires backend cooperation.
+clients; local priority is a delivery policy, not a CAS/concurrency guarantee.
 
 Before any real coverage write, verify exact reference normalization: source
 text-node order, excluded elements/namespaces, filtered Unicode code points,

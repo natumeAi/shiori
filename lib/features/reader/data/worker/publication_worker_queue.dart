@@ -15,7 +15,9 @@ extension _WorkerQueue on PublicationWorker {
     if (cancellation?.isCanceled ?? false) {
       return PublicationWorker._failure(PublicationWorkerFailure.canceled);
     }
-    if (_running != null && _pending.length >= PublicationWorker.pendingLimit) {
+    if (request is! DetachPublication &&
+        _running != null &&
+        _pending.length + _deferred >= PublicationWorker.pendingLimit) {
       return PublicationWorker._failure(PublicationWorkerFailure.queueFull);
     }
     final completer = Completer<T>();

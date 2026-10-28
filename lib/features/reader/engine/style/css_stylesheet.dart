@@ -48,17 +48,38 @@ typedef StylesheetReader = String? Function(String path);
 
 /// Accumulates the rules of several stylesheets in cascade order.
 final class CssSheetBuilder {
-  CssSheetBuilder({this.sink, this.reader, int firstOrder = 0})
-    : _order = firstOrder;
+  CssSheetBuilder({
+    this.sink,
+    this.reader,
+    int firstOrder = 0,
+    this.viewportWidth,
+    this.viewportHeight,
+  }) : _order = firstOrder;
 
   final StyleDiagnosticSink? sink;
   final StylesheetReader? reader;
+  final double? viewportWidth, viewportHeight;
   int _order;
   final List<CssRule> rules = [];
   final List<CssFontFace> fontFaces = [];
 
   int get nextOrder => _order;
   static const _maxImportDepth = 4;
+
+  bool matchesMediaAttribute(String? text) {
+    if (text == null || text.trim().isEmpty) return true;
+    final errors = <css.Message>[];
+    final sheet = css.parse('@media $text {}', errors: errors);
+    if (errors.isNotEmpty ||
+        sheet.topLevels.length != 1 ||
+        sheet.topLevels.single is! MediaDirective) {
+      sink?.add(StyleDiagnosticKind.unsupportedAtRule, 'media-attribute');
+      return false;
+    }
+    return _mediaMatches(
+      (sheet.topLevels.single as MediaDirective).mediaQueries,
+    );
+  }
 
   /// Adds the rules of [text], whose archive path is [basePath].
   void addStylesheet(
@@ -98,7 +119,7 @@ final class CssSheetBuilder {
       } else if (top is MediaDirective) {
         if (_mediaMatches(top.mediaQueries)) {
           _addTopLevels(top.rules, basePath, depth, active);
-        } else {
+        } else if (viewportWidth == null) {
           sink?.add(StyleDiagnosticKind.unsupportedAtRule, '@media');
         }
       } else if (top is CharsetDirective || top is NamespaceDirective) {
@@ -124,7 +145,12 @@ final class CssSheetBuilder {
       sink?.add(StyleDiagnosticKind.stylesheetSkipped, '@import media');
       return;
     }
-    final href = directive.import;
+    var href = directive.import;
+    if (href.length >= 2 &&
+        ((href.startsWith("'") && href.endsWith("'")) ||
+            (href.startsWith('"') && href.endsWith('"')))) {
+      href = href.substring(1, href.length - 1);
+    }
     if (isExternalUrl(href)) {
       sink?.add(StyleDiagnosticKind.stylesheetSkipped, '@import external');
       return;
@@ -151,11 +177,64 @@ final class CssSheetBuilder {
   bool _mediaMatches(List<MediaQuery> queries, {bool emptyMatches = true}) {
     if (queries.isEmpty) return emptyMatches;
     for (final query in queries) {
-      if (query.hasUnary && query.unary == 'not') continue;
-      if (query.expressions.isNotEmpty) continue;
-      if (!query.hasMediaType) return true;
-      final type = query.mediaType.toLowerCase();
-      if (type == 'all' || type == 'screen') return true;
+      if (viewportWidth == null) {
+        if (query.hasUnary && query.unary.toLowerCase() == 'not') continue;
+        if (query.expressions.isNotEmpty) continue;
+      }
+      var unknown = false;
+      var matches =
+          !query.hasMediaType ||
+          const {'all', 'screen'}.contains(query.mediaType.toLowerCase());
+      for (final expression in query.expressions) {
+        final tokens = convertExpression(expression.exprs);
+        final feature = expression.mediaFeature.toLowerCase();
+        bool? answer;
+        if (tokens?.length == 1 &&
+            viewportWidth != null &&
+            viewportHeight != null) {
+          final token = tokens!.single;
+          if (feature == 'orientation') {
+            answer = token.isIdent(
+              viewportWidth! > viewportHeight! ? 'landscape' : 'portrait',
+            );
+          } else if (const {
+            'width',
+            'min-width',
+            'max-width',
+            'height',
+            'min-height',
+            'max-height',
+          }.contains(feature)) {
+            final scale = token.unit == 'px'
+                ? 1.0
+                : token.unit == 'em' || token.unit == 'rem'
+                ? 16.0
+                : null;
+            if (scale != null ||
+                token.kind == CssTokenKind.number && token.number == 0) {
+              final limit = token.number * (scale ?? 1);
+              final actual = feature.endsWith('width')
+                  ? viewportWidth!
+                  : viewportHeight!;
+              answer = feature.startsWith('min-')
+                  ? actual >= limit
+                  : feature.startsWith('max-')
+                  ? actual <= limit
+                  : actual == limit;
+            }
+          }
+        }
+        if (answer == null) {
+          unknown = true;
+          sink?.add(StyleDiagnosticKind.unsupportedAtRule, '@media:$feature');
+        }
+        matches = matches && answer == true;
+      }
+      if (query.hasUnary && query.unary.toLowerCase() == 'not') {
+        matches = !matches;
+      }
+      if (unknown) matches = false;
+      if (matches) return true;
     }
     return false;
   }
@@ -192,16 +271,44 @@ final class CssSheetBuilder {
             if (t.kind == CssTokenKind.uri) urls.add(t.text);
           }
         case 'font-weight':
+          if (tokens.length != 1 ||
+              tokens.single.kind == CssTokenKind.number &&
+                  (tokens.single.number < 100 ||
+                      tokens.single.number > 900 ||
+                      tokens.single.number % 100 != 0)) {
+            sink?.add(
+              StyleDiagnosticKind.invalidValue,
+              '@font-face font-weight',
+            );
+            continue;
+          }
           final first = tokens.first;
           if (first.kind == CssTokenKind.number) {
-            weight = ((first.number / 100).round() * 100).clamp(100, 900);
+            weight = first.number.toInt();
           } else if (first.isIdent('bold')) {
             weight = 700;
+          } else if (!first.isIdent('normal')) {
+            sink?.add(
+              StyleDiagnosticKind.invalidValue,
+              '@font-face font-weight',
+            );
           }
         case 'font-style':
+          if (tokens.length != 1) {
+            sink?.add(
+              StyleDiagnosticKind.invalidValue,
+              '@font-face font-style',
+            );
+            continue;
+          }
           if (tokens.first.isIdent('italic') ||
               tokens.first.isIdent('oblique')) {
             style = StyleFontStyle.italic;
+          } else if (!tokens.first.isIdent('normal')) {
+            sink?.add(
+              StyleDiagnosticKind.invalidValue,
+              '@font-face font-style',
+            );
           }
       }
     }

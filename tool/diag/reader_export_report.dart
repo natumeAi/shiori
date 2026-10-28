@@ -56,6 +56,7 @@ String renderReaderReport(List<ReaderExportAnalysis> runs) {
         name: run.readerAggregates[name],
       'warm receipt to first submission (informational; legacy App aggregate)':
           run.readerAggregates['warmInputToFirstSubmission'],
+      'recognized admission to first submission': run.demand.latency,
       'stall engine intervals': run.stalls['engineIntervals'],
       'stall submission gaps': run.stalls['submissionGaps'],
       'coldInputPreparation': run.inputs.coldInputPreparation,
@@ -101,6 +102,7 @@ String renderReaderReport(List<ReaderExportAnalysis> runs) {
           'rssDeltaBytes',
         ])
           [key, run.readerAggregates[key]],
+        ['demand timeline', jsonEncode(run.demand.report)],
         ['correctness', jsonEncode(run.correctness)],
         ['longStageFrames >=50 ms', run.stalls['longStageFrames']],
         ['stall classes', jsonEncode(run.stalls['classes'])],

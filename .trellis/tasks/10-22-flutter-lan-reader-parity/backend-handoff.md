@@ -6,6 +6,13 @@ Baseline: inspected local version 3.3.0; the NAS version is not yet verified.
 Detailed source anchors and existing test suites are in
 `research/backend-contract-audit.md`.
 
+S4 adds one separate reference-frontend follow-up: occlusion-aware visible
+text sampling. The user approved actual-visible native coverage and a narrow
+documented exception for demonstrated browser overcounting on 2026-10-27.
+This requires no new backend endpoint and does not block S4. Reproduction,
+scope, expected result and user-owned correction are in
+`research/occlusion-parity-exception.md`; existing history is not rewritten.
+
 ## 1. What can remain unchanged
 
 The first native vertical slice can use the current APIs:
@@ -104,6 +111,12 @@ and explicit refresh, with the metadata-preserving replacement limitation
 documented.
 
 ## 4. Conditional: conflicting reading-position writes
+
+S4 policy update, 2026-10-27: the user chose pending verified local progress
+over changed server/web progress, allowing an overwrite after content/CFI
+revalidation. S4 does not require a conflict-choice UI or CAS deployment.
+The proposal below remains an optional future stronger-concurrency contract;
+it must not block the selected existing-API policy.
 
 **Priority:** only if adding a stronger multi-client/offline-write guarantee
 than the current web product. Do not make this an automatic first-release

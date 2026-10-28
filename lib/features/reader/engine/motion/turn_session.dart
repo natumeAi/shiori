@@ -1,4 +1,5 @@
 import 'package:shiori/features/reader/engine/motion/page_turn_engine.dart';
+import 'package:shiori/features/reader/engine/motion/reader_preparation_failure.dart';
 
 /// A proven foreground page. Anchors on the same page need not be identical.
 final class TurnPosition {
@@ -64,10 +65,12 @@ enum TurnNavigationKind {
 }
 
 final class TurnNavigation {
-  const TurnNavigation(this.kind, {this.position, this.reason});
+  const TurnNavigation(this.kind, {this.position, this.reason, this.failure});
   const TurnNavigation.verified(TurnPosition this.position)
     : kind = TurnNavigationKind.verified,
-      reason = null;
+      reason = null,
+      failure = null;
+  final ReaderPreparationFailure? failure;
   final TurnNavigationKind kind;
   final TurnPosition? position;
   final String? reason;
@@ -75,6 +78,13 @@ final class TurnNavigation {
 
 /// Engine-owned seam; no providers, storage, diagnostics or frame scheduling.
 enum TurnSessionState { ready, handoff, failed, closed, suspended, loading }
+
+/// Optional session seam for synchronous generation invalidation. This must
+/// only revoke publication, never dispose native resources in a callback.
+/// The controller follows it with unbind in its ordinary control task.
+abstract interface class TurnPreparationInvalidation {
+  void invalidatePreparation();
+}
 
 abstract interface class TurnSession {
   TurnSessionState get state;
@@ -124,6 +134,18 @@ enum TurnTimingEvent {
   queueClosed,
   inputCommitted,
   staleCallbackRejected,
+  inputRecognized,
+  recognizedAdmission,
+  dragDirty,
+  dragClean,
+  holdStart,
+  holdEnd,
+  frameDemandStart,
+  frameDemandEnd,
+  preparationBarrierStart,
+  preparationBarrierEnd,
+  visualMutation,
+  noMotionRequired,
 }
 
 abstract interface class TurnTimingSink {

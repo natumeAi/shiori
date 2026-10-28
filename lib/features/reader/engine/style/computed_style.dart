@@ -8,7 +8,9 @@
 /// matrix in the S2 design (§5.2) needs them; never repurpose a field.
 library;
 
-enum StyleDisplay { none, block, inline, listItem }
+part 'authored_style.dart';
+
+enum StyleDisplay { none, block, inline, listItem, inlineBlock }
 
 enum StyleTextAlign { start, left, right, center, justify }
 
@@ -124,6 +126,7 @@ final class StyleEdges {
 
 final class ComputedStyle {
   const ComputedStyle({
+    this.authored = const AuthoredStyle.empty(),
     this.display = StyleDisplay.inline,
     this.margin = StyleEdges.zero,
     this.padding = StyleEdges.zero,
@@ -154,6 +157,7 @@ final class ComputedStyle {
   });
 
   final StyleDisplay display;
+  final AuthoredStyle authored;
   final StyleEdges margin;
   final StyleEdges padding;
   final StyleLength textIndent;

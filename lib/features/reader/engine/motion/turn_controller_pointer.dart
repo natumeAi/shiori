@@ -82,7 +82,10 @@ extension _TurnControllerPointer on ReaderTurnController {
           return false;
         }
         if (latest.phase != GesturePhase.dragging) return false;
+        _recognize(pointer.intent);
         pointer.dirty = true;
+        _event(TurnTimingEvent.dragDirty, input: pointer.intent);
+        _refreshDemand();
         if (identical(_pointer, pointer)) {
           _post(() {
             if (identical(_pointer, pointer)) {
@@ -110,6 +113,9 @@ extension _TurnControllerPointer on ReaderTurnController {
         } else {
           _pointer = null;
         }
+        if (pointer.dirty) {
+          _event(TurnTimingEvent.dragClean, input: pointer.intent);
+        }
         final released = pointer.engine.release(sample);
         final rendered = _offset;
         final zone = released.kind == ReleaseKind.tap
@@ -123,6 +129,10 @@ extension _TurnControllerPointer on ReaderTurnController {
             ? TurnDirection.next
             : null;
         pointer.intent.direction = next;
+        if (released.kind == ReleaseKind.tap && next != null) {
+          _recognize(pointer.intent);
+        }
+        _refreshDemand();
         _post(() async {
           if (pointer.intent.completed) return;
           if (released.kind == ReleaseKind.tap &&
@@ -186,6 +196,8 @@ extension _TurnControllerPointer on ReaderTurnController {
       _waitingPointer = null;
       _queue.remove(pointer.intent);
       pointer.engine.cancel();
+      _event(TurnTimingEvent.dragClean, input: pointer.intent);
+      _event(TurnTimingEvent.cancelled, input: pointer.intent);
       pointer.intent.resolve(TurnResult(TurnResultKind.cancelled, reason));
     } else if (_pointer?.id == id) {
       cancel(reason);

@@ -308,7 +308,24 @@ void main() {
     test(
       'the image cache stays within its byte bound and keeps leased images',
       () async {
-        final cache = ReaderImageCache(maxBytes: 64 * 64 * 4 * 2);
+        const outputBytes = 64 * 64 * 4;
+        const intrinsicBytes = 64 * 96 * 4;
+        final cache = ReaderImageCache(
+          maxBytes: intrinsicBytes + outputBytes * 2,
+        );
+        // An impossible target is refused before invalid encoded data is
+        // inspected (a decode failure would return null).
+        await expectLater(
+          cache.lease(
+            'oversized',
+            Uint8List(8),
+            targetWidth: cache.maxBytes,
+            targetHeight: 1,
+          ),
+          throwsA(isA<ImageAdmissionException>()),
+        );
+        expect(cache.totalBytes, 0);
+        expect(cache.entryCount, 0);
         final a = (await cache.lease(
           'a',
           png,
@@ -321,32 +338,41 @@ void main() {
           targetWidth: 64,
           targetHeight: 64,
         ))!;
+        await expectLater(
+          cache.lease('c', png, targetWidth: 64, targetHeight: 64),
+          throwsA(isA<ImageAdmissionException>()),
+        );
+        // The full decode peak cannot fit while both old entries are leased.
+        expect(cache.entryCount, 2);
+        expect(cache.pendingBytes, 0);
+        expect(cache.totalBytes, a.bytes + b.bytes);
+        expect(a.image.debugDisposed, isFalse);
+        expect(b.image.debugDisposed, isFalse);
+        a.release();
         final c = (await cache.lease(
           'c',
           png,
           targetWidth: 64,
           targetHeight: 64,
         ))!;
-        // All leased: bound may be exceeded, none evicted.
-        expect(cache.entryCount, 3);
-        a.release();
         expect(
           cache.entryCount,
           2,
-          reason: 'unleased entry evicted over bound',
+          reason: 'unleased entry evicted to admit the pending decode peak',
         );
-        expect(cache.totalBytes, lessThanOrEqualTo(64 * 64 * 4 * 2));
-        b.release();
-        c.release();
-        final again = await cache.lease(
-          'c',
-          png,
+        expect(a.image.debugDisposed, isTrue);
+        expect(b.image.debugDisposed, isFalse);
+        expect(cache.totalBytes, lessThanOrEqualTo(cache.maxBytes));
+        final again = (await cache.lease(
+          'b',
+          Uint8List(8),
           targetWidth: 64,
           targetHeight: 64,
-        );
-        expect(again, isNotNull);
-        expect(cache.entryCount, lessThanOrEqualTo(2));
-        again!.release();
+        ))!;
+        expect(again.image, same(b.image), reason: 'leased entry was retained');
+        again.release();
+        b.release();
+        c.release();
         cache.clearUnleased();
         expect(cache.totalBytes, 0);
         expect(

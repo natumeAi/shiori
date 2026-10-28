@@ -12,7 +12,11 @@
     "vectors": "node src/run-oracle.mjs vectors",
     "verify-vectors": "node src/verify-vectors.mjs",
     "vectors-local": "node src/run-oracle.mjs vectors-local",
-    "resolve": "node src/run-oracle.mjs resolve"
+    "resolve": "node src/run-oracle.mjs resolve",
+    "fixed-fonts": "node src/fixed-layout-fonts.mjs",
+    "fixed-corpus": "node src/fixed-layout-corpus.mjs",
+    "check-fixed-corpus": "node src/fixed-layout-corpus.mjs --check",
+    "fixed-oracle": "node src/fixed-layout-oracle.mjs"
   },
   "devDependencies": {
     "esbuild": "0.28.2",

@@ -7,6 +7,8 @@ import 'package:shiori/core/diagnostics/diagnostic_recorder.dart';
 import 'package:shiori/core/diagnostics/probe_declarations.dart';
 import 'package:shiori/features/diagnostics/data/book_digest.dart';
 import 'package:shiori/features/diagnostics/data/presentation_probe.dart';
+import 'package:shiori/features/diagnostics/data/reader_capture_budget.dart';
+import 'package:shiori/features/diagnostics/data/reader_event_buffer.dart';
 import 'package:shiori/features/diagnostics/data/reader_feasibility_record.dart';
 import 'package:shiori/features/diagnostics/data/reader_probe_summary.dart';
 import 'package:shiori/features/reader/engine/motion/turn_session.dart';
@@ -17,13 +19,17 @@ final class ReaderProbeRecorder
   ReaderProbeRecorder({
     required this.engine,
     this.presentation = const UnavailablePresentationProbe(),
-    int capacity = 16384,
-  }) : events = BoundedRing(capacity),
-       costs = BoundedRing(capacity),
-       resources = BoundedRing(capacity);
+    int capacity = ReaderCaptureBudget.eventCapacity,
+  }) : events = ReaderEventBuffer(capacity),
+       costs = BoundedRing(
+         capacity.clamp(1, ReaderCaptureBudget.auxiliaryCapacity),
+       ),
+       resources = BoundedRing(
+         capacity.clamp(1, ReaderCaptureBudget.auxiliaryCapacity),
+       );
   final DiagnosticRecorder engine;
   final PresentationProbe presentation;
-  final BoundedRing<Map<String, Object?>> events;
+  final ReaderEventBuffer events;
   final BoundedRing<Map<String, Object?>> costs;
   final BoundedRing<Map<String, Object?>> resources;
   int _epoch = 0;
@@ -93,7 +99,14 @@ final class ReaderProbeRecorder
         metadata: {
           ...metadata,
           'readerCorrectnessVersion': 1,
+          'readerDemandVersion': 1,
           'captureEpoch': epoch,
+          'readerCaptureBudget': ReaderCaptureBudget.describe(
+            events: events.capacity,
+            auxiliary: costs.capacity,
+            engine: engine.capacity,
+            maximumMs: engine.maximumDuration.inMilliseconds,
+          ),
         },
       );
     } on Object {
@@ -109,7 +122,7 @@ final class ReaderProbeRecorder
             if (_disposed || epoch != _epoch || timing == null) return;
             final native = await presentation.stop();
             if (_disposed || epoch != _epoch) return;
-            final readerEvents = events.snapshot();
+            final readerEvents = events.snapshot(seal: true);
             final layoutCosts = costs.snapshot();
             final snapshots = resources.snapshot();
             _completion?.complete(
@@ -214,26 +227,25 @@ final class ReaderProbeRecorder
   }) {
     if (engine.phase != CapturePhase.recording || _disposed) return;
     final id = _inputId(input);
-    events.add({
-      'sequence': ++_sequence,
-      'event': event.name,
-      'monotonicUs': engine.clock.monotonicUs,
-      'turnClockMs': time,
-      'generation': generation,
-      'activeGeneration': activeGeneration,
-      'captureEpoch': input == null ? _epoch : _inputs[input]?.epoch,
-      'queueDepth': queueDepth,
-      'inputId': id,
-      if (destination != null)
-        'destination': {
-          'sectionIndex': destination.sectionIndex,
-          'pageIndex': destination.pageIndex,
-          'layoutGeneration': destination.layoutGeneration,
-          'pageIdentity': sha256Hex(
-            Uint8List.fromList(utf8.encode(destination.pageIdentity)),
-          ),
-        },
-    });
+    events.add(
+      kind: event.index,
+      sequence: ++_sequence,
+      monotonicUs: engine.clock.monotonicUs,
+      value: time,
+      generation: generation,
+      activeGeneration: activeGeneration,
+      epoch: input == null ? _epoch : _inputs[input]?.epoch,
+      queueOrFrame: queueDepth,
+      inputId: id,
+      section: destination?.sectionIndex ?? 0,
+      page: destination?.pageIndex ?? 0,
+      layoutGeneration: destination?.layoutGeneration ?? 0,
+      pageIdentity: destination == null
+          ? null
+          : sha256Hex(
+              Uint8List.fromList(utf8.encode(destination.pageIdentity)),
+            ),
+    );
   }
 
   @override
@@ -253,6 +265,16 @@ final class ReaderProbeRecorder
       progress: offset,
     );
     final inputId = _inputId(input);
+    events.add(
+      kind: ReaderEventBuffer.submission,
+      sequence: ++_sequence,
+      epoch: input == null ? _epoch : _inputs[input]?.epoch,
+      monotonicUs: engine.clock.monotonicUs,
+      generation: generation,
+      queueOrFrame: frameNumber,
+      inputId: inputId,
+      value: offset,
+    );
     final identity = inputId == null
         ? null
         : (_inputs[input!]?.epoch ?? _epoch, inputId);
@@ -263,15 +285,15 @@ final class ReaderProbeRecorder
     }
     _firstInput = identity;
     _firstGeneration = generation;
-    events.add({
-      'sequence': ++_sequence,
-      'event': 'firstMotionSubmission',
-      'captureEpoch': input == null ? _epoch : _inputs[input]?.epoch,
-      'monotonicUs': engine.clock.monotonicUs,
-      'generation': generation,
-      'frameNumber': frameNumber,
-      'inputId': inputId,
-    });
+    events.add(
+      kind: ReaderEventBuffer.firstSubmission,
+      sequence: ++_sequence,
+      epoch: input == null ? _epoch : _inputs[input]?.epoch,
+      monotonicUs: engine.clock.monotonicUs,
+      generation: generation,
+      queueOrFrame: frameNumber,
+      inputId: inputId,
+    );
   }
 
   void layout({
@@ -298,13 +320,15 @@ final class ReaderProbeRecorder
     required bool cacheHit,
   }) {
     if (engine.phase != CapturePhase.recording || _disposed) return;
-    events.add({
-      'sequence': ++_sequence,
-      'event': start ? 'sectionPreparationStart' : 'sectionPreparationEnd',
-      'monotonicUs': engine.clock.monotonicUs,
-      'section': section,
-      'cacheHit': cacheHit,
-    });
+    events.add(
+      kind: start
+          ? ReaderEventBuffer.preparationStart
+          : ReaderEventBuffer.preparationEnd,
+      sequence: ++_sequence,
+      monotonicUs: engine.clock.monotonicUs,
+      section: section,
+      cacheHit: cacheHit,
+    );
   }
 
   void memory({
@@ -329,7 +353,7 @@ final class ReaderProbeRecorder
     ++_epoch;
     engine.dispose();
     if (_completion case final c? when !c.isCompleted) c.complete(null);
-    events.clear();
+    events.dispose();
     costs.clear();
     resources.clear();
     unawaited(presentation.dispose());

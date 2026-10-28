@@ -1,0 +1,19 @@
+{
+  "version": "14.6.0",
+  "platform": "windows-x64-mingw",
+  "archive": "harfbuzz-win64-14.6.0.zip",
+  "archiveBytes": 6315868,
+  "archiveSHA256": "a773b8e99aa13f9a387d3d243eaad594d6dc530fba1bb852445282639b40b0b3",
+  "library": "libharfbuzz-0.dll",
+  "librarySHA256": "54f305d0e69f70a0ae285d45aa9bf6c73ef4d86b93480312c7cff142996d63c3",
+  "dependenciesInLoadOrder": {
+    "libintl-8.dll": "46e34a84cd32b644eaf35fd44532e5786ceb8e896fa11bbd842f6b607f50c570",
+    "libglib-2.0-0.dll": "5a3e1404ca58a0a34cd4f4143d1cb0522a7666e838e808fdc95f7f81a3d8563b"
+  },
+  "svgTextContentSHA256": {
+    "corpus": "6c0db5fba6b3b76b7ed9d9bf45d3510b2fb1db3375b4cea86e27ec0212e70b65",
+    "oracle": "699af229946ad242b4cff9d9184b856467ce85ecb01db635185716ac8492af87"
+  },
+  "licence": "Old MIT",
+  "fontSHA256": "79e851404657dac2106b3d22ad256d47824a9a5765458edb72c9102a45816d95"
+}

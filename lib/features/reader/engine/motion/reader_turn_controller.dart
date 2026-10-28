@@ -78,6 +78,9 @@ final class ReaderTurnController {
   int _staticFallbacks = 0;
   Future<void>? _navigation;
   Future<void>? _recovery;
+  final Set<Future<void>> _physicalTurns = {};
+  Future<void>? _closing;
+  bool _demanding = false, _holding = false;
 
   TurnPosition get accepted => _accepted;
   TurnPhase get phase => _phase;
@@ -170,17 +173,50 @@ final class ReaderTurnController {
 
   void _setPhase(TurnPhase value) {
     _phase = value;
+    _refreshDemand();
     onChanged?.call();
   }
 
+  void _recognize(TurnIntent intent) {
+    if (!intent.recognized) {
+      intent.recognized = true;
+      _event(TurnTimingEvent.inputRecognized, input: intent);
+    }
+    if (identical(intent, _current) && !intent.recognizedAdmitted) {
+      intent.recognizedAdmitted = true;
+      _event(TurnTimingEvent.recognizedAdmission, input: intent);
+    }
+  }
+
+  // Actual controller demand, independent of frame callback delivery.
+  void _refreshDemand() {
+    final demand = needsTick;
+    final hold =
+        !demand && _bound && _pointer?.latest?.phase == GesturePhase.dragging;
+    if (_holding && !hold) _event(TurnTimingEvent.holdEnd);
+    if (_demanding != demand) {
+      _event(
+        demand
+            ? TurnTimingEvent.frameDemandStart
+            : TurnTimingEvent.frameDemandEnd,
+      );
+    }
+    if (!_holding && hold) _event(TurnTimingEvent.holdStart);
+    _demanding = demand;
+    _holding = hold;
+  }
+
   void _write(double value) {
+    if (_offset == value) return;
     _offset = value;
+    _event(TurnTimingEvent.visualMutation);
     onOffset?.call(value);
   }
 
   Future<TurnResult> turnPage(TurnDirection direction) {
     final intent = TurnIntent(direction);
     _event(TurnTimingEvent.inputReceived, input: intent);
+    _recognize(intent);
     if (_blocked) {
       _event(TurnTimingEvent.rejected, input: intent);
       intent.resolve(const TurnResult(TurnResultKind.blocked, 'not-ready'));
@@ -192,6 +228,7 @@ final class ReaderTurnController {
       }
     } else {
       _current = intent;
+      _recognize(intent);
       _post(() => _run(intent));
     }
     return intent.future;
@@ -207,20 +244,31 @@ final class ReaderTurnController {
 
   void cancel([String reason = 'cancelled']) {
     ++_generation;
+    final preparation = switch (session) {
+      final TurnPreparationInvalidation owner => owner,
+      _ => null,
+    };
+    preparation?.invalidatePreparation();
     _event(TurnTimingEvent.generationInvalidated);
     _motion?.complete(false);
     _motion = null;
     _pointer?.engine.cancel();
+    if (_pointer?.dirty == true) _event(TurnTimingEvent.dragClean);
     _pointer = null;
+    _refreshDemand();
     _waitingPointer?.engine.cancel();
     _waitingPointer = null;
     final result = TurnResult(TurnResultKind.cancelled, reason);
     _terminateWaiting(result);
     _current?.resolve(result);
-    _current = null;
     _event(TurnTimingEvent.cancelled);
+    _current = null;
     _post(() {
+      final wasBound = _bound;
       _clearPair();
+      if (!wasBound && preparation != null) {
+        session.unbind();
+      }
       _event(TurnTimingEvent.queueClosed);
       final navigation = _navigation;
       if (navigation != null) {
@@ -259,5 +307,21 @@ final class ReaderTurnController {
     cancel('close');
     _closed = true;
     _setPhase(TurnPhase.closed);
+  }
+
+  /// Reader teardown uses this barrier before disposing scenes or detaching
+  /// the worker. Logical TurnResult cancellation alone does not drain work.
+  Future<void> closeAndDrain() => _closing ??= _closeAndDrain();
+
+  Future<void> _closeAndDrain() async {
+    close();
+    await _controlTask();
+    await session.stopAndDrain();
+    while (_physicalTurns.isNotEmpty) {
+      await Future.wait(_physicalTurns.toList());
+    }
+    await _navigation;
+    await _recovery;
+    await _controlTask();
   }
 }

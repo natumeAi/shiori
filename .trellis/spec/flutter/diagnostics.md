@@ -1,5 +1,9 @@
 # Diagnostic capture and export contract
 
+S4a's implemented recognized-admission, demand/submission and native-loss
+extension is specified in [Reader Admission Diagnostics](./reader-admission-diagnostics.md).
+Its capability gates qualify the legacy timing reductions described below.
+
 ## SQLite self-check (S3 Phase A)
 
 ### 1. Scope / Trigger
@@ -415,9 +419,11 @@ stall threshold, repeat/turn minima and RSS rule live in `ReaderGates`
 (`tool/diag/reader_export_data.dart`).
 
 Report UI and raster budgets separately; use nonnegative frame-number joins and
-consecutive matched IDs for engine cadence. Warm latency is input receipt to
-first motion submission for warm, unqueued admitted inputs, joined by epoch/ID;
-it is a submission proxy. Report queue wait, cold input/section preparation,
+consecutive matched IDs for engine cadence. Legacy warm aggregates retain input
+receipt to first motion submission, joined by epoch/ID. The current acceptance
+gate requires versioned recognized-admission evidence as specified in Reader
+Admission Diagnostics; a legacy receipt proxy cannot satisfy it. Report queue
+wait, cold input/section preparation,
 paragraph layout, static fallback/rate, motion-window stage/interval/submission
 stalls, correctness, resource trends and native cadence separately. Unknown
 schemas and malformed required data are rejected; incomplete streams, open

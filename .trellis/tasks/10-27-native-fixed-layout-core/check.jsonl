@@ -1,0 +1,7 @@
+{"file":".trellis/spec/flutter/quality-guidelines.md","reason":"Authoritative quality-guidelines conventions for check; larger reader/data contracts load by phase per implement.md."}
+{"file":".trellis/spec/flutter/testing.md","reason":"Authoritative testing conventions for check; larger reader/data contracts load by phase per implement.md."}
+{"file":".trellis/spec/flutter/diagnostics.md","reason":"Authoritative diagnostics conventions for check; larger reader/data contracts load by phase per implement.md."}
+{"file":".trellis/tasks/10-27-native-fixed-layout-core/research/rendering-plan.md","reason":"Task-specific source evidence, contracts, feasibility gates and preserved decisions."}
+{"file":".trellis/spec/flutter/reader-admission-diagnostics.md","reason":"Review modern demand/latency/loss capability without accepting incomplete or legacy absence claims."}
+{"file":".trellis/spec/flutter/reader-resource-admission.md","reason":"Review resource reservations and non-unloadable font lifecycle separately from later product enforcement."}
+{"file": ".trellis/tasks/10-27-native-fixed-layout-core/research/a0-measurement-review.md", "reason": "Review against the post-A0 per-channel geometry contract, D3/D4/D6 rules and open A0 closure items, not raw per-component deltas."}

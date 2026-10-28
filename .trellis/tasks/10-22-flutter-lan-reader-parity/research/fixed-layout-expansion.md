@@ -120,10 +120,10 @@ turn gestures resume at fit, and a stable view requires source-visible proof
 before position/coverage publication. Page-local transforms cannot leak
 across source identities or lifecycle generations.
 
-Technical work still needed before S4a implementation approval: the exact
-static feature matrix, a native rendering approach for the currently absent
-positioning/SVG capabilities, cross-client font/geometry tolerances, and a
-bounded page/spread resource model. These are researched in the child plan;
-they are not claimed solved by the existing image path. A failed feasibility
+Detailed planning on 2026-10-27 now records the exact static feature matrix,
+native positioning/SVG approach, font/geometry tolerances and bounded
+page/spread resource proposal in the S4a child research/design/implementation
+plan. These are proposed contracts and explicit A0-A5 feasibility gates,
+not claimed solved by the existing image path. A failed feasibility
 gate returns evidence for review without reducing the accepted complex scope,
 changing the pure Dart/Flutter boundary or lowering the performance target.

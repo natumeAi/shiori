@@ -529,9 +529,11 @@ release-mode scheduler or an isolation guarantee for unguarded future APIs.
   above. Full product/session wiring and device integration remain S4 work.
   Host archive measurements do not establish total worker RSS or iPhone limits;
   downloaded-publication integration and device validation remain required.
-- S4: `FontRegistry` caps each font at 32 MiB but cannot unload engine fonts or
-  bound their cross-book count. Add a session/restart policy. Font mappings and
-  fallback availability require device evidence, not host Ahem results.
+- S4: production `FontRegistry` still caps each font at 32 MiB without a shared
+  cross-book count. A0 added standalone scene/process-font policy owners in
+  [Reader Resource Admission](./reader-resource-admission.md); A3 must integrate
+  them before claiming product enforcement. Font mappings and fallback
+  availability require device evidence, not host Ahem results.
 - S4: known HTML-mode gaps are head-level template isolation, noscript closing
   an open paragraph, and attribute URL rewriting in script-enabled noscript raw
   text. Expand edge fixtures if encountered; pure-SVG spine interop is unproven.

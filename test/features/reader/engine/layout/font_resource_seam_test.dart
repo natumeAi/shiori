@@ -46,7 +46,7 @@ void main() {
       expect(source.sizes, 1);
       expect(source.reads, 0);
       expect(registry.records.single.loaded, isFalse);
-      expect(registry.records.single.failure, 'FormatException');
+      expect(registry.records.single.failure, 'FontFormatException');
     },
   );
 
@@ -64,7 +64,9 @@ void main() {
     expect(missing.sizes, 1);
     expect(missing.reads, 1);
     expect(
-      registry.records.every((record) => record.failure == 'FormatException'),
+      registry.records.every(
+        (record) => record.failure == 'FontFormatException',
+      ),
       isTrue,
     );
   });

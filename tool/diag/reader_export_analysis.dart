@@ -1,3 +1,5 @@
+import 'reader_demand_analysis.dart';
+import 'reader_capture_analysis.dart';
 import 'reader_engine_analysis.dart';
 import 'reader_correctness_analysis.dart';
 import 'reader_resource_gate.dart';
@@ -35,9 +37,31 @@ final class ReaderExportAnalysis {
     );
     resources = resourceTrends(objects(raw['resources'], 'resources'));
     native = nativeAnalysis(object(raw['presentation'], 'presentation'));
+    demand = ReaderDemandAnalysis(
+      objects(raw['readerEvents'], 'readerEvents'),
+      metadata,
+      integer(engineRaw['stoppedMonotonicUs'], 'stoppedMonotonicUs'),
+    );
     stalls = engine.stalls(inputs.windows);
+    if (demand.available) {
+      final longStages = objects(
+        stalls['candidates'],
+        'candidates',
+      ).where((c) => c['source'] == 'longStage').toList();
+      stalls['candidates'] = [...longStages, ...demand.candidates];
+      stalls['observed'] =
+          longStages.isNotEmpty || demand.candidates.isNotEmpty;
+      stalls['classes'] = {
+        'recordedDeliberateHold': demand.holds.length,
+        'provenIdleNoFrameRequested': 0,
+        'dueLateOrMissing': longStages.length + demand.candidates.length,
+        'unresolved': 0,
+      };
+      stalls['demandTimeline'] = demand.report;
+    }
     overflow = object(raw['overflow'], 'overflow');
     omissions = object(raw['omissions'], 'omissions');
+    captureBudget = captureBudgetGate(raw);
     mismatches = [
       ...differences(
         object(raw['aggregates'], 'aggregates'),
@@ -57,6 +81,7 @@ final class ReaderExportAnalysis {
   late final int repeat, repeatCount;
   late final EngineAnalysis engine;
   late final InputAnalysis inputs;
+  late final ReaderDemandAnalysis demand;
   late final Json resources,
       native,
       stalls,
@@ -65,11 +90,12 @@ final class ReaderExportAnalysis {
       metadata,
       correctness;
   late final List<String> mismatches;
+  late final GateRow captureBudget;
   Json get readerAggregates => inputs.appAggregates;
   bool lost(String key) => number(overflow[key], 'overflow.$key') > 0;
 
   List<GateRow> get gates {
-    final rows = <GateRow>[];
+    final rows = <GateRow>[captureBudget];
     void gate(
       String name,
       Object? value,
@@ -116,33 +142,57 @@ final class ReaderExportAnalysis {
             : 'retained engine-matched motion samples; trailing batch may be incomplete',
       );
     }
+    final p95 = demand.latency['p95Us'] as int?;
     gate(
       'warm admitted input to first submission',
-      null,
+      p95,
       'P95 <=${ReaderGates.warmSubmissionP95Us} us',
-      null,
-      'requires App change: pointerAdmitted is pointer down; admitted is release settlement for drags; recognized admission is not recorded',
+      p95 != null && p95 > ReaderGates.warmSubmissionP95Us
+          ? false
+          : !demand.available ||
+                p95 == null ||
+                demand.invalidTransitions > 0 ||
+                demand.incompleteInputs > 0 ||
+                lost('events')
+          ? null
+          : true,
+      demand.available
+          ? 'actual recognized admission; queued/cold inputs excluded; incomplete=${demand.incompleteInputs}'
+          : 'legacy export: recognized admission is not recorded; capability unavailable',
     );
+    final modernComplete =
+        demand.available &&
+        demand.recognizedInputs > 0 &&
+        demand.openIntervals == 0 &&
+        demand.openBarriers == 0 &&
+        demand.invalidTransitions == 0 &&
+        demand.incompleteInputs == 0 &&
+        demand.incompleteDemandInputs == 0 &&
+        demand.demandStarts > 0 &&
+        demand.mutations > 0 &&
+        demand.submissions > 0;
+    final legacyIncomplete =
+        inputs.windows.isEmpty ||
+        inputs.openWindows > 0 ||
+        engine.intervals.isEmpty ||
+        engine.unavailableFrameNumbers > 0 ||
+        engine.unmatchedMotionIds > 0 ||
+        (stalls['brokenAdjacencyInsideWindows'] as int) > 0;
     gate(
       'motion stalls',
       stalls['observed'],
       'no unexplained >=${ReaderGates.stallUs} us stall',
       stalls['observed'] == true
           ? false
-          : inputs.windows.isEmpty ||
-                inputs.openWindows > 0 ||
-                engine.intervals.isEmpty ||
-                engine.unavailableFrameNumbers > 0 ||
-                engine.unmatchedMotionIds > 0 ||
-                (stalls['brokenAdjacencyInsideWindows'] as int) > 0 ||
-                lost('events') ||
+          : lost('events') ||
                 lost('frames') ||
-                lost('motion')
+                lost('motion') ||
+                (demand.available ? !modernComplete : legacyIncomplete)
           ? null
           : true,
-      stalls['observed'] == true
-          ? 'candidate requires explanation; see stall distributions'
-          : 'bounded motion windows=${inputs.windows.length}; open=${inputs.openWindows}; unavailable IDs=${engine.unavailableFrameNumbers}; unmatched motion IDs=${engine.unmatchedMotionIds}; broken adjacency=${stalls['brokenAdjacencyInsideWindows']}; overflow qualifies absence evidence',
+      demand.available
+          ? 'actual demand including pending intervals through capture stop; holds do not excuse dirty/mutation demand'
+          : 'legacy bounded windows; missing demand cannot explain observed gaps',
     );
     final proofs = readerAggregates['proofFailures'] as int;
     gate(
@@ -188,6 +238,18 @@ final class ReaderExportAnalysis {
       available
           ? 'native-clock evidence only; overflow=${native['overflow']}; contentionDrops=${native['contentionDrops']} (subset); unmatchedCallbacks=${native['unmatchedCallbacks']} (separate)'
           : '${native['omission']}',
+    );
+    gate(
+      'native sample loss',
+      native['overflow'],
+      'zero native losses and unmatched callbacks',
+      (native['overflow'] as num) > 0 ||
+              (native['unmatchedCallbacks'] as num) > 0
+          ? false
+          : available && native['lossAccountingVersion'] == 1
+          ? true
+          : null,
+      'contention is included in overflow; unmatched callbacks are separate; legacy capture lacks complete loss accounting',
     );
     gate(
       'physical presentation / touch-to-photon',

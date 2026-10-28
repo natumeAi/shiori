@@ -1,7 +1,11 @@
+import 'package:shiori/features/reader/data/layout/section_rendition.dart';
+
 /// Import facts, independent of the renderer's capability verdict.
 enum PublicationLayoutMode { reflowable, fixed }
 
 enum SectionInspection { notInspected, inspected }
+
+enum SectionDirectionIssue { rtlProgression, rtlDirection, verticalWritingMode }
 
 final class PublicationLayoutFacts {
   PublicationLayoutFacts({
@@ -27,6 +31,7 @@ final class SectionLayoutFacts {
     required Map<String, String?> rendition,
     this.source,
     this.style,
+    this.renditionResolution,
   }) : itemrefProperties = List.unmodifiable(itemrefProperties),
        rendition = Map.unmodifiable(rendition);
 
@@ -41,6 +46,31 @@ final class SectionLayoutFacts {
   final Map<String, String?> rendition;
   final SectionSourceFacts? source;
   final SectionStyleFacts? style;
+  final SectionRendition? renditionResolution;
+
+  /// Null means metadata has not been validated or has a typed issue. The
+  /// legacy mode remains an import hint, never a renderer acceptance verdict.
+  PublicationLayoutMode? get resolvedMode {
+    final value = renditionResolution;
+    if (value == null || !value.isValid) return null;
+    return value.isFixed == true
+        ? PublicationLayoutMode.fixed
+        : PublicationLayoutMode.reflowable;
+  }
+
+  Set<SectionDirectionIssue> directionIssues({
+    String? pageProgressionDirection,
+  }) => Set.unmodifiable({
+    if (pageProgressionDirection == 'rtl') SectionDirectionIssue.rtlProgression,
+    if (style?.rootDirection == 'rtl' ||
+        style?.bodyDirection == 'rtl' ||
+        style?.declaredRootDirection == 'rtl' ||
+        style?.declaredBodyDirection == 'rtl')
+      SectionDirectionIssue.rtlDirection,
+    if (style?.writingModes.any((mode) => mode.startsWith('vertical-')) ??
+        false)
+      SectionDirectionIssue.verticalWritingMode,
+  });
 
   SectionInspection get inspection => style == null
       ? SectionInspection.notInspected
@@ -77,6 +107,7 @@ final class SectionSourceFacts {
     required List<String> viewports,
     required List<String> sourceViewports,
     required List<SvgSourceDimensions> svgDimensions,
+    this.rootSvgNodeIndex,
   }) : viewports = List.unmodifiable(viewports),
        sourceViewports = List.unmodifiable(sourceViewports),
        svgDimensions = List.unmodifiable(svgDimensions);
@@ -84,6 +115,7 @@ final class SectionSourceFacts {
   final List<String> viewports;
   final List<String> sourceViewports;
   final List<SvgSourceDimensions> svgDimensions;
+  final int? rootSvgNodeIndex;
 }
 
 final class SvgSourceDimensions {
@@ -92,9 +124,11 @@ final class SvgSourceDimensions {
     required this.width,
     required this.height,
     required this.viewBox,
+    this.preserveAspectRatio,
   });
   final int nodeIndex;
   final String? width;
   final String? height;
   final String? viewBox;
+  final String? preserveAspectRatio;
 }

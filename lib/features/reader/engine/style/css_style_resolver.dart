@@ -18,6 +18,7 @@ import 'package:shiori/features/reader/engine/style/reader_stylesheets.dart';
 import 'package:shiori/features/reader/engine/style/style_diagnostic.dart';
 import 'package:shiori/features/reader/engine/style/style_resolver.dart';
 import 'package:shiori/features/reader/engine/support/layout_flags.dart';
+import 'package:shiori/features/reader/data/layout/authored_page_size.dart';
 
 /// The result of [CssStyleResolver.resolve].
 final class CssStyledDocument implements StyledDocument {
@@ -73,8 +74,9 @@ final class CssStyleResolver implements StyleResolver {
     EpubBook book,
     int sectionIndex,
     SourceDocument document,
-    ReaderSettings settings,
-  ) {
+    ReaderSettings settings, {
+    AuthoredPageSize? authoredViewport,
+  }) {
     final sink = StyleDiagnosticSink();
     final item = book.sections[sectionIndex].item;
     final fixed = isFixedLayoutSection(book, sectionIndex);
@@ -88,7 +90,12 @@ final class CssStyleResolver implements StyleResolver {
       }
     }
 
-    final author = CssSheetBuilder(sink: sink, reader: read);
+    final author = CssSheetBuilder(
+      sink: sink,
+      reader: read,
+      viewportWidth: authoredViewport?.width,
+      viewportHeight: authoredViewport?.height,
+    );
     _collectAuthorSheets(
       book,
       item.href,
@@ -101,7 +108,7 @@ final class CssStyleResolver implements StyleResolver {
     );
     final override = CssSheetBuilder(firstOrder: author.nextOrder)
       ..addStylesheet(
-        readerOverrideCss(settings, fixedLayout: fixed),
+        fixed ? '' : readerOverrideCss(settings, fixedLayout: false),
         item.href,
       );
 
@@ -111,7 +118,7 @@ final class CssStyleResolver implements StyleResolver {
       for (final rule in override.rules) _Entry(rule),
     ];
     final index = _RuleIndex(entries);
-    final computed = _Computer(document, tree, index, sink).run();
+    final computed = _Computer(document, tree, index, sink, fixed: fixed).run();
 
     final faces = _resolveFontFaces(book, author.fontFaces, sink);
     final root = document.bodyIndex ?? document.documentElementIndex;
@@ -167,7 +174,9 @@ void _collectAuthorSheets(
       final href = node.attribute('href');
       if (rel == null || !rel.contains('stylesheet') || href == null) continue;
       if (rel.contains('alternate')) continue;
-      if (!_screenMedia(node.attribute('media'))) {
+      if (!(builder.viewportWidth == null
+          ? _screenMedia(node.attribute('media'))
+          : builder.matchesMediaAttribute(node.attribute('media')))) {
         sink.add(StyleDiagnosticKind.stylesheetSkipped, 'media');
         continue;
       }
@@ -186,7 +195,9 @@ void _collectAuthorSheets(
       final ordinal = styleOrdinal++;
       final type = node.attribute('type')?.trim().toLowerCase();
       if (type != null && type.isNotEmpty && type != 'text/css') continue;
-      if (!_screenMedia(node.attribute('media'))) {
+      if (!(builder.viewportWidth == null
+          ? _screenMedia(node.attribute('media'))
+          : builder.matchesMediaAttribute(node.attribute('media')))) {
         sink.add(StyleDiagnosticKind.stylesheetSkipped, 'media');
         continue;
       }
@@ -354,7 +365,15 @@ final class _Candidate {
 }
 
 final class _Computer {
-  _Computer(this.document, this.tree, this.index, this.sink);
+  _Computer(
+    this.document,
+    this.tree,
+    this.index,
+    this.sink, {
+    this.fixed = false,
+  });
+
+  final bool fixed;
 
   final SourceDocument document;
   final StyleTree tree;
@@ -435,8 +454,9 @@ final class _Computer {
         );
       }
     }
-    if (element == document.documentElementIndex ||
-        element == document.bodyIndex) {
+    if (!fixed &&
+        (element == document.documentElementIndex ||
+            element == document.bodyIndex)) {
       for (final declaration in _paginatorInline) {
         candidates.add(_Candidate(3, 1, 0, 1, declaration));
       }
@@ -578,11 +598,15 @@ final class _Computer {
       return v! as T;
     }
 
-    final display = pick<StyleDisplay>(
+    var display = pick<StyleDisplay>(
       'display',
       base.display,
       StyleDisplay.inline,
     );
+    if (!fixed && display == StyleDisplay.inlineBlock) {
+      display = StyleDisplay.inline;
+      sink.add(StyleDiagnosticKind.approximatedValue, 'display:inline-block');
+    }
     final textAlign = pick<StyleTextAlign>(
       'text-align',
       base.textAlign,
@@ -725,6 +749,7 @@ final class _Computer {
     }
 
     return ComputedStyle(
+      authored: _authored(spec, base.authored, fontSize, color),
       display: display,
       margin: margin,
       padding: padding,
@@ -753,6 +778,49 @@ final class _Computer {
       breakAfter: breakAfter,
       listStyleType: listStyleType,
     );
+  }
+
+  AuthoredStyle _authored(
+    Map<String, Object> spec,
+    AuthoredStyle parent,
+    double fontSize,
+    int color,
+  ) {
+    Object resolve(Object v) {
+      if (v is CssLength) return _styleLength(v, fontSize);
+      if (v is CssColor) return v.isCurrent ? color : v.argb;
+      if (v is List<CssLength>) {
+        return List<StyleLength>.unmodifiable(
+          v.map((l) => _styleLength(l, fontSize)),
+        );
+      }
+      if (v is List<AuthoredTransform>) {
+        return List<AuthoredTransform>.unmodifiable(
+          v.map(
+            (t) => AuthoredTransform(t.name, t.arguments.map(resolve).toList()),
+          ),
+        );
+      }
+      return v;
+    }
+
+    final values = <String, Object>{};
+    for (final name in authoredLonghands) {
+      final v = spec[name];
+      final inherited = const {'visibility', 'word-spacing'}.contains(name);
+      if (v == CssKeyword.inherit ||
+          (v == null || v == CssKeyword.unset) && inherited) {
+        final previous = parent.values[name];
+        if (previous != null) values[name] = previous;
+      } else if (v != null && v is! CssKeyword) {
+        if ((name == 'z-index' && v == 'auto') ||
+            (name == 'background-image' && v == 'none')) {
+          continue;
+        }
+        values[name] = resolve(v);
+      }
+    }
+    return AuthoredStyle(values);
   }
 
   double _fontSizePx(CssLength length, double parentFontSize) =>

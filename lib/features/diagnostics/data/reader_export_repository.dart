@@ -48,6 +48,18 @@ class ReaderExportRepository {
               engine['schemaVersion'] is! int) {
         throw const FormatException('Unsupported engine schema');
       }
+      final engine = json['engine'] as Map<String, Object?>;
+      if (engine['metadata'] case final Map<String, Object?> metadata) {
+        if (metadata['readerCaptureBudget'] case final budget?) {
+          if (budget is! Map<String, Object?> ||
+              budget['version'] is! int ||
+              budget['version'] != 1 ||
+              budget['storage'] != 'packed_numeric_rows' ||
+              budget['repeatPolicy'] != 'stop_export_reset') {
+            throw const FormatException('Unsupported reader capture budget');
+          }
+        }
+      }
       return ReaderFeasibilityRecord.fromJson(json);
     } on FormatException {
       throw const ParseException();

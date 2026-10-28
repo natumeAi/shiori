@@ -30,12 +30,38 @@ class _Entry {
   int leases = 0;
 }
 
+/// Capacity refusal is distinct from a malformed/missing optional raster.
+final class ImageAdmissionException implements Exception {
+  const ImageAdmissionException();
+}
+
+/// Output payload reserved by a complete fixed-unit plan before any decode.
+/// Cache decodes exchange this credit for their intrinsic + output peak.
+final class ImageReservation {
+  ImageReservation._(this._cache, this._remaining);
+  final ReaderImageCache _cache;
+  int _remaining;
+  bool _released = false;
+  void _consume(int bytes) {
+    if (_released || bytes > _remaining) throw const ImageAdmissionException();
+    _remaining -= bytes;
+    _cache._reservedBytes -= bytes;
+  }
+
+  void release() {
+    if (_released) return;
+    _released = true;
+    _cache._reservedBytes -= _remaining;
+    _remaining = 0;
+  }
+}
+
 /// Byte-bounded cache of decoded rasters and their intrinsic sizes.
 ///
 /// Decoding happens only in [lease] during preparation. Entries with an
 /// active lease are never evicted; unleased entries are dropped oldest first
-/// once [totalBytes] exceeds [maxBytes]. A single lease larger than the
-/// bound is still granted (and dropped as soon as it is released).
+/// before a decode starts. Pending decode peaks share the retained byte cap;
+/// an oversized image is refused before codec allocation.
 final class ReaderImageCache {
   ReaderImageCache({this.maxBytes = 48 * 1024 * 1024});
 
@@ -43,9 +69,20 @@ final class ReaderImageCache {
   final LinkedHashMap<String, _Entry> _entries = LinkedHashMap();
   final Map<String, ({double width, double height})?> _sizes = {};
   int _total = 0;
+  int _pendingBytes = 0;
+  int _reservedBytes = 0;
 
-  int get totalBytes => _total;
+  int get totalBytes => _total + _pendingBytes + _reservedBytes;
+  int get pendingBytes => _pendingBytes;
   int get entryCount => _entries.length;
+
+  ImageReservation reserveOutput(int bytes) {
+    if (bytes < 0) throw ArgumentError('Negative image reservation');
+    _makeRoom(bytes);
+    if (bytes > maxBytes - totalBytes) throw const ImageAdmissionException();
+    _reservedBytes += bytes;
+    return ImageReservation._(this, bytes);
+  }
 
   /// Intrinsic pixel size without decoding the pixels, or null when the data
   /// is not a decodable image. Cached by [key].
@@ -83,21 +120,54 @@ final class ReaderImageCache {
     Uint8List bytes, {
     required int targetWidth,
     required int targetHeight,
+    ImageReservation? reservation,
   }) async {
     ReaderWorkGuard.check(ReaderWork.imageDecode);
+    if (targetWidth < 1 || targetHeight < 1) {
+      throw ArgumentError('Image targets must be positive');
+    }
     final entryKey = '$key@${targetWidth}x$targetHeight';
+    if (reservation != null && !identical(reservation._cache, this)) {
+      throw ArgumentError('Image reservation belongs to another owner');
+    }
     final existing = _entries.remove(entryKey);
     if (existing != null) {
+      reservation?._consume(targetWidth * targetHeight * 4);
       _entries[entryKey] = existing;
       existing.leases++;
       return ImageLease._(this, entryKey, existing.image, existing.bytes);
     }
-    ui.Image image;
+    if (targetWidth > maxBytes ~/ 4 ~/ targetHeight) {
+      throw const ImageAdmissionException();
+    }
+    ui.Image? image;
+    var reserved = 0;
+    var pendingCharge = 0;
+    var outputBound = 0;
     try {
       final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
       try {
         final descriptor = await ui.ImageDescriptor.encoded(buffer);
         try {
+          // Conservative peak: full intrinsic decode plus requested output.
+          // Admission occurs before instantiateCodec/getNextFrame. Keep both
+          // old rasters and other in-flight decodes charged across every await.
+          outputBound = targetWidth * targetHeight * 4;
+          if (descriptor.height < 1 ||
+              descriptor.width < 1 ||
+              descriptor.width > maxBytes ~/ 4 ~/ descriptor.height) {
+            throw const ImageAdmissionException();
+          }
+          reserved = descriptor.width * descriptor.height * 4 + outputBound;
+          final credit = reservation == null ? 0 : outputBound;
+          _makeRoom(reserved - credit);
+          if (reserved - credit > maxBytes - totalBytes) {
+            reserved = 0;
+            throw const ImageAdmissionException();
+          }
+          reservation?._consume(outputBound);
+          _pendingBytes += reserved;
+          pendingCharge = reserved;
           final codec = await descriptor.instantiateCodec(
             targetWidth: targetWidth,
             targetHeight: targetHeight,
@@ -113,10 +183,19 @@ final class ReaderImageCache {
       } finally {
         buffer.dispose();
       }
+    } on ImageAdmissionException {
+      rethrow;
     } on Object {
+      image?.dispose();
       return null;
+    } finally {
+      _pendingBytes -= pendingCharge;
     }
     final size = image.width * image.height * 4;
+    if (size > outputBound || size > maxBytes - totalBytes) {
+      image.dispose();
+      throw const ImageAdmissionException();
+    }
     final raced = _entries[entryKey];
     if (raced != null) {
       image.dispose();
@@ -138,9 +217,13 @@ final class ReaderImageCache {
   }
 
   void _evict() {
-    if (_total <= maxBytes) return;
+    _makeRoom(0);
+  }
+
+  void _makeRoom(int bytes) {
+    if (totalBytes + bytes <= maxBytes) return;
     for (final key in _entries.keys.toList()) {
-      if (_total <= maxBytes) break;
+      if (totalBytes + bytes <= maxBytes) break;
       final entry = _entries[key]!;
       if (entry.leases > 0) continue;
       _entries.remove(key);

@@ -100,3 +100,41 @@ Resolve input is a JSON array of `{ "fixtureId": "cfi-structure", "cfis":
 Windows WebKit is a reference engine approximation, not iPhone Safari or
 physical presentation evidence. See the S2 task's `research/oracle-notes.md`
 for exact observations and reference ambiguities.
+
+## Fixed layout A0 corpus
+
+`npm run fixed-corpus` writes the deterministic 13-row, 52-case capability
+matrix to `test/fixtures/reader/fixed_layout/corpus.json`.
+`npm run check-fixed-corpus` rejects drift. `npm run fixed-oracle` requires a
+clean read-only reference checkout at the pinned commit, runs all cases in
+WebKit and Chromium, and writes authoritative WebKit `oracle.json` plus the
+explicit cross-engine differences. Full Chromium output remains under ignored
+`build/fixed-layout-chromium/`. The loopback server uses an ephemeral port;
+serialized computed URLs remove only that exact origin.
+
+Each case carries its original XHTML, OPF/source sequence, SHA-256, required
+features, failure criterion and capability classification. Positive, boundary,
+nested and unsupported variants exist for every row. Browser acceptance of an
+unsupported variant does not grant native support. Actual native coverage is
+reported by the separate Flutter spike and the implementation phase gates.
+The oracle captures UTF-16 range rectangles, SVG character start/end/extent/
+rotation, element transforms and paint samples. Four hard SVG positive cases
+also retain whole PNGs for native pixel comparison. These are measured browser
+outputs; the generator does not synthesize renderer success.
+
+Source/namespace/CFI/canonical and worker metadata replay is executable with
+`flutter test test/features/reader/data/epub/fixed_layout_corpus_test.dart`.
+Windows browser measurements establish a reference, while iOS font loading,
+filter rendering and physical FlutterMetalLayer presentation still need their
+own validation.
+
+`npm run fixed-fonts` regenerates deterministic WOFF1 and WOFF2 wrappers of the
+same licensed Roboto SFNT tables plus `fonts.json`; run it before `fixed-oracle`.
+These copied font derivatives retain the attribution and Apache-2.0 license
+in `fixtures/styles/`. Oracle `fontProbes` records actual load and shaping for
+all three formats. `svgTextProbes` separately makes textPath length adjustment
+visible. `node src/fixed-layout-paint-controls.mjs` records isolated HTML/XHTML
+PNG controls; WebKit 27.2 paints one black alpha38 pixel at the top-left of even
+an empty inline SVG in XHTML. Chromium and the same WebKit HTML control do not.
+Raw PNGs and stability observations remain intact; this is a measured reference
+engine discrepancy, not a silently accepted pixel exclusion.

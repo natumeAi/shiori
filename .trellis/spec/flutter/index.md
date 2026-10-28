@@ -87,6 +87,8 @@ code generation, formatting, analysis or tests. See the Definition of Done in
 | [Testing](./testing.md) | Unit/widget helpers, oracle and export regeneration, private-input switches, injected clocks/frames and host-evidence limits | Filled |
 | [Quality Guidelines](./quality-guidelines.md) | Resolved dependency/licence tables, pins, fixture/privacy guard, product asset carry-forward and build quality gates | Filled |
 | [Diagnostics](./diagnostics.md) | S1 and reader-feasibility schemas, correctness/resources, presentation channel/evidence levels and independent analyzer | Filled (native/device results pending) |
+| [Reader Admission Diagnostics](./reader-admission-diagnostics.md) | Recognized input, actual submission/demand timelines and versioned native loss evidence | Implemented A0 capture; device acceptance pending |
+| [Reader Resource Admission](./reader-resource-admission.md) | Standalone scene and process-font reservation/lifetime policies | A0 policy tested; A3 product integration pending |
 
 ---
 

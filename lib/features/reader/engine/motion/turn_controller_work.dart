@@ -13,6 +13,7 @@ extension _TurnControllerWork on ReaderTurnController {
     final next = _queue.promote();
     if (next != null) {
       _current = next;
+      if (next.recognized) _recognize(next);
       final pointer = _waitingPointer;
       if (pointer != null && identical(pointer.intent, next)) {
         _waitingPointer = null;
@@ -50,6 +51,27 @@ extension _TurnControllerWork on ReaderTurnController {
     double velocity = 0,
     bool release = false,
   }) async {
+    final done = Completer<void>();
+    _physicalTurns.add(done.future);
+    try {
+      await _runOwned(
+        intent,
+        start: start,
+        velocity: velocity,
+        release: release,
+      );
+    } finally {
+      _physicalTurns.remove(done.future);
+      done.complete();
+    }
+  }
+
+  Future<void> _runOwned(
+    TurnIntent intent, {
+    double start = 0,
+    double velocity = 0,
+    bool release = false,
+  }) async {
     final next = intent.direction;
     if (next == null || intent.completed || !identical(_current, intent)) {
       return;
@@ -58,6 +80,7 @@ extension _TurnControllerWork on ReaderTurnController {
     final origin = _accepted;
     final boundary = next == TurnDirection.next ? origin.atEnd : origin.atStart;
     session.optionalWorkAllowed(false);
+    _recognize(intent);
     _event(TurnTimingEvent.admitted);
     TurnResult result = const TurnResult(
       TurnResultKind.failed,
@@ -71,6 +94,7 @@ extension _TurnControllerWork on ReaderTurnController {
       }
       if (!_alive(token, input: intent)) return;
       if (boundary) {
+        if (start == 0) _event(TurnTimingEvent.noMotionRequired);
         await _animate(start, 0, (
           duration: PageTurnRules.settleDurationMinMs,
           launch: PageTurnRules.turnLaunch,
@@ -221,7 +245,9 @@ extension _TurnControllerWork on ReaderTurnController {
         if (catchUp.finished) pointer.catchUp = null;
       }
       pointer.dirty = false;
+      _event(TurnTimingEvent.dragClean, input: pointer.intent);
       _write(distance);
     }
+    _refreshDemand();
   });
 }

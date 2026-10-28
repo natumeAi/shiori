@@ -1,5 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shiori/core/config/server_session.dart';
+import 'package:shiori/core/config/server_endpoint.dart';
 import 'package:shiori/features/reader/data/epub/epub_book.dart';
+import 'package:shiori/features/reader/data/layout/reading_unit_section.dart';
+import 'package:shiori/features/reader/data/layout/section_rendition.dart';
 import 'package:shiori/features/reader/engine/motion/page_turn_engine.dart';
 import 'package:shiori/features/reader/engine/motion/reader_turn_controller.dart';
 import 'package:shiori/features/reader/engine/motion/turn_intent_queue.dart';
@@ -8,6 +12,7 @@ import 'package:shiori/features/reader/engine/pagination/anchor.dart';
 import 'package:shiori/features/reader/engine/pagination/page_painter.dart';
 import 'package:shiori/features/reader/engine/pagination/preparation.dart';
 import 'package:shiori/features/reader/engine/pagination/prepared_section.dart';
+import 'package:shiori/features/reader/engine/pagination/reading_unit_navigator.dart';
 import 'package:shiori/features/reader/engine/pagination/section_preparer.dart';
 import 'package:shiori/features/reader/engine/style/reader_settings.dart';
 import 'package:shiori/features/reader/engine/surface/page_surface_pool.dart';
@@ -15,6 +20,7 @@ import 'package:shiori/features/reader/engine/surface/prepared_reader_session.da
 
 import '../layout/layout_test_support.dart';
 import '../motion/motion_test_support.dart';
+import '../../contract_test_values.dart';
 
 const surfaceTheme = PagePaintTheme(background: 0xffffffff);
 
@@ -81,7 +87,7 @@ final class SurfaceHarness {
       settings: const ReaderSettings(),
       viewportWidth: 400,
       viewportHeight: 600,
-      contentId: 'surface-test',
+      contentId: contractContent().sha256,
     );
     final section = await SectionPreparer().prepare(
       request,
@@ -98,6 +104,9 @@ final class SurfaceHarness {
       theme: surfaceTheme,
       proofHook: proofHook,
       drain: drain,
+      navigator: surfaceNavigator([section]),
+      activation: surfaceActivation(1),
+      isActivationCurrent: (_) => true,
     );
     expect(session, isNotNull);
     return SurfaceHarness._(
@@ -139,6 +148,48 @@ final class SurfaceHarness {
     session.close();
     section.dispose();
   }
+}
+
+ServerSession surfaceActivation(int generation) => ServerSession(
+  endpoint: ServerEndpoint.parse(
+    contractContent().bookKey.serverKey.canonicalRoot,
+  ).endpoint!,
+  generation: generation,
+);
+
+ComposedReadingUnitNavigator surfaceNavigator(
+  List<PreparedSection> sections, {
+  Set<int> nonlinear = const {},
+}) {
+  final sources = {
+    for (final section in sections)
+      section.sectionIndex: contractPage(
+        section: section.sectionIndex,
+        id: 'section-${section.sectionIndex}.xhtml',
+      ),
+  };
+  return ComposedReadingUnitNavigator(
+    sections: [
+      for (final section in sections)
+        ReadingUnitSection(
+          page: sources[section.sectionIndex]!,
+          href: 'section-${section.sectionIndex}.xhtml',
+          rendition: resolveSectionRendition(package: {}),
+          linear: !nonlinear.contains(section.sectionIndex),
+          layoutKey: section.identity.key,
+          reflowPageCount: section.pageCount,
+        ),
+    ],
+    viewportWidth: sections.first.identity.viewportWidth,
+    viewportHeight: sections.first.identity.viewportHeight,
+    documents: {
+      for (final section in sections)
+        sources[section.sectionIndex]!: section.document,
+    },
+    locateReflow: (page, position) => PageAnchors(
+      sections.firstWhere((s) => s.sectionIndex == page.sectionIndex),
+    ).locate(position)?.pageIndex,
+  );
 }
 
 TurnPosition changePosition(
