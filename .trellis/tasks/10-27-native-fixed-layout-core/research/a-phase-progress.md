@@ -6668,3 +6668,61 @@ drift, visible libc++/compiler helpers or missed generated C++ scopes must retur
 for review, never gain an allowlist. Actual AOT/process lookup, exact runtime
 version, six fixtures, callbacks, device glyph coverage and memory/performance
 remain A5 gates. No successful Apple build or broader S4a acceptance is claimed.
+
+#### CI fix 4 (2026-10-30)
+
+Owner hb-fix4, inline in the existing in-progress S4a task with the expected
+empty Codex pointer. Applied trellis-start, trellis-before-dev and trellis-check.
+No new task, pointer change, sub-agent, download, build or git mutation.
+Preserved the pre-existing execution-log.md change and both reviewed lipo
+argument-order fixes in build_harfbuzz_ios.sh. Workflow pins, Dart, specs,
+Flutter-generated files and project.pbxproj were not changed.
+
+Changed ios/Flutter/HarfBuzz.xcconfig to contain only the optional, portable
+include relative to ios/Flutter:
+`#include? "../../build/third_party/harfbuzz-ios-14.6.0/HarfBuzz.generated.xcconfig"`.
+Moved all HarfBuzz SDK linker settings, force_load, the 33 required -u roots,
+libc++, export_dynamic and link-map settings into the build-only generated
+file. The extracted generate_xcconfig function is also available through
+`--generate-xcconfig <destination> <build-root> <required-symbols-file>`;
+this mode only writes configuration and needs no Apple tool or download.
+Normal CI builds call the same generator after the archive audits.
+
+Without that generated file, local Debug/Profile/Release add no HarfBuzz
+linker or map settings and link as before HarfBuzz wiring. Attempting to use
+the unavailable bindings still produces the existing typed
+HarfBuzzException(HarfBuzzFailure.missingSymbol) at runtime; no Dart fallback
+was added. Debug and Release already include the wrapper, and Runner Profile
+already uses Release.xcconfig as its base. No Profile file/project edit is
+needed. A present generated config opts into linkage; if its archives were
+removed, remove or regenerate that stale config before building locally.
+
+Before flutter build ios, build_ios_unsigned.sh now requires a nonempty
+generated config identical to this run's provenance copy and the matching
+absolute build-root record. It reads both SDK force_load references, requires
+the expected nonempty device and simulator archives, and runs xcrun lipo with
+the archive before -verify_arch: device arm64; simulator arm64 and x86_64.
+Missing/stale configs, wrong references, missing archives and missing slices
+fail before Flutter. The --verify-runner invocation and implementation are
+unchanged, retaining the final Release exports/live link-map ownership gate.
+
+Local checks (Windows; evidence under ignored build/hb-fix4/): bash -n on
+build_harfbuzz_ios.sh and build_ios_unsigned.sh: exit 0 each. Existing
+check_ios_build_modes.sh: exit 0. Generator-only execution: exit 0; printed
+the committed wrapper and complete sample HarfBuzz.generated.xcconfig with
+all 33 roots and a build path containing spaces. Git Bash used a local
+python3 shim for the installed Python; nothing was installed. All seven
+HarfBuzz Python heredocs and the new CI preflight heredoc compile: exit 0.
+Nineteen cases execute the exact production preflight shell with synthetic
+archive contents and mocked lipo: suite exit 0. Valid input exits 0 and reaches
+the Flutter marker; missing/empty/stale configuration, absent provenance/root,
+missing/empty device or simulator archives, wrong architectures, missing or
+duplicate SDK settings, unexpected/extra archives and a relative root all
+exit nonzero before the marker. Static checks confirm optional relative
+include resolution, all three Runner modes, retained lipo fixes and unchanged
+Runner audit code/call: exit 0. git diff --check: exit 0.
+
+Actual archive architecture verification, xcconfig evaluation and Xcode
+linking still require the next macOS CI run. AOT/process lookup, runtime
+version, fixtures, resource lifetime, device fidelity and performance remain
+A5 gates; this fix makes no Apple build or device acceptance claim.

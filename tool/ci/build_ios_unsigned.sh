@@ -112,6 +112,38 @@ git diff --exit-code -- pubspec.lock
 dart run tool/ci/check_reader_fixtures.dart
 # Fresh source build, archive audits and generated linker roots precede Xcode.
 bash tool/ci/build_harfbuzz_ios.sh "$OUTPUT_DIR/harfbuzz"
+# Local builds may omit the optional include; CI must use this run's output.
+HB_CONFIG="$PWD/build/third_party/harfbuzz-ios-14.6.0/HarfBuzz.generated.xcconfig"
+test -s "$HB_CONFIG" || { echo 'Missing generated HarfBuzz configuration.' >&2; exit 1; }
+cmp "$HB_CONFIG" "$OUTPUT_DIR/harfbuzz/HarfBuzz.generated.xcconfig"
+python3 - "$HB_CONFIG" "$OUTPUT_DIR/harfbuzz/build-root.txt" <<'PY'
+import pathlib, re, shlex, subprocess, sys
+config = pathlib.Path(sys.argv[1]).read_text()
+roots = re.findall(r'^SHIORI_HB_BUILD_DIR = (.+)$', config, re.M)
+if len(roots) != 1 or roots[0] != pathlib.Path(sys.argv[2]).read_text().strip():
+    raise SystemExit('HarfBuzz configuration does not reference this build')
+build_root = pathlib.Path(roots[0])
+if not build_root.is_absolute():
+    raise SystemExit('Expected an absolute HarfBuzz build path')
+settings = re.findall(r'^OTHER_LDFLAGS\[sdk=(\w+)\*\] = (.+)$', config, re.M)
+expected = {
+    'iphoneos': ('device-arm64/install/lib/libharfbuzz.a', ['arm64']),
+    'iphonesimulator': ('simulator/libharfbuzz.a', ['arm64', 'x86_64']),
+}
+if len(settings) != len(expected) or {sdk for sdk, _ in settings} != expected.keys():
+    raise SystemExit('Expected device and simulator HarfBuzz linker settings')
+for sdk, value in settings:
+    flags = shlex.split(value)
+    if flags.count('-force_load') != 1 or flags[-1] == '-force_load':
+        raise SystemExit('Expected one HarfBuzz archive per SDK')
+    archive = pathlib.Path(flags[flags.index('-force_load') + 1].replace(
+        '$(SHIORI_HB_BUILD_DIR)', str(build_root)))
+    relative, architectures = expected[sdk]
+    if archive != build_root / relative or not archive.is_file() or archive.stat().st_size == 0:
+        raise SystemExit('Missing or unexpected HarfBuzz archive: ' + str(archive))
+    subprocess.run(['xcrun', 'lipo', str(archive), '-verify_arch', *architectures], check=True)
+    print(f'Validated HarfBuzz {sdk} archive: {archive} ({", ".join(architectures)})')
+PY
 flutter build ios --release --no-codesign --no-pub \
   --target "$ENTRY_POINT" \
   --build-number "$BUILD_NUMBER" \

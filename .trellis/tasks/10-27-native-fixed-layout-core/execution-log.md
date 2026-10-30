@@ -1868,3 +1868,14 @@ source. Astra re-check, then commit/push for CI follow.
   `hb-fix2` (gpt-6.1-sol high).
 - `hb-fix2`: HB_EXTERN-only map (541 APIs, all 33 required; source macros and C++ names excluded), hidden visibility in all slices with generated annotations exposing only mapped APIs (six excluded APIs stay hidden), audits (a)-(c) implemented; generator, 488 audit cases, syntax and build-mode checks pass; 17 host tests pass; packaging doc updated. Astra `recheck-hbfix2` dispatched.
 - Astra `recheck-hbfix2`: no blocking defects; 541 APIs incl. all 33; the six exclusions are header/test macros (none required); visibility flags cover all three slices; audits strict; ready to push.
+- Committed `51e6eea` fix(ci) and pushed (64fd66c..51e6eea); CI run 41046483072 started.
+- CI run 41046483072: device-arm64 compiled and installed (fix 2 works);
+  failed at `lipo -verify_arch <arch> <file>` (argument order). Main session
+  swapped both calls to `lipo <file> -verify_arch <arch...>` (mechanical).
+  Astra `recheck-hbfix3` reviews it and pre-reviews every remaining
+  never-executed Apple CLI step (nm/c++filt parsers, lipo -create,
+  xcodebuild -create-xcframework, dyld_info, link map, xcconfig) to avoid
+  further one-error-per-run iterations.
+- Astra `recheck-hbfix3`: lipo fix correct; remaining Apple CLI calls statically fine (nm/c++filt/lipo -create/xcframework/dyld_info/ditto/shasum, link map); P1 `ios/Flutter/HarfBuzz.xcconfig` makes every local Debug/Profile/Release build require the CI-generated config (missing include or stale force_load path). Dispatched `hb-fix4` (gpt-6.1-sol high): settings in a generated xcconfig, wrapper `#include?`, CI preconditions explicit.
+- `hb-fix4`: wrapper is only `#include? "../../build/third_party/harfbuzz-ios-14.6.0/HarfBuzz.generated.xcconfig"`; all settings generated; local builds link as before without it; CI requires the generated config and device/simulator archives before Flutter; Profile inherits Release. 19 synthetic preflight cases and syntax checks pass. Astra `recheck-hbfix4` dispatched.
+- Astra `recheck-hbfix4`: P1 resolved, optional include resolves for Debug/Release (Profile inherits Release), generated settings equal the previous wrapper (33 roots), CI preconditions strict, lipo fixes intact; residual: a stale local generated config fails visibly or reports missingSymbol. Ready to push.
