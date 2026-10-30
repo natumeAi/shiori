@@ -1,6 +1,3 @@
-import 'dart:async';
-
-import 'package:shiori/core/errors/app_exception.dart';
 import 'package:shiori/features/diagnostics/data/reader_probe_recorder.dart';
 import 'package:shiori/features/reader/data/epub/epub_book.dart';
 import 'package:shiori/features/reader/data/resources/archive_reader_resource_source.dart';
@@ -9,6 +6,8 @@ import 'package:shiori/features/reader/engine/pagination/prepared_section.dart';
 import 'package:shiori/features/reader/engine/pagination/section_preparer.dart';
 import 'package:shiori/features/reader/engine/style/css_style_resolver.dart';
 import 'package:shiori/features/reader/engine/style/reader_settings.dart';
+import 'package:shiori/features/reader/engine/layout/scene_resource_budget.dart';
+import 'package:shiori/features/reader/engine/surface/reflow_section_cache.dart';
 
 /// Bounded section owner. Presented sections cannot be evicted underneath pictures.
 final class ReaderPreparationRepository {
@@ -21,7 +20,13 @@ final class ReaderPreparationRepository {
     required this.dpr,
     required this.generation,
     required this.recorder,
-  });
+    SceneResourceBudget? resourceBudget,
+  }) {
+    _cache = ReflowSectionCache(
+      prepare: _prepare,
+      budget: resourceBudget ?? SceneResourceBudget(),
+    );
+  }
   final EpubBook book;
   final String digest;
   final ReaderSettings settings;
@@ -31,23 +36,20 @@ final class ReaderPreparationRepository {
   final int generation;
   final ReaderProbeRecorder recorder;
   final _preparer = SectionPreparer();
-  final _cache = <int, PreparedSection>{};
-  final _pending = <int, Future<PreparedSection?>>{};
+  late final ReflowSectionCache _cache;
   final _controls = <PreparationControl>{};
-  bool Function(PreparedSection)? pinned;
+  set pinned(bool Function(PreparedSection)? value) => _cache.pinned = value;
   bool _closed = false;
-  int get cachedSections => _cache.length;
+  int get cachedSections => _cache.sections.length;
 
   Future<PreparedSection?> load(int index) {
     if (_closed) return Future.value(null);
-    final cached = _cache.remove(index);
-    recorder.preparation(start: true, section: index, cacheHit: cached != null);
-    if (cached != null) {
-      _cache[index] = cached;
+    final hit = _cache.sections.containsKey(index);
+    recorder.preparation(start: true, section: index, cacheHit: hit);
+    if (hit) {
       recorder.preparation(start: false, section: index, cacheHit: true);
-      return Future.value(cached);
     }
-    return _pending.putIfAbsent(index, () => _prepare(index));
+    return _cache.load(index);
   }
 
   Future<PreparedSection?> _prepare(int index) async {
@@ -91,32 +93,16 @@ final class ReaderPreparationRepository {
           pageCount: section.pageCount,
         );
       }
-      // Three presented sections plus one incoming reserve.
-      while (_cache.length >= 4) {
-        final candidates = _cache.entries.where(
-          (e) => !(pinned?.call(e.value) ?? false),
-        );
-        if (candidates.isEmpty) {
-          section.dispose();
-          throw const ParseException();
-        }
-        final key = candidates.first.key;
-        _cache.remove(key)?.dispose();
-      }
-      _cache[index] = section;
       recorder.preparation(start: false, section: index, cacheHit: false);
       return section;
     } on PreparationCancelled {
       return null;
     } finally {
       _controls.remove(control);
-      unawaited(_pending.remove(index));
     }
   }
 
-  Future<void> drain() async {
-    await Future.wait(_pending.values.toList());
-  }
+  Future<void> drain() => _cache.drain();
 
   /// Call after closing the surface session, which releases its picture leases.
   Future<void> close() async {
@@ -126,10 +112,7 @@ final class ReaderPreparationRepository {
       control.cancel();
     }
     await drain();
-    for (final section in _cache.values) {
-      section.dispose();
-    }
-    _cache.clear();
+    _cache.dispose();
     _preparer.images.clearUnleased();
   }
 }

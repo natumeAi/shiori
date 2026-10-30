@@ -26,11 +26,16 @@ import 'package:shiori/features/reader/data/source/source_document.dart';
 import 'package:shiori/features/reader/data/source/source_node.dart';
 import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
 import 'package:shiori/features/reader/engine/fixed/fixed_svg_viewport.dart';
+import 'package:shiori/features/reader/engine/fixed/fixed_preparation_scale.dart';
 import 'package:shiori/features/reader/data/worker/publication_layout_facts.dart';
 import 'package:shiori/features/reader/data/worker/publication_cancellation.dart';
 import 'package:shiori/features/reader/engine/pagination/preparation.dart';
 import 'package:shiori/features/reader/engine/layout/scene_resource_budget.dart';
 import 'package:shiori/features/reader/engine/support/section_capability.dart';
+import 'package:shiori/features/reader/engine/text/harfbuzz/harfbuzz.dart'
+    as hb;
+import 'package:shiori/features/reader/engine/fixed/fixed_svg_text_fonts.dart';
+import 'package:shiori/features/reader/engine/layout/font_format.dart';
 
 part 'svg_graphics_plan.dart';
 part 'svg_graphics_values.dart';
@@ -43,13 +48,41 @@ part 'svg_graphics_patterns.dart';
 part 'svg_path_bounds.dart';
 part 'svg_graphics_validation.dart';
 part 'svg_graphics_dash.dart';
+part 'svg_feature_hooks.dart';
+part 'svg_feature_filters.dart';
+part 'svg_feature_clip_mask.dart';
+part 'svg_feature_foreign_object.dart';
+part 'svg_feature_text.dart';
+
+/// Host services that only the fixed scene can provide. The unavailable default
+/// keeps every feature on its typed-refusal path until A3 supplies an owner.
+final class SvgFeatureHost {
+  const SvgFeatureHost({required this.foreignObject, required this.text});
+  const SvgFeatureHost.unavailable()
+    : foreignObject = const SvgUnavailableForeignObjectLayoutService(),
+      text = const SvgUnavailableTextFontService();
+  final SvgForeignObjectLayoutService foreignObject;
+  final SvgTextFontService text;
+}
 
 /// Decoded images are borrowed from the caller's admitted image leases.
 /// SVG image resources are already prepared scenes, never arbitrary markup.
 final class SvgGraphicsImages {
-  const SvgGraphicsImages({this.rasters = const {}, this.vectors = const {}});
+  const SvgGraphicsImages({
+    this.rasters = const {},
+    this.vectors = const {},
+    this.evidenceRasters = const {},
+    this.intrinsicSizes = const {},
+  });
   final Map<String, ui.Image> rasters;
   final Map<String, SvgGraphicsScene> vectors;
+  final Map<String, ui.Image> evidenceRasters;
+  final Map<String, ui.Size> intrinsicSizes;
+  SvgGraphicsImages get forEvidence => SvgGraphicsImages(
+    rasters: {...rasters, ...evidenceRasters},
+    vectors: vectors,
+    intrinsicSizes: intrinsicSizes,
+  );
 }
 
 final class SvgGraphicsScene {
@@ -61,6 +94,7 @@ final class SvgGraphicsScene {
     this.elements,
     this._pictures,
     this._leases,
+    this._featureOwners,
   );
   final AuthoredPageSize size;
   final ui.Picture? picture;
@@ -69,6 +103,7 @@ final class SvgGraphicsScene {
   final List<SvgGraphicsElement> elements;
   final List<ui.Picture> _pictures;
   final List<SceneResourceLease> _leases;
+  final _SvgFeatureOwners _featureOwners;
   bool _disposed = false;
   void dispose() {
     if (_disposed) return;
@@ -80,6 +115,7 @@ final class SvgGraphicsScene {
     for (final lease in _leases.reversed) {
       lease.release();
     }
+    _featureOwners.dispose();
   }
 }
 
@@ -93,13 +129,22 @@ final class SvgGraphicsElement {
     this.paintOrdinal,
     this.bounds,
     this.paint,
-    this.resourceNodes,
-  );
+    this.resourceNodes, {
+    this.fillPath,
+    this.clipIds = const [],
+  });
   final int nodeIndex, paintOrdinal;
   final List<int> instancePath;
   final AffineTransform transform;
   final ui.Rect bounds;
   final Map<String, String> paint;
+
+  /// Local fill path for shape/image instances; null for containers/groups.
+  /// Read-only D9 sample-classification evidence, not a paint instruction.
+  final ui.Path? fillPath;
+
+  /// Outer-to-inner clip registry ids covering this paint.
+  final List<String> clipIds;
 
   /// Original nodes contributing gradient stops/pattern/marker paint. Resource
   /// definitions are not assigned fictitious independent document paint boxes.
@@ -145,6 +190,7 @@ final class _SvgInstance {
   final List<_SvgInstance> children = [];
   ui.Rect? bounds;
   ui.Picture? picture;
+  ui.Picture? evidencePicture;
   ui.Path? path;
   int ordinal = 0;
 }

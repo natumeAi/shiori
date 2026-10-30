@@ -90,7 +90,10 @@ final class FixedLayoutSceneHarness {
           retainedSourceBytes: utf8.encode(fixture['source'] as String).length,
           releaseSource: () {},
         );
-        final plan = FixedPreparationPlan.inspect(source);
+        final plan = FixedPreparationPlan.inspect(
+          source,
+          scale: const FixedPreparationScale.authored(),
+        );
         if (fixture['row'] == 'metadata' || !plan.capability.isComplete) {
           final metadata = fixture['row'] == 'metadata';
           final wanted = fixture['expectedCapability'];
@@ -138,6 +141,7 @@ final class FixedLayoutSceneHarness {
           continue;
         }
         final scene = await FixedSceneBuilder(
+          preparationScale: const FixedPreparationScale.authored(),
           document: input.document,
           styles: styles,
           page: input.page,
@@ -148,7 +152,8 @@ final class FixedLayoutSceneHarness {
                 ? const {}
                 : {'AuthoredSceneFixture': decorationMetrics},
           ),
-          backgroundImages: {'/tile.svg': image},
+          backgroundImages: {'tile.svg': image},
+          svgPlans: {for (final svg in plan.svgPlans) svg.rootIndex: svg},
         ).build();
         try {
           if (fallback) {
@@ -223,6 +228,7 @@ final class FixedLayoutSceneHarness {
       'oracleSHA256': sha256.convert(oracleBytes).toString(),
       'geometryToleranceCssPx': .5,
       'd4ComponentAlphaThresholdInclusive': d4ComponentAlphaThreshold,
+      'd10ChangedPixelMinimumDelta': d10ChangedPixelMinimumDelta,
       'referenceDefectsSHA256': _defects.registrySHA256,
       'paintControlsSHA256': _defects.controlsSHA256,
       'font': fontInfo,

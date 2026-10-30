@@ -60,7 +60,14 @@ void main() {
         case 'boundary':
           expect(result, isA<MalformedDimensions>());
         case 'unsupported':
+          // Device-relative page dimensions cannot define an authored page.
+          // Inline SVG percentage lengths still require containing-block layout.
           expect(result, isA<UnsupportedDimensions>());
+          expect(result.reason, 'Device-relative authored viewport');
+          expect(
+            resolveSvgDimensions(facts.svgDimensions.single),
+            isA<UnsupportedDimensions>(),
+          );
       }
       expect(result.reason, isNotEmpty);
     });

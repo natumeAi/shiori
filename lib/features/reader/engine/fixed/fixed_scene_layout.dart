@@ -16,6 +16,73 @@ bool _engineDecorationsVisible(ParagraphFonts fonts, TextBlock block) {
 }
 
 extension _FixedLayout on FixedSceneBuilder {
+  ui.Rect _positioningBlock(
+    ComputedStyle style,
+    ui.Rect containing,
+    FixedBox? positioned,
+  ) {
+    final position = style.authored.position;
+    return position == AuthoredPosition.fixed
+        ? ui.Rect.fromLTWH(0, 0, size.width, size.height)
+        : position == AuthoredPosition.absolute && positioned != null
+        ? positioned.borderBox
+        : containing;
+  }
+
+  ui.Offset _positionedOrigin(
+    ComputedStyle style,
+    ui.Rect cb,
+    ui.Offset flow,
+    ui.Size borderSize, {
+    bool trailing = true,
+  }) {
+    final a = style.authored;
+    final out =
+        a.position == AuthoredPosition.absolute ||
+        a.position == AuthoredPosition.fixed;
+    final left = a.inset('left').resolve(cb.width),
+        right = a.inset('right').resolve(cb.width),
+        top = a.inset('top').resolve(cb.height),
+        bottom = a.inset('bottom').resolve(cb.height);
+    double margin(StyleLength length) => length.resolve(cb.width) ?? 0;
+    var x = (out ? cb.left + (left ?? 0) : flow.dx) + margin(style.margin.left);
+    var y = (out ? cb.top + (top ?? 0) : flow.dy) + margin(style.margin.top);
+    if (a.position == AuthoredPosition.relative) {
+      x += left ?? -(right ?? 0);
+      y += top ?? -(bottom ?? 0);
+    }
+    if (trailing && out && left == null && right != null) {
+      x = cb.right - right - borderSize.width - margin(style.margin.right);
+    }
+    if (trailing && out && top == null && bottom != null) {
+      y = cb.bottom - bottom - borderSize.height - margin(style.margin.bottom);
+    }
+    return ui.Offset(x, y);
+  }
+
+  bool _missingInlineContainingBlock(int index) {
+    var ancestor = document.node(index).parentIndex;
+    while (ancestor != null) {
+      // A foreignObject host supplies its own definite containing viewport.
+      if (ancestor == _foreignRoot) return false;
+      final node = document.node(ancestor), style = styles.styleOf(ancestor);
+      if (style != null &&
+          (style.authored.position != AuthoredPosition.static ||
+              style.authored.transforms.isNotEmpty)) {
+        // Relative non-atomic inline elements are flattened into paragraphs.
+        // Their CSS containing block requires first/last inline fragment boxes,
+        // which are not retained by this layout path. An intervening positioned
+        // block/atomic element supplies a real box and ends the search instead.
+        return style.authored.position == AuthoredPosition.relative &&
+            style.display == StyleDisplay.inline &&
+            node.namespaceUri == 'http://www.w3.org/1999/xhtml' &&
+            !atomicElementNames.contains(node.localName);
+      }
+      ancestor = node.parentIndex;
+    }
+    return false;
+  }
+
   FixedBox? _layout(
     int index,
     FixedBox? parent,
@@ -30,23 +97,43 @@ extension _FixedLayout on FixedSceneBuilder {
       return null;
     }
     try {
-      final node = document.node(index), style = styles.styleOf(index);
+      final node = document.node(index);
+      final foreignRoot = index == _foreignRoot;
+      final style = foreignRoot
+          ? _foreignRootStyle(
+              styles.styleOf(index) ?? const ComputedStyle(),
+              size,
+            )
+          : styles.styleOf(index);
       if (style == null || style.display == StyleDisplay.none) return null;
+      if (style.authored.position == AuthoredPosition.absolute &&
+          _missingInlineContainingBlock(index)) {
+        _reject(index, 'inline-positioned-containing-block');
+        return null;
+      }
       if (style.writingMode != StyleWritingMode.horizontalTb ||
           style.direction != StyleDirection.ltr) {
         _reject(index, 'vertical-or-rtl-layout');
       }
       if (node.localName == 'svg' &&
           node.namespaceUri == 'http://www.w3.org/2000/svg') {
-        return _layoutSvg(index, parent, flow);
+        return _layoutSvg(index, parent, containing, flow, positioned);
       }
-      if (node.namespaceUri != 'http://www.w3.org/1999/xhtml' ||
-          atomicElementNames.contains(node.localName)) {
+      if (!foreignRoot &&
+          (node.namespaceUri != 'http://www.w3.org/1999/xhtml' ||
+              atomicElementNames.contains(node.localName) &&
+                  node.localName != 'img')) {
         _reject(index, 'non-xhtml-box');
         return null;
       }
       if (style.display == StyleDisplay.listItem) _reject(index, 'list-marker');
       final box = FixedBox._(index, style, parent);
+      if (node.localName == 'img') {
+        box.imagePath = node.attribute('src');
+        if (!backgroundImages.containsKey(box.imagePath)) {
+          _reject(index, 'missing-admitted-image');
+        }
+      }
       _boxes.add(box);
       parent?.children.add(box);
       parent?.contents.add(box);
@@ -54,16 +141,9 @@ extension _FixedLayout on FixedSceneBuilder {
       final out =
           a.position == AuthoredPosition.absolute ||
           a.position == AuthoredPosition.fixed;
-      final cb = a.position == AuthoredPosition.fixed
-          ? ui.Rect.fromLTWH(0, 0, size.width, size.height)
-          : out && positioned != null
-          ? positioned.borderBox.deflate(0)
-          : containing;
+      final cb = _positioningBlock(style, containing, positioned);
       final basis = cb.width;
       double edge(StyleLength l) => l.resolve(basis) ?? 0;
-      final ml = edge(style.margin.left),
-          mr = edge(style.margin.right),
-          mt = edge(style.margin.top);
       final pl = edge(style.padding.left),
           pr = edge(style.padding.right),
           pt = edge(style.padding.top),
@@ -77,25 +157,24 @@ extension _FixedLayout on FixedSceneBuilder {
       final extraW = pl + pr + bl + br, extraH = pt + pb + bt + bb;
       final left = a.inset('left').resolve(cb.width),
           right = a.inset('right').resolve(cb.width);
-      final top = a.inset('top').resolve(cb.height),
-          bottom = a.inset('bottom').resolve(cb.height);
-      var width = style.width.resolve(cb.width);
+      final cbHeight = parent == null || a.position == AuthoredPosition.fixed
+          ? cb.height
+          : out && positioned != null
+          ? positioned.definiteContentHeight == null
+                ? null
+                : cb.height
+          : parent.definiteContentHeight;
+      final used = FixedUsedBoxSize.resolve(style, cb.width, cbHeight);
+      var width = used.width;
       final shrink =
           (out && (left == null || right == null) ||
               style.display == StyleDisplay.inlineBlock) &&
-          width == null;
+          style.width.kind == StyleLengthKind.auto;
       if (shrink &&
           node.children.any(
             (c) => styles.styleOf(c)?.width.kind == StyleLengthKind.percent,
           )) {
         _reject(index, 'percentage-width-cycle', malformed: true);
-      }
-      width ??= out && left != null && right != null
-          ? cb.width - left - right - ml - mr - extraW
-          : cb.width - ml - mr - extraW;
-      if (a.boxSizing == AuthoredBoxSizing.borderBox &&
-          style.width.kind != StyleLengthKind.auto) {
-        width -= extraW;
       }
       double constrain(
         double value,
@@ -120,22 +199,53 @@ extension _FixedLayout on FixedSceneBuilder {
         cb.width,
         extraW,
       );
-      var height = style.height.resolve(cb.height);
-      if (height != null && a.boxSizing == AuthoredBoxSizing.borderBox) {
-        height = math.max(0, height - extraH);
+      var height = used.height;
+      if (node.localName == 'img') {
+        final intrinsic = intrinsicImageSizes[box.imagePath];
+        if (intrinsic != null) {
+          final ratio = intrinsic.width / intrinsic.height;
+          final autoW = style.width.kind == StyleLengthKind.auto;
+          final autoH = height == null;
+          double imageLimit(String axis, double value) =>
+              FixedUsedBoxSize.constrain(
+                style,
+                axis,
+                value,
+                axis == 'width' ? cb.width : cbHeight,
+                axis == 'width' ? extraW : extraH,
+              );
+          if (autoW && autoH) {
+            final lower = math.max(
+              imageLimit('width', 0) / intrinsic.width,
+              imageLimit('height', 0) / intrinsic.height,
+            );
+            final upper = math.min(
+              imageLimit('width', double.infinity) / intrinsic.width,
+              imageLimit('height', double.infinity) / intrinsic.height,
+            );
+            final factor = math.max(lower, math.min(1.0, upper));
+            width = imageLimit('width', intrinsic.width * factor);
+            height = imageLimit('height', intrinsic.height * factor);
+          } else if (autoW) {
+            height = imageLimit('height', height!);
+            width = imageLimit('width', height * ratio);
+          } else if (autoH) {
+            width = imageLimit('width', width);
+            height = imageLimit('height', width / ratio);
+          }
+        } else {
+          _reject(index, 'missing-image-intrinsic-size');
+        }
       }
-      if (height == null && out && top != null && bottom != null) {
-        height = math.max(
-          0,
-          cb.height - top - bottom - extraH - mt - edge(style.margin.bottom),
-        );
-      }
-      var x = out ? cb.left + (left ?? 0) + ml : flow.dx + ml;
-      var y = out ? cb.top + (top ?? 0) + mt : flow.dy + mt;
-      if (a.position == AuthoredPosition.relative) {
-        x += left ?? -(right ?? 0);
-        y += top ?? -(bottom ?? 0);
-      }
+      box.definiteContentHeight = height;
+      final origin = _positionedOrigin(
+        style,
+        cb,
+        flow,
+        ui.Size.zero,
+        trailing: false,
+      );
+      var x = origin.dx, y = origin.dy;
       box.borderBox = ui.Rect.fromLTWH(
         x,
         y,
@@ -156,11 +266,47 @@ extension _FixedLayout on FixedSceneBuilder {
         final acc = InlineAccumulator();
         final inlineBoxes = <FixedBox>[];
         final nodeShifts = <int, double>{};
-        void collect(int child, [double inheritedShift = 0]) {
+        final relativeOffsets = <int, ui.Offset>{};
+        void collect(
+          int child, [
+          double inheritedShift = 0,
+          ui.Offset relativeOffset = ui.Offset.zero,
+        ]) {
           final n = document.node(child), s = styles.styleOf(child);
           if (s == null || s.display == StyleDisplay.none) return;
+          if (!n.isCharacterData &&
+              (s.authored.position == AuthoredPosition.absolute ||
+                  s.authored.position == AuthoredPosition.fixed)) {
+            // Nested inline descendants still use their containing block;
+            // they neither consume nor receive paragraph placeholder space.
+            _layout(
+              child,
+              box,
+              ui.Rect.fromLTWH(
+                content.left,
+                content.top,
+                width,
+                height ?? cb.height,
+              ),
+              ui.Offset(content.left, cursor),
+              a.position != AuthoredPosition.static || a.transforms.isNotEmpty
+                  ? box
+                  : positioned,
+              depth + 1,
+            );
+            return;
+          }
           var shift = inheritedShift;
           if (!n.isCharacterData) {
+            if (s.authored.position == AuthoredPosition.relative) {
+              relativeOffset += ui.Offset(
+                s.authored.inset('left').resolve(width) ??
+                    -(s.authored.inset('right').resolve(width) ?? 0),
+                s.authored.inset('top').resolve(height ?? cb.height) ??
+                    -(s.authored.inset('bottom').resolve(height ?? cb.height) ??
+                        0),
+              );
+            }
             final parentSize =
                 (n.parentIndex == null ? null : styles.styleOf(n.parentIndex!))
                     ?.fontSize ??
@@ -174,6 +320,7 @@ extension _FixedLayout on FixedSceneBuilder {
             };
           }
           nodeShifts[child] = shift;
+          relativeOffsets[child] = relativeOffset;
           if (n.isCharacterData) {
             acc.addText(child, n.text ?? '', s);
             return;
@@ -182,14 +329,16 @@ extension _FixedLayout on FixedSceneBuilder {
             acc.addBreak(child, s);
             return;
           }
-          if (s.display == StyleDisplay.inlineBlock) {
+          if (s.display == StyleDisplay.inlineBlock ||
+              atomicElementNames.contains(n.localName) ||
+              n.namespaceUri != 'http://www.w3.org/1999/xhtml') {
             final childBox = _layout(
               child,
               box,
               ui.Rect.fromLTWH(
                 content.left,
                 content.top,
-                width!,
+                width,
                 height ?? cb.height,
               ),
               ui.Offset(content.left, cursor),
@@ -224,8 +373,35 @@ extension _FixedLayout on FixedSceneBuilder {
           if (s.authored.opacity != 1 || s.authored.transforms.isNotEmpty) {
             _reject(child, 'inline-compositing');
           }
+          if (s.authored.backgroundImage != null ||
+              const [
+                'top',
+                'right',
+                'bottom',
+                'left',
+              ].any((e) => s.authored.borderStyle(e) != 'none') ||
+              [
+                s.padding.top,
+                s.padding.right,
+                s.padding.bottom,
+                s.padding.left,
+              ].any((p) => (p.resolve(width) ?? 0) != 0) ||
+              [
+                s.margin.top,
+                s.margin.right,
+                s.margin.bottom,
+                s.margin.left,
+              ].any((p) => (p.resolve(width) ?? 0) != 0) ||
+              const [
+                'top-left',
+                'top-right',
+                'bottom-right',
+                'bottom-left',
+              ].any((c) => (s.authored.radius(c).resolve(width) ?? 0) != 0)) {
+            _reject(child, 'inline-box-decoration');
+          }
           for (final c in n.children) {
-            collect(c, shift);
+            collect(c, shift, relativeOffset);
           }
         }
 
@@ -234,7 +410,7 @@ extension _FixedLayout on FixedSceneBuilder {
         }
         inline.clear();
         if (!acc.hasContent) return;
-        final indent = style.textIndent.resolve(width!) ?? 0;
+        final indent = style.textIndent.resolve(width) ?? 0;
         if (indent < 0) _reject(index, 'negative-text-indent');
         final result = acc.finish(style, [
           if (indent > 0) InlinePrefix.placeholder(indent, style),
@@ -255,7 +431,18 @@ extension _FixedLayout on FixedSceneBuilder {
           lastNodeIndex: result.lastNodeIndex,
         );
         try {
-          _leases.add(budget.reserve({SceneResource.paragraphs: 1}));
+          _leases.add(
+            budget.reserve({
+              SceneResource.paragraphs: 1,
+              SceneResource.textCodeUnits: result.map.entries
+                  .where(
+                    (e) =>
+                        e.kind == MapKind.synthetic ||
+                        e.kind == MapKind.lineBreak,
+                  )
+                  .fold(0, (sum, e) => sum + e.paraEnd - e.paraStart),
+            }),
+          );
         } on SceneAdmissionException {
           _resourceFailures.add(
             OffendingConstruct(
@@ -268,7 +455,7 @@ extension _FixedLayout on FixedSceneBuilder {
         }
         var built = buildParagraph(
           block,
-          math.max(1, width!),
+          math.max(1, width),
           fonts,
           paintBackgrounds: false,
           paintDecorations: _engineDecorationsVisible(fonts, block),
@@ -300,39 +487,32 @@ extension _FixedLayout on FixedSceneBuilder {
             built.dispose();
             built = buildParagraph(
               block,
-              math.max(1, width!),
+              math.max(1, width),
               fonts,
               paintBackgrounds: false,
               paintDecorations: _engineDecorationsVisible(fonts, block),
             );
           }
         }
-        final positions = result.runs
-            .map((r) => r.style.authored)
-            .where((a) => a.position == AuthoredPosition.relative)
-            .toList();
-        var offset = ui.Offset.zero;
-        if (positions.isNotEmpty) {
-          if (positions.length == result.runs.length) {
-            final relative = positions.first;
-            offset = ui.Offset(
-              relative.inset('left').resolve(width!) ??
-                  -(relative.inset('right').resolve(width!) ?? 0),
-              relative.inset('top').resolve(height ?? cb.height) ??
-                  -(relative.inset('bottom').resolve(height ?? cb.height) ?? 0),
-            );
-          } else {
-            _reject(index, 'mixed-relative-inline-offsets');
-          }
-        }
-        final origin = ui.Offset(content.left, cursor) + offset;
+        final origin = ui.Offset(content.left, cursor);
         final text = FixedText._(box, block, built, origin);
         box.texts.add(text);
         box.contents.add(text);
+        // Inline backgrounds belong below the replaced children of this run.
+        for (final child in inlineBoxes) {
+          box.contents.remove(child);
+          box.contents.add(child);
+        }
         _texts.add(text);
-        if (nodeShifts.values.any((shift) => shift != 0)) {
+        if (nodeShifts.values.any((shift) => shift != 0) ||
+            relativeOffsets.values.any((offset) => offset != ui.Offset.zero)) {
           try {
-            text._inline = _layoutInline(block, built, nodeShifts);
+            text._inline = _layoutInline(
+              block,
+              built,
+              nodeShifts,
+              relativeOffsets: relativeOffsets,
+            );
           } on SceneAdmissionException {
             _resourceFailures.add(
               OffendingConstruct(
@@ -393,8 +573,7 @@ extension _FixedLayout on FixedSceneBuilder {
         if (n.isCharacterData ||
             (s.display == StyleDisplay.inline ||
                     s.display == StyleDisplay.inlineBlock) &&
-                !childOut &&
-                n.namespaceUri != 'http://www.w3.org/2000/svg') {
+                !childOut) {
           inline.add(child);
           continue;
         }
@@ -405,7 +584,7 @@ extension _FixedLayout on FixedSceneBuilder {
           ui.Rect.fromLTWH(
             content.left,
             content.top,
-            width!,
+            width,
             height ?? cb.height,
           ),
           ui.Offset(content.left, cursor),
@@ -420,32 +599,37 @@ extension _FixedLayout on FixedSceneBuilder {
       }
       flush();
       height ??= math.max(0, cursor - content.top);
-      height = constrain(
+      height = FixedUsedBoxSize.constrain(
+        style,
+        'height',
         height,
-        a.minimum('height'),
-        style.maxHeight,
-        cb.height,
+        cbHeight,
         extraH,
       );
-      if (shrink && box.texts.isEmpty && box.children.isEmpty) {
-        width = math.min(width!, maxInline);
+      if (shrink &&
+          node.localName != 'img' &&
+          box.texts.isEmpty &&
+          box.children.isEmpty) {
+        width = math.min(width, maxInline);
       }
-      if (out && left == null && right != null) {
-        x = cb.right - right - width! - extraW - mr;
-      }
-      if (out && top == null && bottom != null) {
-        y = cb.bottom - bottom - height - extraH - edge(style.margin.bottom);
-      }
+      final placed = _positionedOrigin(
+        style,
+        cb,
+        flow,
+        ui.Size(width + extraW, height + extraH),
+      );
+      x = placed.dx;
+      y = placed.dy;
       final dx = x - box.borderBox.left, dy = y - box.borderBox.top;
       if (dx != 0 || dy != 0) _shift(box, dx, dy);
-      box.borderBox = ui.Rect.fromLTWH(x, y, width! + extraW, height + extraH);
+      box.borderBox = ui.Rect.fromLTWH(x, y, width + extraW, height + extraH);
       box.contentBox = ui.Rect.fromLTWH(
         x + bl + pl,
         y + bt + pt,
-        width!,
+        width,
         height,
       );
-      if (![x, y, width!, height, extraW, extraH].every((v) => v.isFinite)) {
+      if (![x, y, width, height, extraW, extraH].every((v) => v.isFinite)) {
         _reject(index, 'nonfinite-box', malformed: true);
       }
       return box;
@@ -477,6 +661,8 @@ extension _FixedLayout on FixedSceneBuilder {
       box.contents[box.contents.indexOf(t)] = replacement;
     }
     for (final child in box.children) {
+      // A viewport-fixed subtree has already resolved its own coordinates.
+      if (child.style.authored.position == AuthoredPosition.fixed) continue;
       _shift(child, dx, dy);
     }
   }

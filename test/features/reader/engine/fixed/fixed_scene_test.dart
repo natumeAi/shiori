@@ -54,6 +54,70 @@ void main() {
     return (scene, sample);
   }
 
+  for (final separator in ['<br/>', ' ']) {
+    test('inline background has source-linked evidence on both lines: $separator', () async {
+      final (scene, sample) = await prepare(
+        '<p style="margin:0;width:30px"><span id="red" style="background:red">AA${separator}BB</span></p>',
+      );
+      expect(scene.capability.isComplete, true);
+      final paints = scene.geometry.paint
+          .where((p) => p.nodeIndex == sample.byId('red'))
+          .toList();
+      expect(paints, hasLength(2));
+      expect(
+        paints.every((p) => p.exactCoverage && p.alphaFootprint != null),
+        true,
+      );
+      expect(paints[1].region.top, greaterThan(paints[0].region.top));
+      final image = await scene.picture.toImage(320, 240);
+      final data = (await image.toByteData(
+        format: ui.ImageByteFormat.rawStraightRgba,
+      ))!;
+      for (final paint in paints) {
+        final r = paint.region;
+        final i = ((r.top + 1).floor() * 320 + (r.left + 1).floor()) * 4;
+        expect(
+          [data.getUint8(i), data.getUint8(i + 1), data.getUint8(i + 2)],
+          [255, 0, 0],
+        );
+      }
+      image.dispose();
+    });
+  }
+
+  test(
+    'inline backgrounds retain their paragraph content clip and indent',
+    () async {
+      final (scene, sample) = await prepare(
+        '<p id="clip" style="margin:0;width:24px;height:12px;overflow:hidden;text-indent:4px;white-space:nowrap">'
+        '<span id="red" style="background:red;white-space:nowrap">AAAA</span></p>',
+      );
+      expect(scene.capability.isComplete, true);
+      final paint = scene.geometry.paint.singleWhere(
+        (p) => p.nodeIndex == sample.byId('red'),
+      );
+      expect(paint.clipIds, contains('box-${sample.byId('clip')}'));
+      final image = await scene.picture.toImage(320, 240);
+      final data = (await image.toByteData(
+        format: ui.ImageByteFormat.rawRgba,
+      ))!;
+      expect(data.getUint8((4 * 320 + 5) * 4 + 3), 255);
+      expect(data.getUint8((4 * 320 + 25) * 4 + 3), 0);
+      expect(data.getUint8((13 * 320 + 5) * 4 + 3), 0);
+      image.dispose();
+    },
+  );
+
+  test(
+    'unsupported inline border refuses instead of dropping decoration',
+    () async {
+      final (scene, _) = await prepare(
+        '<p><span style="border:2px solid red">AA</span></p>',
+      );
+      expect(scene.capability, isA<UnsupportedSectionCapability>());
+    },
+  );
+
   test(
     'positioned boxes use padding containing block and min beats max',
     () async {

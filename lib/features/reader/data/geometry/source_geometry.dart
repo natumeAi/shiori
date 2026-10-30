@@ -76,6 +76,12 @@ final class SourceGeometry {
     if (ids.length != this.clips.length) {
       throw ArgumentError('Duplicate clip registry id');
     }
+    final maskIds = <String>{};
+    for (final mask in masks) {
+      if (!maskIds.add(mask.id)) {
+        throw ArgumentError('Conflicting or duplicate mask registry id');
+      }
+    }
     final groupIds = <String>{};
     for (final group in this.opacityGroups) {
       if (!groupIds.add(group.id) ||
@@ -87,7 +93,7 @@ final class SourceGeometry {
         (this.fragments.any(
               (f) =>
                   f.clipIds.any((id) => !ids.contains(id)) ||
-                  f.maskIds.isNotEmpty,
+                  f.maskIds.any((id) => !maskIds.contains(id)),
             ) ||
             this.paint.any(
               (p) =>
@@ -107,6 +113,23 @@ final class SourceGeometry {
     }
   }
   final int version;
+
+  /// Explicit mask registry derived from retained paint evidence. Conflicting
+  /// evidence for one id is invalid rather than first-wins.
+  List<GeometryMask> get masks {
+    final byId = <String, GeometryMask>{};
+    for (final paint in this.paint) {
+      for (final mask in paint.masks) {
+        final prior = byId[mask.id];
+        if (prior == null) {
+          byId[mask.id] = mask;
+        } else if (prior != mask) {
+          throw ArgumentError('Conflicting mask registry id');
+        }
+      }
+    }
+    return List.unmodifiable(byId.values);
+  }
 
   /// Source order; paintOrdinal supplies the independent paint ordering.
   final List<SourceFragment> fragments;

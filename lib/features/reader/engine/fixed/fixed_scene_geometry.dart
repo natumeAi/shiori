@@ -4,7 +4,13 @@ extension _FixedGeometry on FixedSceneBuilder {
   SourceGeometry _export() {
     final fragments = <SourceFragment>[];
     for (final box in _boxes) {
-      if (!box.hasVisibleTransform) continue;
+      if (!box.hasVisibleTransform || box.svgScene != null) continue;
+      // XHTML's document element supplies the initial CSS containing chain,
+      // but has no local CFI step. Keep the existing body/descendant anchors.
+      if (box.nodeIndex == document.documentElementIndex &&
+          document.bodyIndex != null) {
+        continue;
+      }
       final id = document.node(box.nodeIndex).id;
       final r = box.borderBox;
       fragments.add(
@@ -37,6 +43,10 @@ extension _FixedGeometry on FixedSceneBuilder {
               : 0,
         ),
       );
+    }
+    for (final box in _boxes) {
+      if (box.svgScene == null) continue;
+      fragments.addAll(_mergeSvg(box));
     }
     final textNodes = <int, FixedText>{};
     for (final text in _texts) {
@@ -161,7 +171,10 @@ extension _FixedGeometry on FixedSceneBuilder {
     for (final f in fragments.where(
       (f) => f.kind == SourceFragmentKind.xhtmlText,
     )) {
-      final text = textNodes[f.nodeIndex]!;
+      // Opaque SVG foreignObject text already carries its host's inline
+      // element geometry. It is not a paragraph owned by this outer builder.
+      final text = textNodes[f.nodeIndex];
+      if (text == null) continue;
       final points = f.clusters.expand((c) => c.quad);
       if (points.isEmpty) continue;
       final left = points.map((p) => p.x).reduce(math.min),
@@ -224,5 +237,78 @@ extension _FixedGeometry on FixedSceneBuilder {
           ? const CompleteGeometry()
           : IncompleteGeometry(_issues),
     );
+  }
+
+  List<SourceFragment> _mergeSvg(FixedBox box) {
+    final scene = box.svgScene!;
+    final prefix = 'svg-${box.nodeIndex}:';
+    String clipId(String id) => '$prefix$id';
+    String groupId(String id) => '$prefix$id';
+    for (final clip in scene.geometry.clips) {
+      _clips.add(
+        GeometryClip(
+          id: clipId(clip.id),
+          // The scene lays its clips out in unit space already.
+          region: clip.region,
+        ),
+      );
+    }
+    for (final group in scene.geometry.opacityGroups) {
+      _groups.add(
+        GeometryOpacityGroup(
+          id: groupId(group.id),
+          parentId: group.parentId == null
+              ? box.svgPaintGroups.lastOrNull
+              : groupId(group.parentId!),
+          opacity: group.opacity,
+        ),
+      );
+    }
+    for (final p in scene.geometry.paint) {
+      _paint.add(
+        GeometryPaint(
+          nodeIndex: p.nodeIndex,
+          paintOrdinal: box.paintOrdinal + p.paintOrdinal,
+          region: p.region,
+          innerRegion: p.innerRegion,
+          kind: p.kind,
+          role: p.role,
+          effectiveOpacity: _svgOpacity(box, p.effectiveOpacity),
+          exactCoverage: p.exactCoverage,
+          argb: p.argb,
+          alphaFootprint: p.alphaFootprint,
+          clipIds: [...box.clipIds, for (final id in p.clipIds) clipId(id)],
+          groupIds: [
+            ...box.svgPaintGroups,
+            for (final id in p.groupIds) groupId(id),
+          ],
+          textRanges: p.textRanges,
+        ),
+      );
+    }
+    final opacity = _svgOpacity(box, 1);
+    return [
+      for (final f in scene.geometry.fragments)
+        SourceFragment(
+          page: page,
+          nodeIndex: f.nodeIndex,
+          kind: f.kind,
+          textRange: f.textRange,
+          clusters: f.clusters,
+          elementAnchor: f.elementAnchor,
+          elementQuad: f.elementQuad,
+          // The scene already applied the host placement; place exactly once.
+          sourceToUnit: f.sourceToUnit,
+          clipIds: [...box.clipIds, for (final id in f.clipIds) clipId(id)],
+          maskIds: f.maskIds,
+          paintOrdinal: box.paintOrdinal + f.paintOrdinal,
+          effectiveOpacity: opacity * f.effectiveOpacity,
+        ),
+    ];
+  }
+
+  double _svgOpacity(FixedBox box, double own) {
+    if (box.style.authored.visibility != AuthoredVisibility.visible) return 0;
+    return (box.effectiveOpacity * own).clamp(0.0, 1.0);
   }
 }

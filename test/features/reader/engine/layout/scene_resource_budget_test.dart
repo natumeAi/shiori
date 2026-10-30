@@ -274,6 +274,71 @@ void main() {
       }
     },
   );
+
+  test(
+    'lease shrink returns part of one class and release returns the rest once',
+    () {
+      final budget = SceneResourceBudget();
+      final lease = budget.reserveUnit(
+        sourcePages: 1,
+        resources: {
+          SceneResource.vectorBytes: 1000,
+          SceneResource.sourceBytes: 50,
+        },
+      );
+      final peak = budget.peaks[SceneResource.vectorBytes];
+      lease.shrink(SceneResource.vectorBytes, 0);
+      expect(lease.charge[SceneResource.vectorBytes], 1000);
+      lease.shrink(SceneResource.vectorBytes, 400);
+      expect(lease.charge[SceneResource.vectorBytes], 600);
+      expect(lease.charge[SceneResource.sourceBytes], 50);
+      expect(budget.used[SceneResource.vectorBytes], 600);
+      expect(budget.used[SceneResource.sourceBytes], 50);
+      expect(budget.peaks[SceneResource.vectorBytes], peak);
+      // The freed capacity is immediately admissible to another unit.
+      final other = budget.reserve({SceneResource.vectorBytes: 400});
+      expect(budget.used[SceneResource.vectorBytes], 1000);
+      other.release();
+      expect(
+        () => lease.shrink(SceneResource.vectorBytes, 601),
+        throwsArgumentError,
+      );
+      expect(
+        () => lease.shrink(SceneResource.vectorBytes, -1),
+        throwsArgumentError,
+      );
+      expect(
+        () => lease.shrink(SceneResource.paragraphs, 1),
+        throwsArgumentError,
+      );
+      expect(() => lease.charge.clear(), throwsUnsupportedError);
+      expect(budget.used[SceneResource.vectorBytes], 600);
+      lease.release();
+      lease.release();
+      expect(budget.used.values, everyElement(0));
+      expect(
+        () => lease.shrink(SceneResource.vectorBytes, 0),
+        throwsStateError,
+      );
+      expect(budget.used.values, everyElement(0));
+    },
+  );
+  test(
+    'shrinking one lease never changes another lease on the same budget',
+    () {
+      final budget = SceneResourceBudget();
+      final a = budget.reserve({SceneResource.vectorBytes: 100});
+      final b = budget.reserve({SceneResource.vectorBytes: 100});
+      a.shrink(SceneResource.vectorBytes, 100);
+      expect(a.charge[SceneResource.vectorBytes], 0);
+      expect(b.charge[SceneResource.vectorBytes], 100);
+      expect(budget.used[SceneResource.vectorBytes], 100);
+      a.release();
+      expect(budget.used[SceneResource.vectorBytes], 100);
+      b.release();
+      expect(budget.used[SceneResource.vectorBytes], 0);
+    },
+  );
 }
 
 Matcher _exhausted(SceneResource resource) => isA<SceneAdmissionException>()

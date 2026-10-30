@@ -28,6 +28,7 @@ final class _Source implements ReaderResourceSource {
 
 const _sfntPath = 'tool/oracle/fixtures/styles/EPUB/fonts/Roboto-Regular.ttf';
 const _woffPath = 'test/fixtures/reader/fixed_layout/Roboto-Regular.woff';
+const _woff2Path = 'test/fixtures/reader/fixed_layout/Roboto-Regular.woff2';
 const _faces = [StyleFontFace(family: 'Author', archivePath: 'font')];
 
 double _width(String alias) {
@@ -193,13 +194,129 @@ void main() {
     },
   );
 
-  test('WOFF2 remains a typed unsupported format before native work', () async {
+  test(
+    'required WOFF2 shapes at the pinned advance before SFNT control',
+    () async {
+      final registry = FontRegistry(processBudget: ProcessFontBudget());
+      final converted = await registry.loadResources(
+        _Source(File(_woff2Path).readAsBytesSync()),
+        _faces,
+        scope: 'woff2-shape',
+        requiredFonts: true,
+      );
+      final width = _width(converted['author']!);
+      expect(width, 72.763671875);
+      final transformed = await registry.loadResources(
+        _Source(
+          File('test/fixtures/reader/fonts/roboto-transformed.woff2')
+              .readAsBytesSync(),
+        ),
+        _faces,
+        scope: 'woff2-transform',
+        requiredFonts: true,
+      );
+      expect(_width(transformed['author']!), width);
+      final control = await registry.loadResources(
+        _Source(File(_sfntPath).readAsBytesSync()),
+        _faces,
+        scope: 'woff2-control',
+        requiredFonts: true,
+      );
+      expect(_width(control['author']!), width);
+      expect(_width('a3-woff2-absent'), 180);
+    },
+  );
+
+  test(
+    'WOFF2 cancellation retains SFNT charge through physical drain',
+    () async {
+      final encoded = ReaderResourceBudget();
+      final process = ProcessFontBudget();
+      final gate = Completer<void>();
+      final token = PublicationCancellation();
+      var calls = 0;
+      final registry = FontRegistry(
+        processBudget: process,
+        conversionBudget: encoded,
+        register: (bytes, _) {
+          calls++;
+          expect(ByteData.sublistView(bytes).getUint32(0), 0x00010000);
+          expect(process.pendingBytes, bytes.length);
+          return gate.future;
+        },
+      );
+      final source = _Source(File(_woff2Path).readAsBytesSync());
+      final a = registry.loadResources(
+        source,
+        _faces,
+        scope: 'woff2-cancel',
+        cancellation: token,
+      );
+      final checked = expectLater(a, throwsA(isA<ProcessFontLoadCanceled>()));
+      final b = registry.loadResources(source, _faces, scope: 'woff2-survive');
+      token.cancel();
+      await checked;
+      expect(encoded.reservedBytes, 171676 * 2);
+      expect(calls, 1);
+      var drained = false;
+      final drain = registry.drainFonts().then((_) => drained = true);
+      await Future<void>.delayed(Duration.zero);
+      expect(drained, isFalse);
+      gate.complete();
+      expect(await b, isNotEmpty);
+      await drain;
+      expect(encoded.accountedBytes, 0);
+      expect(process.registeredBytes, 171676);
+    },
+  );
+
+  test(
+    'WOFF2 process refusal/native failure release converted-byte admission',
+    () async {
+      final source = _Source(File(_woff2Path).readAsBytesSync());
+      for (final refuseProcess in [true, false]) {
+        final encoded = ReaderResourceBudget();
+        final process = ProcessFontBudget(
+          maxBytes: refuseProcess ? 1 : 1000000,
+        );
+        final registry = FontRegistry(
+          processBudget: process,
+          conversionBudget: encoded,
+          register: (_, _) async {
+            expect(refuseProcess, isFalse);
+            throw StateError('native failure after admission');
+          },
+        );
+        await expectLater(
+          registry.loadResources(
+            source,
+            _faces,
+            scope: 'woff2-refusal',
+            requiredFonts: true,
+          ),
+          throwsA(
+            refuseProcess
+                ? isA<SceneAdmissionException>()
+                : isA<RequiredFontException>(),
+          ),
+        );
+        await registry.drainFonts();
+        expect(encoded.accountedBytes, 0);
+        expect(process.uncertainFaces, refuseProcess ? 0 : 1);
+      }
+    },
+  );
+
+  test('invalid WOFF2 fails typed before native registration', () async {
     final registry = FontRegistry(
       processBudget: ProcessFontBudget(),
-      register: (_, _) async => fail('WOFF2 crossed native boundary'),
+      register: (_, _) async => fail('invalid WOFF2 crossed native boundary'),
     );
-    final bytes = File('test/fixtures/reader/fixed_layout/Roboto-Regular.woff2')
-        .readAsBytesSync();
+    final bytes = File(_woff2Path).readAsBytesSync()..[97] = 0xff;
+    expect(
+      await registry.loadResources(_Source(bytes), _faces, scope: 'reflow'),
+      isEmpty,
+    );
     await expectLater(
       registry.loadResources(
         _Source(bytes),
@@ -214,7 +331,7 @@ void main() {
           isA<FontFormatException>().having(
             (e) => e.failure,
             'failure',
-            FontFormatFailure.unsupportedFormat,
+            FontFormatFailure.malformed,
           ),
         ),
       ),

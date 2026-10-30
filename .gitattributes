@@ -7,3 +7,7 @@
 # picking either side (task state lives in task.json, not index.md). See
 # .trellis/spec/cli/backend/directory-structure.md for details.
 .trellis/workspace/*/journal-*.md merge=union
+
+# Vendored third-party data is byte-exact. The Brotli dictionary has no NUL
+# bytes, so Git would otherwise treat it as text and autocrlf would corrupt it.
+third_party/** binary

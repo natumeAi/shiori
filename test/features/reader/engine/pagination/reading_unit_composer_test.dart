@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shiori/features/reader/data/layout/authored_page_size.dart';
 import 'package:shiori/features/reader/data/layout/reading_unit.dart';
+import 'package:shiori/features/reader/data/layout/reading_unit_section.dart';
+import 'package:shiori/features/reader/data/layout/section_rendition.dart';
 import 'package:shiori/features/reader/data/layout/source_page_slot.dart';
+import 'package:shiori/features/reader/data/worker/publication_layout_facts.dart';
 import 'package:shiori/features/reader/engine/pagination/reading_unit_composer.dart';
 
 import '../../data/layout/fixed_layout_test_support.dart';
@@ -240,6 +243,73 @@ void main() {
     expect(
       composer.compose([], viewportWidth: 900, viewportHeight: 600),
       isEmpty,
+    );
+  });
+  test('direction facts refuse before units and stay distinct', () {
+    for (final issue in SectionDirectionIssue.values) {
+      final sections = [
+        unitSection(0, directionIssues: {issue}),
+      ];
+      expect(
+        () => composer.plan(sections, viewportWidth: 900, viewportHeight: 600),
+        throwsA(
+          isA<UnsupportedDirectionCompositionException>().having(
+            (error) => error.issues,
+            'issues',
+            contains(issue),
+          ),
+        ),
+      );
+      expect(
+        () =>
+            composer.compose(sections, viewportWidth: 900, viewportHeight: 600),
+        throwsA(isA<UnsupportedDirectionCompositionException>()),
+      );
+    }
+    expect(
+      composer.compose(
+        [unitSection(0, fixed: false)],
+        viewportWidth: 900,
+        viewportHeight: 600,
+      ),
+      hasLength(1),
+    );
+    final noDimensions = ReadingUnitSection(
+      page: unitSection(0).page,
+      href: 'EPUB/p0.xhtml',
+      rendition: resolveSectionRendition(package: {'layout': 'pre-paginated'}),
+      layoutKey: 'no-dimensions',
+    );
+    expect(
+      () => composer.compose(
+        [noDimensions],
+        viewportWidth: 900,
+        viewportHeight: 600,
+      ),
+      throwsA(
+        isA<UnitCompositionException>().having(
+          (error) => error is UnsupportedDirectionCompositionException,
+          'isDirection',
+          false,
+        ),
+      ),
+    );
+    final malformed = ReadingUnitSection(
+      page: unitSection(0).page,
+      href: 'EPUB/p0.xhtml',
+      rendition: resolveSectionRendition(package: {'layout': 'future'}),
+      layoutKey: 'malformed',
+      directionIssues: {SectionDirectionIssue.rtlProgression},
+    );
+    expect(
+      () => composer.plan([malformed], viewportWidth: 900, viewportHeight: 600),
+      throwsA(
+        isA<UnitCompositionException>().having(
+          (error) => error is UnsupportedDirectionCompositionException,
+          'isDirection',
+          false,
+        ),
+      ),
     );
   });
 }

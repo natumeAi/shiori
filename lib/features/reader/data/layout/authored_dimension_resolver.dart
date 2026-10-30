@@ -3,8 +3,8 @@ import 'package:shiori/features/reader/data/layout/verified_raster_wrapper.dart'
 import 'package:shiori/features/reader/data/worker/publication_layout_facts.dart';
 
 /// XHTML: document viewport > package viewport > verified raster wrapper.
-/// SVG roots: explicit absolute size > viewBox size. Embedded SVG declarations
-/// are validated, but never become the XHTML page's dimensions.
+/// SVG roots: explicit absolute size > viewBox size. Embedded SVG layout is a
+/// scene-preparation concern, never a source of XHTML page dimensions.
 DimensionResolution resolveAuthoredDimensions({
   required SectionSourceFacts source,
   Map<String, String?> packageRendition = const {},
@@ -26,6 +26,10 @@ DimensionResolution resolveAuthoredDimensions({
       if (viewport is! ResolvedDimensions) return viewport;
     }
   }
+  // An inline SVG is a replaced element within this authored page. Its relative
+  // dimensions require containing-block layout; they cannot invalidate the
+  // independently declared XHTML viewport or supply a replacement page size.
+  if (viewport != null) return viewport;
   DimensionResolution? root;
   for (final svg in source.svgDimensions) {
     final dimensions = resolveSvgDimensions(svg);
@@ -37,7 +41,6 @@ DimensionResolution resolveAuthoredDimensions({
   if (source.rootSvgNodeIndex != null) {
     return root ?? MalformedDimensions('Missing root SVG dimensions');
   }
-  if (viewport != null) return viewport;
   if (rasterWrapper != null) {
     return ResolvedDimensions(
       size: rasterWrapper.size,

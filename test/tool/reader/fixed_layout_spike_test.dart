@@ -186,11 +186,110 @@ void main() {
         (20, 20, [255, 0, 0, 110]),
       ]);
       expect(compareSpikePixels(edgeA, edgeB)['pass'], isTrue);
-      // Delta 2 is unchanged; delta 3 must be classified.
+      // D10: delta 1 is unchanged; delta 2 must be classified.
+      edgeB[(20 * 320 + 20) * 4 + 3] = 101;
+      var oneStep = compareSpikePixels(edgeA, edgeB);
+      expect(oneStep['changedPixels'], 0);
+      expect(oneStep['deltaOnePixels'], 1);
       edgeB[(20 * 320 + 20) * 4 + 3] = 102;
-      expect(compareSpikePixels(edgeA, edgeB)['changedPixels'], 0);
-      edgeB[(20 * 320 + 20) * 4 + 3] = 103;
       expect(compareSpikePixels(edgeA, edgeB)['changedPixels'], 1);
+    },
+  );
+  test('D9 gradient samples allow one step and solid samples stay exact', () {
+    final image = Uint8List(320 * 240 * 4);
+    SpikeSampleRecord sample(int delta, SpikeSamplePaintClass classification) =>
+        SpikeSampleRecord(
+          x: 10,
+          y: 10,
+          maximumChannelDelta: delta,
+          classification: classification,
+          provenance: const {
+            'native': {'nodeIndex': 12, 'role': 'fill', 'paint': 'url(#grad)'},
+            'reference': {'ordinal': 12, 'computedPaint': 'url("#grad")'},
+          },
+        );
+    var result = compareSpikePixels(
+      image,
+      image,
+      samples: [sample(1, SpikeSamplePaintClass.gradient)],
+    );
+    var samples = (result['d4'] as Map)['samples'] as Map;
+    expect(samples['pass'], true);
+    expect(samples['counts'], {'gradient': 1, 'solid': 0});
+    expect(samples['maximumChannelDeltaByClass'], {'gradient': 1, 'solid': 0});
+    expect(result['pass'], true);
+    result = compareSpikePixels(
+      image,
+      image,
+      samples: [sample(2, SpikeSamplePaintClass.gradient)],
+    );
+    expect((result['d4'] as Map)['samples']['pass'], false);
+    result = compareSpikePixels(
+      image,
+      image,
+      samples: [sample(1, SpikeSamplePaintClass.solid)],
+    );
+    expect((result['d4'] as Map)['samples']['pass'], false);
+    final nativeOnly = classifySpikeSamplePaint(
+      nativeIsGradient: true,
+      referenceIsGradient: false,
+    );
+    expect(nativeOnly, SpikeSamplePaintClass.solid);
+    result = compareSpikePixels(image, image, samples: [sample(1, nativeOnly)]);
+    expect((result['d4'] as Map)['samples']['pass'], false);
+    result = compareSpikePixels(image, image, maximumSampleDelta: 1);
+    samples = (result['d4'] as Map)['samples'] as Map;
+    expect(samples['classification'], 'all-solid');
+    expect(samples['pass'], false);
+  });
+  test('D10 delta-1 is unchanged and delta-2 changes an interior patch', () {
+    Uint8List patch(int red) {
+      final bytes = Uint8List(320 * 240 * 4);
+      for (var y = 20; y < 25; y++) {
+        for (var x = 20; x < 25; x++) {
+          final index = (y * 320 + x) * 4;
+          bytes.setRange(index, index + 4, [red, 0, 0, 255]);
+        }
+      }
+      return bytes;
+    }
+
+    final base = patch(255);
+    var result = compareSpikePixels(patch(254), base);
+    expect(result['changedPixels'], 0);
+    expect(result['deltaOnePixels'], 25);
+    expect((result['d4'] as Map)['interior']['pass'], true);
+    expect(result['pass'], true);
+    result = compareSpikePixels(patch(253), base);
+    expect(result['changedPixels'], 25);
+    expect(result['deltaOnePixels'], 0);
+    expect((result['d4'] as Map)['interior']['pass'], false);
+    expect(result['pass'], false);
+  });
+  test(
+    'D10 sub-threshold pixels are identical support and component evidence',
+    () {
+      Uint8List pixel(int alpha) {
+        final bytes = Uint8List(320 * 240 * 4);
+        bytes[(20 * 320 + 20) * 4 + 3] = alpha;
+        return bytes;
+      }
+
+      var result = compareSpikePixels(pixel(0), pixel(1));
+      expect(result['changedPixels'], 0);
+      expect((result['d4'] as Map)['supportBounds']['pass'], true);
+      expect((result['d4'] as Map)['components']['pass'], true);
+      result = compareSpikePixels(pixel(31), pixel(32));
+      expect(result['changedPixels'], 0);
+      expect((result['d4'] as Map)['supportBounds']['pass'], true);
+      expect((result['d4'] as Map)['components']['pass'], true);
+      result = compareSpikePixels(pixel(0), pixel(2));
+      expect(result['changedPixels'], 1);
+      expect((result['d4'] as Map)['supportBounds']['pass'], false);
+      result = compareSpikePixels(pixel(30), pixel(32));
+      expect(result['changedPixels'], 1);
+      expect((result['d4'] as Map)['components']['pass'], false);
+      expect((result['d4'] as Map)['supportBounds']['pass'], true);
     },
   );
   test('geometry uses 2D endpoints and rotation displacement, not component extents', () {

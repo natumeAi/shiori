@@ -5,6 +5,7 @@ import 'package:shiori/features/reader/data/layout/authored_page_size.dart';
 import 'package:shiori/features/reader/data/layout/reading_unit.dart';
 import 'package:shiori/features/reader/data/layout/reading_unit_section.dart';
 import 'package:shiori/features/reader/data/layout/source_page_slot.dart';
+import 'package:shiori/features/reader/data/worker/publication_layout_facts.dart';
 
 typedef PlannedSlot = ({ReadingUnitSection section, SpreadSide side});
 typedef PlannedUnit = ({
@@ -14,11 +15,30 @@ typedef PlannedUnit = ({
 });
 
 /// A composition failure publishes no partial units.
-final class UnitCompositionException implements Exception {
+class UnitCompositionException implements Exception {
   const UnitCompositionException(this.reason);
   final String reason;
   @override
   String toString() => 'UnitCompositionException($reason)';
+}
+
+/// Typed refusal for import-declared vertical/RTL direction facts.
+final class UnsupportedDirectionCompositionException
+    extends UnitCompositionException {
+  UnsupportedDirectionCompositionException(Set<SectionDirectionIssue> issues)
+    : issues = Set.unmodifiable(issues),
+      super('Unsupported section direction: ${_directionNames(issues)}') {
+    if (issues.isEmpty) {
+      throw ArgumentError('A direction refusal needs at least one issue');
+    }
+  }
+
+  final Set<SectionDirectionIssue> issues;
+}
+
+String _directionNames(Set<SectionDirectionIssue> issues) {
+  final names = [for (final issue in issues) issue.name]..sort();
+  return names.join(', ');
 }
 
 /// Pure composition, with no preparation, source loading or resource ownership.
@@ -54,6 +74,12 @@ final class ReadingUnitComposer {
         );
       }
       previousSpine = section.page.spineIndex;
+    }
+    final directionIssues = <SectionDirectionIssue>{
+      for (final section in sections) ...section.directionIssues,
+    };
+    if (directionIssues.isNotEmpty) {
+      throw UnsupportedDirectionCompositionException(directionIssues);
     }
     final physical = <PlannedUnit>[];
     PlannedSlot? pendingLeft;

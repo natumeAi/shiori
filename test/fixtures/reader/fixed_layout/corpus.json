@@ -668,8 +668,8 @@
           10
         ]
       ],
-      "sha256": "ae47d5e6c96c0c665397067ff6ed82d28603865d9c10d37e7a1b555fe7536c56",
-      "source": "<?xml version=\"1.0\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><meta name=\"viewport\" content=\"width=320,height=240\"/><link rel=\"stylesheet\" href=\"/linked.css\"/><style>@import url('/imported.css');@font-face{font-family:Fixture;src:url('/font.ttf') format('truetype')}html,body{margin:0;width:320px;height:240px}body{font:20px Fixture}</style></head><body><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"50%\" height=\"75%\" viewBox=\"0 0 320 240\" preserveAspectRatio=\"xMidYMid meet\"><rect id=\"source\" data-source=\"rect\" x=\"20\" y=\"30\" width=\"40\" height=\"50\" fill=\"red\"/></svg></body></html>\n",
+      "sha256": "889dfce5c97dd3b6750af93b5440629d0dd8cf54d17a3d5aae23f697cf8c65e4",
+      "source": "<?xml version=\"1.0\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><meta name=\"viewport\" content=\"width=device-width,height=240\"/><link rel=\"stylesheet\" href=\"/linked.css\"/><style>@import url('/imported.css');@font-face{font-family:Fixture;src:url('/font.ttf') format('truetype')}html,body{margin:0;width:320px;height:240px}body{font:20px Fixture}</style></head><body><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"50%\" height=\"75%\" viewBox=\"0 0 320 240\" preserveAspectRatio=\"xMidYMid meet\"><rect id=\"source\" data-source=\"rect\" x=\"20\" y=\"30\" width=\"40\" height=\"50\" fill=\"red\"/></svg></body></html>\n",
       "variant": "unsupported"
     },
     {

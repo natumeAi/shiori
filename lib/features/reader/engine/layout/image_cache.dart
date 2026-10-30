@@ -14,11 +14,12 @@ final class ImageLease {
   final int bytes;
   bool _released = false;
 
-  /// Returns the image to the cache; it may be evicted afterwards.
-  void release() {
+  /// Returns the image to the cache. Discard removes only this entry after its
+  /// final lease returns, even when another holder releases without discard.
+  void release({bool discard = false}) {
     if (_released) return;
     _released = true;
-    _cache._release(_key);
+    _cache._release(_key, discard: discard);
   }
 }
 
@@ -28,6 +29,7 @@ class _Entry {
   final ui.Image image;
   final int bytes;
   int leases = 0;
+  bool discard = false;
 }
 
 /// Capacity refusal is distinct from a malformed/missing optional raster.
@@ -71,16 +73,25 @@ final class ReaderImageCache {
   int _total = 0;
   int _pendingBytes = 0;
   int _reservedBytes = 0;
+  int _peakBytes = 0;
 
   int get totalBytes => _total + _pendingBytes + _reservedBytes;
   int get pendingBytes => _pendingBytes;
   int get entryCount => _entries.length;
+
+  /// High-water committed bytes, including pending codec/output and credits.
+  int get peakBytes => _peakBytes;
+  void resetPeakBytes() => _peakBytes = totalBytes;
+  void _observePeak() {
+    if (totalBytes > _peakBytes) _peakBytes = totalBytes;
+  }
 
   ImageReservation reserveOutput(int bytes) {
     if (bytes < 0) throw ArgumentError('Negative image reservation');
     _makeRoom(bytes);
     if (bytes > maxBytes - totalBytes) throw const ImageAdmissionException();
     _reservedBytes += bytes;
+    _observePeak();
     return ImageReservation._(this, bytes);
   }
 
@@ -130,9 +141,10 @@ final class ReaderImageCache {
     if (reservation != null && !identical(reservation._cache, this)) {
       throw ArgumentError('Image reservation belongs to another owner');
     }
-    final existing = _entries.remove(entryKey);
+    final existing = _entries[entryKey];
     if (existing != null) {
       reservation?._consume(targetWidth * targetHeight * 4);
+      _entries.remove(entryKey);
       _entries[entryKey] = existing;
       existing.leases++;
       return ImageLease._(this, entryKey, existing.image, existing.bytes);
@@ -167,6 +179,7 @@ final class ReaderImageCache {
           }
           reservation?._consume(outputBound);
           _pendingBytes += reserved;
+          _observePeak();
           pendingCharge = reserved;
           final codec = await descriptor.instantiateCodec(
             targetWidth: targetWidth,
@@ -205,14 +218,21 @@ final class ReaderImageCache {
     final entry = _Entry(image, size)..leases = 1;
     _entries[entryKey] = entry;
     _total += size;
+    _observePeak();
     _evict();
     return ImageLease._(this, entryKey, image, size);
   }
 
-  void _release(String key) {
+  void _release(String key, {bool discard = false}) {
     final entry = _entries[key];
     if (entry == null) return;
+    entry.discard |= discard;
     entry.leases--;
+    if (entry.discard && entry.leases == 0) {
+      _entries.remove(key);
+      _total -= entry.bytes;
+      entry.image.dispose();
+    }
     _evict();
   }
 

@@ -3,7 +3,51 @@ import 'package:shiori/features/reader/data/layout/authored_page_size.dart';
 import 'package:shiori/features/reader/data/worker/publication_layout_facts.dart';
 import 'package:shiori/features/reader/engine/fixed/fixed_svg_viewport.dart';
 
+import '../style/style_test_support.dart';
+
 void main() {
+  for (final vector in <(String, double, double)>[
+    ('width:100%;height:auto;max-width:100px', 100, 75),
+    ('width:auto;height:100%;max-height:60px', 80, 60),
+    ('width:40px;height:auto;min-width:80px', 80, 60),
+    ('width:auto;height:30px;min-height:60px', 80, 60),
+    ('width:100px;height:100px;max-width:80px', 80, 100),
+    ('width:100px;height:auto;min-height:100px', 100, 100),
+    ('width:auto;height:auto;max-width:100px', 100, 75),
+    ('width:auto;height:auto;max-height:60px', 80, 60),
+    ('width:auto;height:auto;min-width:400px', 400, 300),
+    ('width:auto;height:auto;min-height:300px', 400, 300),
+    ('width:auto;height:auto;max-width:100px;max-height:60px', 80, 60),
+    ('width:auto;height:auto;min-width:400px;min-height:400px', 1600 / 3, 400),
+    ('width:auto;height:auto;min-width:400px;max-height:60px', 400, 60),
+    ('width:auto;height:auto;max-width:100px;min-height:300px', 100, 300),
+    ('width:auto;height:auto;min-width:400px;max-height:240px', 400, 240),
+    ('width:auto;height:auto;max-width:100px;min-height:100px', 100, 100),
+    ('width:auto;height:auto;max-width:100px;max-height:100px', 100, 75),
+    ('width:auto;height:auto;min-width:400px;min-height:200px', 400, 300),
+    ('width:auto;height:auto;min-width:400px;max-width:100px', 400, 300),
+  ]) {
+    test('replaced constraints ${vector.$1}', () {
+      final sample = StyleSample.html('<svg id="s"/>', css: '#s{${vector.$1}}');
+      addTearDown(sample.book.archive.close);
+      final viewport = FixedSvgViewport.resolveInline(
+        SvgSourceDimensions(
+          nodeIndex: 1,
+          width: null,
+          height: null,
+          viewBox: '0 0 4 3',
+        ),
+        style: sample['s'],
+        containingWidth: 320,
+        containingHeight: 240,
+        cssWidth: true,
+        cssHeight: true,
+      );
+      final size = (viewport.dimensions as ResolvedDimensions).size;
+      expect(size.width, closeTo(vector.$2, 1e-9));
+      expect(size.height, closeTo(vector.$3, 1e-9));
+    });
+  }
   FixedSvgViewport resolve({
     String width = '200',
     String height = '200',

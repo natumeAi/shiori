@@ -9,6 +9,44 @@ const d8TextMaskDilationPixels = 1;
 /// D8 reports text raster parity on the device; it is never a host pass.
 const textRasterParityStatus = 'device-gated (A5)';
 
+/// D9: gradient-painted samples pass at one straight-RGBA channel step.
+const d9GradientSampleMaximumDelta = 1;
+
+/// D10: a pixel changes when its maximum straight-RGBA channel delta is >= 2.
+const d10ChangedPixelMinimumDelta = 2;
+
+enum SpikeSamplePaintClass { solid, gradient }
+
+/// One D4 oracle sample. [classification] and [provenance] come from source and
+/// paint records, never from pixel values.
+final class SpikeSampleRecord {
+  SpikeSampleRecord({
+    required this.x,
+    required this.y,
+    required this.maximumChannelDelta,
+    required this.classification,
+    required this.provenance,
+  }) {
+    if (x < 0 || x >= 320 || y < 0 || y >= 240 || maximumChannelDelta < 0) {
+      throw ArgumentError('Invalid D4 sample record');
+    }
+  }
+  final int x, y, maximumChannelDelta;
+  final SpikeSamplePaintClass classification;
+  final Map<String, Object?> provenance;
+  bool get pass => classification == SpikeSamplePaintClass.gradient
+      ? maximumChannelDelta <= d9GradientSampleMaximumDelta
+      : maximumChannelDelta == 0;
+}
+
+/// D9 classification is source/paint-record based; either side solid wins.
+SpikeSamplePaintClass classifySpikeSamplePaint({
+  required bool nativeIsGradient,
+  required bool referenceIsGradient,
+}) => nativeIsGradient && referenceIsGradient
+    ? SpikeSamplePaintClass.gradient
+    : SpikeSamplePaintClass.solid;
+
 /// D8 text pixels are excluded from the D4 component sub-rule only.
 ///
 /// [pixels] is a viewport-sized mask (1 = text pixel). Masks are built from
@@ -139,12 +177,14 @@ Map<String, Object?> compareSpikePixels(
   Uint8List expected, {
   Map<int, String> exemptScope = const {},
   int maximumSampleDelta = 0,
+  List<SpikeSampleRecord>? samples,
   SpikeTextMask? textMask,
 }) {
   if (actual.length != 320 * 240 * 4 || actual.length != expected.length) {
     throw StateError('PNG viewport mismatch');
   }
   var changed = 0, interior = 0, missing = 0, extra = 0, maxDelta = 0;
+  var deltaOne = 0, subThresholdUnion = 0;
   var outsideEdge = 0, remaining = 0;
   var nativeTextExcluded = 0, referenceTextExcluded = 0;
   final tiles = <String, int>{};
@@ -157,20 +197,36 @@ Map<String, Object?> compareSpikePixels(
     for (var x = 0; x < 320; x++) {
       final index = y * 320 + x;
       final a = _pixel(actual, index), b = _pixel(expected, index);
-      if (!exemptScope.containsKey(index)) {
-        aSupport[index] = a[3] > 0 ? 1 : 0;
-        bSupport[index] = b[3] > 0 ? 1 : 0;
-        final text = textPixels != null && textPixels[index] != 0;
-        final aTopologyPixel = a[3] >= d4ComponentAlphaThreshold;
-        final bTopologyPixel = b[3] >= d4ComponentAlphaThreshold;
-        aTopology[index] = aTopologyPixel && !text ? 1 : 0;
-        bTopology[index] = bTopologyPixel && !text ? 1 : 0;
-        if (text && aTopologyPixel) nativeTextExcluded++;
-        if (text && bTopologyPixel) referenceTextExcluded++;
-      }
       final delta = a[3] == 0 && b[3] == 0 ? 0 : _delta(a, b);
       maxDelta = math.max(maxDelta, delta);
-      if (delta <= 2) continue;
+      if (delta == 1) deltaOne++;
+      final subThreshold = delta < d10ChangedPixelMinimumDelta;
+      if (!exemptScope.containsKey(index)) {
+        final text = textPixels != null && textPixels[index] != 0;
+        if (subThreshold) {
+          // D10: below the changed threshold the pixel is identical evidence
+          // for support and topology, so a 1-step alpha difference can never
+          // move a bound or split/join a component.
+          final support = a[3] > 0 || b[3] > 0;
+          aSupport[index] = bSupport[index] = support ? 1 : 0;
+          final topology =
+              (a[3] >= d4ComponentAlphaThreshold ||
+                  b[3] >= d4ComponentAlphaThreshold) &&
+              !text;
+          aTopology[index] = bTopology[index] = topology ? 1 : 0;
+          if (support) subThresholdUnion++;
+        } else {
+          aSupport[index] = a[3] > 0 ? 1 : 0;
+          bSupport[index] = b[3] > 0 ? 1 : 0;
+          final aTopologyPixel = a[3] >= d4ComponentAlphaThreshold;
+          final bTopologyPixel = b[3] >= d4ComponentAlphaThreshold;
+          aTopology[index] = aTopologyPixel && !text ? 1 : 0;
+          bTopology[index] = bTopologyPixel && !text ? 1 : 0;
+        }
+        if (text && a[3] >= d4ComponentAlphaThreshold) nativeTextExcluded++;
+        if (text && b[3] >= d4ComponentAlphaThreshold) referenceTextExcluded++;
+      }
+      if (subThreshold) continue;
       changed++;
       final detail = <String, Object?>{
         'x': x,
@@ -197,7 +253,10 @@ Map<String, Object?> compareSpikePixels(
           if (xx < 0 || xx >= 320 || yy < 0 || yy >= 240) continue;
           final aa = _pixel(actual, yy * 320 + xx);
           final bb = _pixel(expected, yy * 320 + xx);
-          if (_delta(a, aa) > 2 || _delta(b, bb) > 2) flat = false;
+          if (_delta(a, aa) >= d10ChangedPixelMinimumDelta ||
+              _delta(b, bb) >= d10ChangedPixelMinimumDelta) {
+            flat = false;
+          }
           if ((aa[3] > 0 && aa[3] < 255) || (bb[3] > 0 && bb[3] < 255)) {
             edge = true;
           }
@@ -211,6 +270,56 @@ Map<String, Object?> compareSpikePixels(
   final aComponents = _components(aTopology),
       bComponents = _components(bTopology);
   final pairing = _pairComponents(aComponents, bComponents);
+  final gradientSamples = samples
+      ?.where((s) => s.classification == SpikeSamplePaintClass.gradient)
+      .toList();
+  final solidSamples = samples
+      ?.where((s) => s.classification == SpikeSamplePaintClass.solid)
+      .toList();
+  final sampleReport = samples == null
+      ? <String, Object?>{
+          'pass': maximumSampleDelta == 0,
+          'classification': 'all-solid',
+          'maximumChannelDelta': maximumSampleDelta,
+          'counts': {'gradient': 0, 'solid': 0},
+          'maximumChannelDeltaByClass': {
+            'gradient': 0,
+            'solid': maximumSampleDelta,
+          },
+        }
+      : <String, Object?>{
+          'pass': samples.every((s) => s.pass),
+          'gradientMaximumChannelDelta': d9GradientSampleMaximumDelta,
+          'counts': {
+            'gradient': gradientSamples!.length,
+            'solid': solidSamples!.length,
+          },
+          'maximumChannelDeltaByClass': {
+            'gradient': gradientSamples.fold<int>(
+              0,
+              (m, s) => math.max(m, s.maximumChannelDelta),
+            ),
+            'solid': solidSamples.fold<int>(
+              0,
+              (m, s) => math.max(m, s.maximumChannelDelta),
+            ),
+          },
+          'maximumChannelDelta': samples.fold<int>(
+            0,
+            (m, s) => math.max(m, s.maximumChannelDelta),
+          ),
+          'samples': [
+            for (final sample in samples)
+              {
+                'x': sample.x,
+                'y': sample.y,
+                'maximumChannelDelta': sample.maximumChannelDelta,
+                'classification': sample.classification.name,
+                'pass': sample.pass,
+                'provenance': sample.provenance,
+              },
+          ],
+        };
   final d4 = <String, Object?>{
     'interior': {'pass': interior == 0, 'mismatchPixels': interior},
     'edgeNeighbourhood': {
@@ -241,17 +350,23 @@ Map<String, Object?> compareSpikePixels(
               },
             },
     },
-    'samples': {
-      'pass': maximumSampleDelta == 0,
-      'maximumChannelDelta': maximumSampleDelta,
-    },
+    'samples': sampleReport,
   };
   final pass = d4.values.every((v) => (v as Map)['pass'] == true);
   return {
     'status': pass ? 'pass' : 'fail',
     'pass': pass,
     'd4': d4,
+    'changedPixelMinimumDelta': d10ChangedPixelMinimumDelta,
     'changedPixels': changed,
+    'deltaOnePixels': deltaOne,
+    'subThresholdUnionPixels': subThresholdUnion,
+    'supportComponentThresholdRule':
+        'delta < $d10ChangedPixelMinimumDelta: support uses the union of '
+        'alpha > 0 and component topology uses the union of alpha >= '
+        '$d4ComponentAlphaThreshold on both sides; delta >= '
+        '$d10ChangedPixelMinimumDelta: each image uses its own alpha; D3 '
+        'scopes and the D8 text mask remain excluded',
     'nonExemptChangedPixels': remaining,
     'interiorMismatchPixels': interior,
     'edgeOrGradientMismatchPixels': remaining - interior,

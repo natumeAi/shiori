@@ -111,7 +111,7 @@ final class CssSheetBuilder {
   ) {
     for (final top in topLevels) {
       if (top is RuleSet) {
-        _addRule(top);
+        _addRule(top, basePath);
       } else if (top is FontFaceDirective) {
         _addFontFace(top, basePath);
       } else if (top is ImportDirective) {
@@ -239,8 +239,12 @@ final class CssSheetBuilder {
     return false;
   }
 
-  void _addRule(RuleSet rule) {
-    final declarations = declarationsOf(rule.declarationGroup, sink);
+  void _addRule(RuleSet rule, String basePath) {
+    final declarations = declarationsOf(
+      rule.declarationGroup,
+      sink,
+      basePath: basePath,
+    );
     final selectors = compileSelectorGroup(rule.selectorGroup, sink);
     for (final selector in selectors) {
       rules.add(CssRule(selector, declarations, _order++));
@@ -334,11 +338,15 @@ String _stripFragment(String path) {
 }
 
 /// Longhand declarations of a declaration block, with invalid or unsupported
-/// ones dropped and reported to [sink].
+/// ones dropped and reported to [sink]. When [basePath] is supplied, local
+/// `background-image` URLs are resolved against their declaring stylesheet
+/// (or the document for inline styles), so equal relative URLs from different
+/// stylesheets remain distinct archive targets.
 List<CssDeclaration> declarationsOf(
   DeclarationGroup group,
-  StyleDiagnosticSink? sink,
-) {
+  StyleDiagnosticSink? sink, {
+  String? basePath,
+}) {
   final result = <CssDeclaration>[];
   for (final node in group.declarations) {
     if (node is! Declaration) continue;
@@ -350,13 +358,49 @@ List<CssDeclaration> declarationsOf(
       continue;
     }
     final expanded = expandDeclaration(property, tokens, node.important, sink);
-    if (expanded != null) result.addAll(expanded);
+    if (expanded != null) {
+      result.addAll(_resolveBackgroundUrls(expanded, basePath));
+    }
+  }
+  return result;
+}
+
+List<CssDeclaration> _resolveBackgroundUrls(
+  List<CssDeclaration> declarations,
+  String? basePath,
+) {
+  if (basePath == null) {
+    return declarations;
+  }
+  final result = <CssDeclaration>[];
+  for (final declaration in declarations) {
+    final value = declaration.value;
+    if (declaration.property == 'background-image' &&
+        value is String &&
+        value != 'none' &&
+        !value.startsWith('#') &&
+        !value.startsWith('//') &&
+        !isExternalUrl(value)) {
+      result.add(
+        CssDeclaration(
+          declaration.property,
+          resolveUrl(value, basePath).split('#').first,
+          declaration.important,
+        ),
+      );
+    } else {
+      result.add(declaration);
+    }
   }
   return result;
 }
 
 /// Declarations of an inline `style` attribute value.
-List<CssDeclaration> parseInlineStyle(String text, StyleDiagnosticSink? sink) {
+List<CssDeclaration> parseInlineStyle(
+  String text,
+  StyleDiagnosticSink? sink, {
+  String? basePath,
+}) {
   ReaderWorkGuard.check(ReaderWork.parsing);
   final errors = <css.Message>[];
   StyleSheet sheet;
@@ -370,7 +414,9 @@ List<CssDeclaration> parseInlineStyle(String text, StyleDiagnosticSink? sink) {
     sink?.add(StyleDiagnosticKind.parseError, 'style attribute', errors.length);
   }
   for (final top in sheet.topLevels) {
-    if (top is RuleSet) return declarationsOf(top.declarationGroup, sink);
+    if (top is RuleSet) {
+      return declarationsOf(top.declarationGroup, sink, basePath: basePath);
+    }
   }
   return const [];
 }

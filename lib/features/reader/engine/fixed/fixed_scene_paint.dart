@@ -24,18 +24,7 @@ extension _FixedPaint on FixedSceneBuilder {
     bottomRight: ui.Radius.circular(r.radii[2]),
     bottomLeft: ui.Radius.circular(r.radii[3]),
   );
-  void _withBox(
-    ui.Canvas canvas,
-    FixedBox box,
-    void Function() draw, {
-    bool content = false,
-  }) {
-    canvas.save();
-    final ids = [
-      ...box.clipIds,
-      if (content && box.style.authored.overflow != AuthoredOverflow.visible)
-        'box-${box.nodeIndex}',
-    ];
+  void _applyClips(ui.Canvas canvas, List<String> ids) {
     for (final id in ids) {
       final clip = _clips.firstWhere((c) => c.id == id),
           t = clip.region.transform;
@@ -45,6 +34,20 @@ extension _FixedPaint on FixedSceneBuilder {
       canvas.clipRRect(_round(clip.region));
       canvas.transform(_matrix(inverse.transform));
     }
+  }
+
+  void _withBox(
+    ui.Canvas canvas,
+    FixedBox box,
+    void Function() draw, {
+    bool content = false,
+  }) {
+    canvas.save();
+    _applyClips(canvas, [
+      ...box.clipIds,
+      if (content && box.style.authored.overflow != AuthoredOverflow.visible)
+        'box-${box.nodeIndex}',
+    ]);
     canvas.transform(_matrix(box.transform));
     draw();
     canvas.restore();
@@ -126,10 +129,47 @@ extension _FixedPaint on FixedSceneBuilder {
     _paintGroups.removeLast();
   }
 
+  void _advanceSvgOrdinal(FixedBox box) {
+    final scene = box.svgScene;
+    if (scene == null) return;
+    // SVG ordinals also count non-painting containers. Advance past every
+    // consumed ordinal so following XHTML paint stays unique and later.
+    var maximumSvgOrdinal = 0;
+    for (final fragment in scene.geometry.fragments) {
+      maximumSvgOrdinal = math.max(maximumSvgOrdinal, fragment.paintOrdinal);
+    }
+    for (final paint in scene.geometry.paint) {
+      maximumSvgOrdinal = math.max(maximumSvgOrdinal, paint.paintOrdinal);
+    }
+    for (final element in scene.elements) {
+      maximumSvgOrdinal = math.max(maximumSvgOrdinal, element.paintOrdinal);
+    }
+    _ordinal = math.max(_ordinal, box.paintOrdinal + maximumSvgOrdinal + 1);
+  }
+
   void _background(ui.Canvas canvas, FixedBox box) {
     if (!box.hasVisibleTransform) return;
     box.paintOrdinal = _ordinal++;
-    if (box.style.authored.visibility != AuthoredVisibility.visible) return;
+    if (box.style.authored.visibility != AuthoredVisibility.visible) {
+      _advanceSvgOrdinal(box);
+      return;
+    }
+    if (box.svgScene case final scene?) {
+      box.svgPaintGroups = List.unmodifiable(_paintGroups);
+      final picture = scene.picture;
+      if (picture == null) {
+        _advanceSvgOrdinal(box);
+        return;
+      }
+      // The SVG scene's placement already includes box.transform; apply only
+      // the unit-space clips, never the box transform again.
+      canvas.save();
+      _applyClips(canvas, box.clipIds);
+      canvas.drawPicture(picture);
+      canvas.restore();
+      _advanceSvgOrdinal(box);
+      return;
+    }
     if (box.svgFill case final int color) {
       _withBox(
         canvas,
@@ -160,163 +200,194 @@ extension _FixedPaint on FixedSceneBuilder {
         a = s.authored,
         r = box.borderBox,
         region = _region(box, r);
-    _withBox(canvas, box, () {
-      final color = s.backgroundColor;
-      if (color != null) {
-        canvas.drawRRect(_round(region), ui.Paint()..color = ui.Color(color));
-        _paint.add(
-          GeometryPaint(
-            nodeIndex: box.nodeIndex,
-            paintOrdinal: _ordinal++,
-            region: region,
-            kind: GeometryPaintKind.solid,
-            effectiveOpacity: box.effectiveOpacity,
-            exactCoverage: true,
-            argb: color,
-            clipIds: box.clipIds,
-          ),
-        );
-      }
-      final imagePath = a.backgroundImage;
-      if (imagePath != null) {
-        final image = backgroundImages[imagePath];
-        if (image == null) {
-          _reject(box.nodeIndex, 'background-resource-missing');
-        } else {
-          canvas.save();
-          canvas.clipRRect(_round(region));
-          final origin = ui.Rect.fromLTRB(
-            r.left + (a.borderWidth('left').resolve(r.width) ?? 0),
-            r.top + (a.borderWidth('top').resolve(r.width) ?? 0),
-            r.right - (a.borderWidth('right').resolve(r.width) ?? 0),
-            r.bottom - (a.borderWidth('bottom').resolve(r.width) ?? 0),
-          );
-          var w = image.width.toDouble(), h = image.height.toDouble();
-          final bs = a.backgroundSize;
-          if (bs is String) {
-            final scale = bs == 'cover'
-                ? math.max(origin.width / w, origin.height / h)
-                : math.min(origin.width / w, origin.height / h);
-            w *= scale;
-            h *= scale;
-          } else {
-            final lengths = bs as List<StyleLength>,
-                rw = lengths[0].resolve(origin.width),
-                rh = lengths[1].resolve(origin.height);
-            if (rw != null) {
-              w = rw;
-              h = rh ?? w * image.height / image.width;
-            } else if (rh != null) {
-              h = rh;
-              w = h * image.width / image.height;
-            }
+    void drawBackground(
+      ui.Canvas canvas,
+      Map<String, ui.Image> imageSources, {
+      required bool recordPaint,
+    }) {
+      _withBox(canvas, box, () {
+        final color = s.backgroundColor;
+        if (color != null) {
+          canvas.drawRRect(_round(region), ui.Paint()..color = ui.Color(color));
+          if (recordPaint) {
+            _paint.add(
+              GeometryPaint(
+                nodeIndex: box.nodeIndex,
+                paintOrdinal: _ordinal++,
+                region: region,
+                kind: GeometryPaintKind.solid,
+                effectiveOpacity: box.effectiveOpacity,
+                exactCoverage: true,
+                argb: color,
+                clipIds: box.clipIds,
+              ),
+            );
           }
-          if (w > 0 && h > 0 && w.isFinite && h.isFinite) {
-            final pos = a.backgroundPosition;
-            double p(StyleLength l, double space) => l.resolve(space) ?? 0;
-            final x = origin.left + p(pos[0], origin.width - w),
-                y = origin.top + p(pos[1], origin.height - h);
-            final rx = const {
-                  BackgroundRepeat.repeat,
-                  BackgroundRepeat.repeatX,
-                }.contains(a.backgroundRepeat),
-                ry = const {
-                  BackgroundRepeat.repeat,
-                  BackgroundRepeat.repeatY,
-                }.contains(a.backgroundRepeat);
-            final firstX = rx ? x - ((x - r.left) / w).ceil() * w : x,
-                firstY = ry ? y - ((y - r.top) / h).ceil() * h : y;
-            final countX = rx ? ((r.right - firstX) / w).ceil() : 1,
-                countY = ry ? ((r.bottom - firstY) / h).ceil() : 1;
-            if (countX * countY > 16384) {
-              _reject(box.nodeIndex, 'background-repeat-limit');
+        }
+        final imagePath = a.backgroundImage == null
+            ? null
+            : fixedCssImageKey(document, a.backgroundImage!);
+        if (imagePath != null) {
+          final image = imageSources[imagePath];
+          if (image == null) {
+            _reject(box.nodeIndex, 'background-resource-missing');
+          } else {
+            canvas.save();
+            canvas.clipRRect(_round(region));
+            final origin = ui.Rect.fromLTRB(
+              r.left + (a.borderWidth('left').resolve(r.width) ?? 0),
+              r.top + (a.borderWidth('top').resolve(r.width) ?? 0),
+              r.right - (a.borderWidth('right').resolve(r.width) ?? 0),
+              r.bottom - (a.borderWidth('bottom').resolve(r.width) ?? 0),
+            );
+            final intrinsic =
+                intrinsicImageSizes[imagePath] ??
+                ui.Size(image.width.toDouble(), image.height.toDouble());
+            var w = intrinsic.width, h = intrinsic.height;
+            final bs = a.backgroundSize;
+            if (bs is String) {
+              final scale = bs == 'cover'
+                  ? math.max(origin.width / w, origin.height / h)
+                  : math.min(origin.width / w, origin.height / h);
+              w *= scale;
+              h *= scale;
             } else {
-              for (var iy = 0; iy < countY; iy++) {
-                for (var ix = 0; ix < countX; ix++) {
-                  canvas.drawImageRect(
-                    image,
-                    ui.Rect.fromLTWH(
-                      0,
-                      0,
-                      image.width.toDouble(),
-                      image.height.toDouble(),
-                    ),
-                    ui.Rect.fromLTWH(firstX + ix * w, firstY + iy * h, w, h),
-                    ui.Paint()..filterQuality = ui.FilterQuality.none,
-                  );
+              final lengths = bs as List<StyleLength>,
+                  rw = lengths[0].resolve(origin.width),
+                  rh = lengths[1].resolve(origin.height);
+              if (rw != null) {
+                w = rw;
+                h = rh ?? w * intrinsic.height / intrinsic.width;
+              } else if (rh != null) {
+                h = rh;
+                w = h * intrinsic.width / intrinsic.height;
+              }
+            }
+            if (w > 0 && h > 0 && w.isFinite && h.isFinite) {
+              final pos = a.backgroundPosition;
+              double p(StyleLength l, double space) => l.resolve(space) ?? 0;
+              final x = origin.left + p(pos[0], origin.width - w),
+                  y = origin.top + p(pos[1], origin.height - h);
+              final rx = const {
+                    BackgroundRepeat.repeat,
+                    BackgroundRepeat.repeatX,
+                  }.contains(a.backgroundRepeat),
+                  ry = const {
+                    BackgroundRepeat.repeat,
+                    BackgroundRepeat.repeatY,
+                  }.contains(a.backgroundRepeat);
+              final firstX = rx ? x - ((x - r.left) / w).ceil() * w : x,
+                  firstY = ry ? y - ((y - r.top) / h).ceil() * h : y;
+              final countX = rx ? ((r.right - firstX) / w).ceil() : 1,
+                  countY = ry ? ((r.bottom - firstY) / h).ceil() : 1;
+              if (countX * countY > 16384) {
+                _reject(box.nodeIndex, 'background-repeat-limit');
+              } else {
+                for (var iy = 0; iy < countY; iy++) {
+                  for (var ix = 0; ix < countX; ix++) {
+                    canvas.drawImageRect(
+                      image,
+                      ui.Rect.fromLTWH(
+                        0,
+                        0,
+                        image.width.toDouble(),
+                        image.height.toDouble(),
+                      ),
+                      ui.Rect.fromLTWH(firstX + ix * w, firstY + iy * h, w, h),
+                      ui.Paint()..filterQuality = ui.FilterQuality.none,
+                    );
+                  }
                 }
               }
             }
+            canvas.restore();
+            if (recordPaint) {
+              _paint.add(
+                GeometryPaint(
+                  nodeIndex: box.nodeIndex,
+                  paintOrdinal: _ordinal++,
+                  region: region,
+                  kind: GeometryPaintKind.image,
+                  effectiveOpacity: box.effectiveOpacity,
+                  exactCoverage: false,
+                  clipIds: box.clipIds,
+                ),
+              );
+            }
+          }
+        }
+        final widths = [
+          for (final edge in ['top', 'right', 'bottom', 'left'])
+            a.borderStyle(edge) == 'solid'
+                ? a.borderWidth(edge).resolve(r.width) ?? 0
+                : 0.0,
+        ];
+        if (widths.any((w) => w > 0)) {
+          final inner = ui.Rect.fromLTRB(
+            r.left + widths[3],
+            r.top + widths[0],
+            r.right - widths[1],
+            r.bottom - widths[2],
+          );
+          final outerRound = _round(region),
+              innerRound = outerRound.deflate(widths.reduce(math.min));
+          final ring = ui.Path()
+            ..fillType = ui.PathFillType.evenOdd
+            ..addRRect(outerRound)
+            ..addRRect(innerRound);
+          canvas.save();
+          canvas.clipPath(ring);
+          final polygons = [
+            [r.topLeft, r.topRight, inner.topRight, inner.topLeft],
+            [r.topRight, r.bottomRight, inner.bottomRight, inner.topRight],
+            [r.bottomRight, r.bottomLeft, inner.bottomLeft, inner.bottomRight],
+            [r.bottomLeft, r.topLeft, inner.topLeft, inner.bottomLeft],
+          ];
+          for (var i = 0; i < 4; i++) {
+            if (widths[i] == 0) continue;
+            final points = polygons[i],
+                path = ui.Path()..addPolygon(points, true),
+                color = a.borderColor(
+                  ['top', 'right', 'bottom', 'left'][i],
+                  s.color,
+                );
+            canvas.drawPath(path, ui.Paint()..color = ui.Color(color));
           }
           canvas.restore();
-          _paint.add(
-            GeometryPaint(
-              nodeIndex: box.nodeIndex,
-              paintOrdinal: _ordinal++,
-              region: region,
-              kind: GeometryPaintKind.image,
-              effectiveOpacity: box.effectiveOpacity,
-              exactCoverage: false,
-              clipIds: box.clipIds,
-            ),
-          );
+          if (recordPaint) {
+            _paint.add(
+              GeometryPaint(
+                nodeIndex: box.nodeIndex,
+                paintOrdinal: _ordinal++,
+                region: region,
+                innerRegion: _region(box, inner),
+                kind: GeometryPaintKind.border,
+                effectiveOpacity: box.effectiveOpacity,
+                exactCoverage: widths.toSet().length == 1,
+                argb: a.borderColor('top', s.color),
+                clipIds: box.clipIds,
+              ),
+            );
+          }
         }
-      }
-      final widths = [
-        for (final edge in ['top', 'right', 'bottom', 'left'])
-          a.borderStyle(edge) == 'solid'
-              ? a.borderWidth(edge).resolve(r.width) ?? 0
-              : 0.0,
-      ];
-      if (widths.any((w) => w > 0)) {
-        final inner = ui.Rect.fromLTRB(
-          r.left + widths[3],
-          r.top + widths[0],
-          r.right - widths[1],
-          r.bottom - widths[2],
-        );
-        final outerRound = _round(region),
-            innerRound = outerRound.deflate(widths.reduce(math.min));
-        final ring = ui.Path()
-          ..fillType = ui.PathFillType.evenOdd
-          ..addRRect(outerRound)
-          ..addRRect(innerRound);
-        canvas.save();
-        canvas.clipPath(ring);
-        final polygons = [
-          [r.topLeft, r.topRight, inner.topRight, inner.topLeft],
-          [r.topRight, r.bottomRight, inner.bottomRight, inner.topRight],
-          [r.bottomRight, r.bottomLeft, inner.bottomLeft, inner.bottomRight],
-          [r.bottomLeft, r.topLeft, inner.topLeft, inner.bottomLeft],
-        ];
-        for (var i = 0; i < 4; i++) {
-          if (widths[i] == 0) continue;
-          final points = polygons[i],
-              path = ui.Path()..addPolygon(points, true),
-              color = a.borderColor(
-                ['top', 'right', 'bottom', 'left'][i],
-                s.color,
-              );
-          canvas.drawPath(path, ui.Paint()..color = ui.Color(color));
-        }
-        canvas.restore();
-        _paint.add(
-          GeometryPaint(
-            nodeIndex: box.nodeIndex,
-            paintOrdinal: _ordinal++,
-            region: region,
-            innerRegion: _region(box, inner),
-            kind: GeometryPaintKind.border,
-            effectiveOpacity: box.effectiveOpacity,
-            exactCoverage: widths.toSet().length == 1,
-            argb: a.borderColor('top', s.color),
-            clipIds: box.clipIds,
-          ),
-        );
-      }
-    });
-    final picture = recorder.endRecording();
+      });
+    }
+
+    drawBackground(canvas, backgroundImages, recordPaint: true);
+    var picture = recorder.endRecording();
     target.drawPicture(picture);
+    if (a.backgroundImage != null &&
+        evidenceImages.containsKey(
+          fixedCssImageKey(document, a.backgroundImage!),
+        )) {
+      picture.dispose();
+      final evidenceRecorder = ui.PictureRecorder();
+      drawBackground(ui.Canvas(evidenceRecorder), {
+        ...backgroundImages,
+        ...evidenceImages,
+      }, recordPaint: false);
+      picture = evidenceRecorder.endRecording();
+    }
     if (_paint.length > firstPaint) {
       final first = _paint[firstPaint];
       _paint.removeRange(firstPaint, _paint.length);
@@ -336,6 +407,46 @@ extension _FixedPaint on FixedSceneBuilder {
     } else {
       picture.dispose();
     }
+    if (box.imagePath != null) _replacedImage(target, box);
+  }
+
+  void _replacedImage(ui.Canvas canvas, FixedBox box) {
+    final path = box.imagePath, display = backgroundImages[box.imagePath];
+    if (display == null) return; // Layout records the typed refusal.
+    void draw(ui.Canvas target, ui.Image image) {
+      _withBox(
+        target,
+        box,
+        () => target.drawImageRect(
+          image,
+          ui.Rect.fromLTWH(
+            0,
+            0,
+            image.width.toDouble(),
+            image.height.toDouble(),
+          ),
+          box.contentBox,
+          ui.Paint()..filterQuality = ui.FilterQuality.low,
+        ),
+      );
+    }
+
+    draw(canvas, display);
+    final recorder = ui.PictureRecorder();
+    draw(ui.Canvas(recorder), evidenceImages[path] ?? display);
+    _paint.add(
+      GeometryPaint(
+        nodeIndex: box.nodeIndex,
+        paintOrdinal: _ordinal++,
+        region: _region(box, box.contentBox),
+        kind: GeometryPaintKind.image,
+        effectiveOpacity: box.effectiveOpacity,
+        exactCoverage: false,
+        clipIds: box.clipIds,
+        groupIds: _paintGroups,
+      ),
+    );
+    _coveragePictures.add((_paint.length - 1, recorder.endRecording()));
   }
 
   FontDecorationMetrics? _fixedDecorationMetrics(TextBlock block) {
@@ -521,7 +632,9 @@ extension _FixedPaint on FixedSceneBuilder {
 
   void _text(ui.Canvas canvas, FixedText text) {
     if (!text.owner.hasVisibleTransform) return;
+    _inlineBackgrounds(canvas, text);
     text.paintOrdinal = _ordinal++;
+    if (text.block.runs.every((r) => r.placeholderWidth != null)) return;
     final recorder = ui.PictureRecorder(), coverage = ui.Canvas(recorder);
     _withBox(coverage, text.owner, () {
       final metrics = _fixedDecorationMetrics(text.block);

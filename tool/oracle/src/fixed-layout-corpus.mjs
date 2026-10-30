@@ -106,8 +106,8 @@ for (const [row, features, body, css, criterion] of rows) {
     if(row==='filters' && variant==='boundary') content=content.replace('color-interpolation-filters="sRGB"','color-interpolation-filters="linearRGB"').replace('stdDeviation="3"','stdDeviation="0"');
     if(row==='filters' && variant==='nested') content=content.replace('color-interpolation-filters="sRGB"','color-interpolation-filters="linearRGB"');
     if(row==='dimensions' && variant==='nested') content=content.replace('viewBox="0 0 320 240"','viewBox="20 30 320 240"').replace('xMidYMid meet','xMinYMax slice');
-    // Relative root dimensions require a containing viewport, outside the
-    // admitted absolute authored-page dimensions profile.
+    // Keep the valid containing-block SVG sizes; the unsupported page viewport
+    // below is device-relative rather than EPUB's authored CSS-pixel size.
     if(row==='dimensions' && unsupported) content=content.replace('width="320" height="240"','width="50%" height="75%"');
     if(row==='box' && variant==='positive') content+='<div data-source="fixed-box" style="position:fixed;right:2px;bottom:2px;display:block;padding:1px"><span style="position:relative;left:2px;display:inline">nested flow</span></div>';
     // Existing row/variant, dedicated to platform fallback. Host evidence only
@@ -120,7 +120,8 @@ for (const [row, features, body, css, criterion] of rows) {
     }
     if(row==='filters' && unsupported) content=content.replace('<feGaussianBlur','<feTurbulence baseFrequency=".05"/><feGaussianBlur');
     if(row==='foreign-object' && unsupported) content=content.replace('</div>','<script>throw new Error("must never execute")</script><form><input value="inert"/></form></div>');
-    const viewport = row === 'dimensions' && variant === 'boundary' ? 'width=0,height=NaN' : 'width=320,height=240';
+    const viewport = row === 'dimensions' && unsupported ? 'width=device-width,height=240'
+      : row === 'dimensions' && variant === 'boundary' ? 'width=0,height=NaN' : 'width=320,height=240';
     const source = `<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><head><meta name="viewport" content="${viewport}"/><link rel="stylesheet" href="/linked.css"/><style>@import url('/imported.css');@font-face{font-family:Fixture;src:url('/font.ttf') format('truetype')}html,body{margin:0;width:320px;height:240px}body{font:20px Fixture}${css}${extra}</style></head><body>${content}</body></html>\n`;
     const sequence = row === 'mixed-navigation' ? [
       {layout:'reflowable', linear:true}, {layout:'pre-paginated',side:'center',linear:true},

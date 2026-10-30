@@ -5,12 +5,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shiori/core/config/book_key.dart';
 import 'package:shiori/core/config/env.dart';
 import 'package:shiori/core/diagnostics/diagnostic_recorder.dart';
 import 'package:shiori/core/diagnostics/probe_declarations.dart';
 import 'package:shiori/core/diagnostics/scheduler_frame_source.dart';
 import 'package:shiori/core/diagnostics/system_probe_clock.dart';
 import 'package:shiori/core/errors/app_exception.dart';
+import 'package:shiori/core/network/request_cancelled.dart';
 import 'package:shiori/core/storage/app_directories.dart';
 import 'package:shiori/features/diagnostics/data/method_channel_presentation_probe.dart';
 import 'package:shiori/features/diagnostics/data/presentation_probe.dart';
@@ -22,10 +24,16 @@ import 'package:shiori/features/diagnostics/data/reader_probe_recorder.dart';
 import 'package:shiori/features/diagnostics/presentation/reader_probe/reader_probe_controller.dart';
 import 'package:shiori/features/diagnostics/presentation/reader_probe/reader_probe_controls.dart';
 import 'package:shiori/features/diagnostics/presentation/reader_probe/reader_scenario_runner.dart';
+import 'package:shiori/features/library/data/publications/prepare_book_exception.dart';
+import 'package:shiori/features/library/data/publications/prepare_book_service.dart';
+import 'package:shiori/features/reader/engine/fixed/fixed_section_preparer.dart';
 import 'package:shiori/features/reader/engine/support/unsupported_layout.dart';
 import 'package:shiori/features/reader/data/epub/epub_book.dart';
 import 'package:shiori/features/reader/engine/motion/turn_clock.dart';
 import 'package:shiori/features/reader/engine/surface/prepared_reader.dart';
+import 'package:shiori/features/reader/engine/surface/publication_fixed_composition.dart';
+import 'package:shiori/features/reader/engine/surface/reflow_section_cache.dart';
+import 'package:shiori/features/servers/presentation/server_activation_controller.dart';
 import 'package:shiori/l10n/l10n.dart';
 
 part 'package:shiori/features/diagnostics/presentation/reader_probe/reader_probe_capture.dart';
@@ -37,18 +45,26 @@ class ReaderProbeScreen extends ConsumerStatefulWidget {
     this.exports,
     this.recorder,
     this.openBook,
+    this.prepareBook,
+    this.bookKey,
     this.clockFactory,
   });
   final ProbeBookRepository? books;
   final ReaderExportRepository? exports;
   final ReaderProbeRecorder? recorder;
   final Future<EpubBook> Function(Uint8List)? openBook;
+  final Future<ReaderProbePreparation?> Function(ProbeBook)? prepareBook;
+
+  /// Maps a server-backed inventory entry to its publication key. Null keeps
+  /// the local asset/Documents path.
+  final BookKey? Function(ProbeBook)? bookKey;
   final TurnClock Function()? clockFactory;
   @override
   ConsumerState<ReaderProbeScreen> createState() => _ReaderProbeScreenState();
 }
 
-class _ReaderProbeScreenState extends ConsumerState<ReaderProbeScreen> {
+class _ReaderProbeScreenState extends ConsumerState<ReaderProbeScreen>
+    with WidgetsBindingObserver {
   final _scaffold = GlobalKey<ScaffoldState>();
   final _viewport = GlobalKey();
   final _model = TextEditingController();
@@ -67,9 +83,12 @@ class _ReaderProbeScreenState extends ConsumerState<ReaderProbeScreen> {
   String? _error, _exportPath;
   PresentationMode _mode = PresentationMode.a1;
   int _captureGeneration = 0;
+  bool _viewportUpdateScheduled = false;
+  int _pendingActions = 0;
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final directories = ref.read(appDirectoriesProvider);
     _books = widget.books ?? ProbeBookRepository(directories);
     _exports = widget.exports ?? ReaderExportRepository(directories);
@@ -113,16 +132,87 @@ class _ReaderProbeScreenState extends ConsumerState<ReaderProbeScreen> {
     _reader.dpr = View.of(context).devicePixelRatio;
   }
 
-  Future<void> _open(ProbeBook book) async {
+  @override
+  void didChangeMetrics() {
+    if (_viewportUpdateScheduled) return;
+    _viewportUpdateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _viewportUpdateScheduled = false;
+      if (!mounted) return;
+      final oldWidth = _reader.width,
+          oldHeight = _reader.height,
+          oldDpr = _reader.dpr;
+      _measure();
+      if ((_reader.session != null || _reader.canReplacePublication) &&
+          (oldWidth != _reader.width ||
+              oldHeight != _reader.height ||
+              oldDpr != _reader.dpr)) {
+        unawaited(_action(() => _reader.reflow(_reader.settings)));
+      }
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  Future<bool> _open(ProbeBook book) async {
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
       _measure();
-      await _reader.open(book);
-      if (!mounted) return;
+      await _reader.releasePublication();
+      if (!mounted) return false;
+      final preparation = await (widget.prepareBook ?? _prepareFromServer)(
+        book,
+      );
+      if (preparation != null) {
+        try {
+          final opened = await _reader.openPublication(
+            captureIdentity: book,
+            book: preparation.book,
+            activation: preparation.session,
+            isCurrent: preparation.service.guard.isCurrent,
+            acquireLease: () async =>
+                (await preparation.service.cache()).acquireHead(
+                  preparation.session,
+                  preparation.book.identity.bookKey,
+                ),
+            queue: preparation.service.queue,
+            worker: preparation.service.worker.get,
+          );
+          if (opened) {
+            if (!mounted) return false;
+            setState(() => _choosing = false);
+            return true;
+          }
+          // A fixed candidate can return false when canceled or superseded.
+          // Only a publication classified as reflow-only uses the fallback.
+          if (!mounted || hasFixedSections(preparation.book.layoutFacts)) {
+            return false;
+          }
+          // Reflow-only publication: keep the existing reflow probe path, but
+          // read the prepared immutable generation rather than downloading
+          // again.
+          final cached = ProbeBook(
+            sha256: preparation.book.identity.sha256,
+            read: () => File(preparation.book.lease.local.path).readAsBytes(),
+          );
+          await _reader.open(cached);
+        } finally {
+          preparation.book.release();
+        }
+      } else {
+        await _reader.open(book);
+      }
+      if (!mounted) return false;
       setState(() => _choosing = false);
+      return true;
+    } on RequestCancelled {
+      // A retired session is silent; the chooser stays available.
+    } on FixedPreparationFailure {
+      if (mounted) setState(() => _error = context.l10n.readerUnsupported);
+    } on PrepareBookException {
+      if (mounted) setState(() => _error = context.l10n.readerFailure);
     } on UnsupportedLayoutException {
       if (mounted) setState(() => _error = context.l10n.readerUnsupported);
     } on AppException {
@@ -130,19 +220,35 @@ class _ReaderProbeScreenState extends ConsumerState<ReaderProbeScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+    return false;
+  }
+
+  Future<ReaderProbePreparation?> _prepareFromServer(ProbeBook book) async {
+    final key = widget.bookKey?.call(book);
+    if (key == null) return null;
+    final session = ref.read(serverActivationControllerProvider).value?.session;
+    if (session == null) return null;
+    final service = ref.read(prepareBookServiceProvider(session));
+    return prepareProbeBook(key: key, session: session, service: service);
   }
 
   Future<void> _action(Future<void> Function() action) async {
+    ++_pendingActions;
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
       await action();
+    } on FixedPreparationFailure {
+      if (mounted) setState(() => _error = context.l10n.readerUnsupported);
+    } on UnsupportedLayoutException {
+      if (mounted) setState(() => _error = context.l10n.readerUnsupported);
     } on AppException {
       if (mounted) setState(() => _error = context.l10n.readerFailure);
     } finally {
-      if (mounted) setState(() => _busy = false);
+      --_pendingActions;
+      if (mounted) setState(() => _busy = _pendingActions != 0);
     }
   }
 
@@ -165,7 +271,10 @@ class _ReaderProbeScreenState extends ConsumerState<ReaderProbeScreen> {
       onManual: (v) => setState(() => _manual = v),
       onDeclarations: (v) => setState(() => _declarations = v),
       onMode: (v) => setState(() => _mode = v),
-      onSettings: (v) => _action(() => _reader.reflow(v)),
+      onSettings: (v) => _action(() async {
+        _measure();
+        await _reader.reflow(v);
+      }),
       onReducedMotion: (v) => setState(() {
         _reader.reducedMotion = v;
         _reader.turn?.configure(reducedMotion: v);
@@ -316,6 +425,7 @@ class _ReaderProbeScreenState extends ConsumerState<ReaderProbeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     ++_captureGeneration;
     _runner?.cancel();
     _reader.removeListener(_changed);

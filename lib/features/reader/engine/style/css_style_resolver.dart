@@ -118,7 +118,14 @@ final class CssStyleResolver implements StyleResolver {
       for (final rule in override.rules) _Entry(rule),
     ];
     final index = _RuleIndex(entries);
-    final computed = _Computer(document, tree, index, sink, fixed: fixed).run();
+    final computed = _Computer(
+      document,
+      tree,
+      index,
+      sink,
+      sectionPath: item.href,
+      fixed: fixed,
+    ).run();
 
     final faces = _resolveFontFaces(book, author.fontFaces, sink);
     final root = document.bodyIndex ?? document.documentElementIndex;
@@ -370,10 +377,12 @@ final class _Computer {
     this.tree,
     this.index,
     this.sink, {
+    required this.sectionPath,
     this.fixed = false,
   });
 
   final bool fixed;
+  final String sectionPath;
 
   final SourceDocument document;
   final StyleTree tree;
@@ -446,7 +455,7 @@ final class _Computer {
     if (inlineStyle != null && inlineStyle.trim().isNotEmpty) {
       final declarations = _inlineCache.putIfAbsent(
         inlineStyle,
-        () => parseInlineStyle(inlineStyle, sink),
+        () => parseInlineStyle(inlineStyle, sink, basePath: sectionPath),
       );
       for (final declaration in declarations) {
         candidates.add(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:shiori/features/reader/data/layout/reading_unit.dart';
 import 'package:shiori/features/reader/data/layout/reading_unit_navigator.dart';
 import 'package:shiori/features/reader/data/layout/reading_unit_section.dart';
@@ -9,7 +11,7 @@ import 'package:shiori/features/reader/data/source/source_position.dart';
 import 'package:shiori/features/reader/engine/pagination/reading_unit_composer.dart';
 
 /// Adapt PageAnchors.locate(position)?.pageIndex for prepared reflow sections.
-typedef ReflowUnitLocator = int? Function(
+typedef ReflowUnitLocator = FutureOr<int?> Function(
   SourcePageId page,
   SourcePosition position,
 );
@@ -117,7 +119,7 @@ final class ComposedReadingUnitNavigator implements ReadingUnitNavigator {
     if (units[indices.first].kind != ReadingUnitKind.reflowPage) {
       return LocatedReadingUnit(_activate(indices.single, page));
     }
-    final pageIndex = locateReflow?.call(page, position);
+    final pageIndex = await locateReflow?.call(page, position);
     if (pageIndex == null || pageIndex < 0 || pageIndex >= indices.length) {
       return UnavailableReadingUnit(
         'Source position has no laid-out reflow page',

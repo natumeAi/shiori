@@ -11,6 +11,8 @@ import 'package:shiori/features/reader/engine/fixed/fixed_preparation_plan.dart'
 import 'package:shiori/features/reader/engine/fixed/fixed_scene.dart';
 import 'package:shiori/features/reader/engine/fixed/fixed_scene_admission.dart';
 import 'package:shiori/features/reader/engine/fixed/fixed_source_lease.dart';
+import 'package:shiori/features/reader/engine/fixed/fixed_svg_text_fonts.dart';
+import 'package:shiori/features/reader/engine/fixed/svg/svg_graphics.dart';
 import 'package:shiori/features/reader/engine/layout/font_mapping.dart';
 import 'package:shiori/features/reader/engine/layout/font_registry.dart';
 import 'package:shiori/features/reader/engine/layout/paragraph_factory.dart';
@@ -25,13 +27,28 @@ final class FixedPreparationFailure implements Exception {
 
 /// Only this result can publish. Failed/partial scenes are disposed internally.
 final class PreparedFixedScene {
-  PreparedFixedScene._(this.plan, this.scene, this._images, this._admission);
+  PreparedFixedScene._(
+    this.plan,
+    this.scene,
+    this._images,
+    this._admission,
+    Map<String, bool> imageOpacity,
+  ) : imageOpacity = Map.unmodifiable(imageOpacity);
   final FixedPreparationPlan plan;
   final FixedScene scene;
   final List<FixedImageLease> _images;
   final FixedSceneAdmission _admission;
-  bool _disposed = false;
+
+  /// Proven from every decoded alpha sample, for the later display generation.
+  final Map<String, bool> imageOpacity;
+  bool _disposed = false, _placed = false;
   SourceGeometry get geometry => scene.geometry;
+
+  /// Evidence the unit ledger holds for this scene after reconciliation.
+  RetainedEvidence get retainedEvidence => _admission.evidence!;
+
+  /// Vector bytes returned to the unit ledger when this scene published.
+  int get evidenceReleased => _admission.evidenceReleased;
 
   /// Companion to drawing scene.picture under the same slot matrix once.
   /// A3 caches this prepared value; motion/proof must not reapply the slot.
@@ -42,24 +59,44 @@ final class PreparedFixedScene {
   }) {
     ReaderWorkGuard.check(ReaderWork.surfacePreparation);
     if (_disposed) throw StateError('Fixed scene disposed');
-    return placeSourceGeometry(
+    // Reject before placeSourceGeometry can allocate any further wrappers.
+    if (_placed) throw StateError('Placed evidence is charged once');
+    // Invalid input is refused first and creates nothing.
+    final placed = placeSourceGeometry(
       geometry,
       sourceToUnit,
       registryPrefix: registryPrefix,
       paintOrdinalOffset: paintOrdinalOffset,
     );
+    // Placement creates footprint wrappers; the ledger charged exactly one set
+    // when the evidence was reconciled, so a second placement is a defect.
+    _placed = true;
+    return placed;
   }
 
   void dispose() {
     ReaderWorkGuard.check(ReaderWork.surfacePreparation);
     if (_disposed) return;
     _disposed = true;
-    scene.dispose();
-    for (final image in _images) {
-      image.dispose();
+    Object? error;
+    StackTrace? stack;
+    void release(void Function() action) {
+      try {
+        action();
+      } catch (cause, trace) {
+        error ??= cause;
+        stack ??= trace;
+      }
     }
-    plan.source.dispose();
-    _admission.dispose();
+
+    release(scene.dispose);
+    for (final image in _images) {
+      release(image.dispose);
+    }
+    release(plan.source.dispose);
+    release(_admission.dispose);
+    final cause = error;
+    if (cause != null) Error.throwWithStackTrace(cause, stack!);
   }
 }
 
@@ -71,12 +108,33 @@ final class FixedSectionPreparer {
     required this.fonts,
     required this.drainFonts,
     this.selectFace,
+    this.sceneBudget,
+    this.svgFeatureHost = const SvgFeatureHost.unavailable(),
   });
   final FontRegistry fonts;
   final Future<void> Function() drainFonts;
   final ResolvedFontFamilies Function(ParagraphFontRequest)? selectFace;
-  FixedPreparationPlan plan(FixedSourceLease source) =>
-      FixedPreparationPlan.inspect(source);
+
+  /// Optional host override. Planning supplies the section-bound text service
+  /// when no text override is available; physical fonts still belong to A3.
+  final SvgFeatureHost svgFeatureHost;
+
+  /// Test/owner injection for the local sub-ledger; production uses a fresh
+  /// ledger limited by the already-reserved plan.
+  final SceneResourceBudget? sceneBudget;
+  FixedPreparationPlan plan(
+    FixedSourceLease source, {
+    FixedPreparationScale scale = const FixedPreparationScale.authored(),
+  }) => FixedPreparationPlan.inspect(
+    source,
+    scale: scale,
+    svgFeatureHost: SvgFeatureHost(
+      foreignObject: svgFeatureHost.foreignObject,
+      text: svgFeatureHost.text.available
+          ? svgFeatureHost.text
+          : FixedSvgTextFontService(source, fonts),
+    ),
+  );
 
   FixedPreparationOperation prepare(
     FixedPreparationPlan plan,
@@ -128,6 +186,7 @@ final class FixedPreparationOperation {
   Future<void> _run() async {
     FixedScene? scene;
     final images = <FixedImageLease>[];
+    final evidenceImages = <FixedImageLease>[];
     var published = false, fontWork = false;
     try {
       _check();
@@ -171,9 +230,24 @@ final class FixedPreparationOperation {
         if (metrics != null) decorationMetrics[alias] = metrics;
       }
       final backgroundImages = <String, ui.Image>{};
+      final evidenceRasters = <String, ui.Image>{};
+      final intrinsicSizes = <String, ui.Size>{};
+      final imageOpacity = <String, bool>{};
+      final evidenceBudget = SceneResourceBudget(
+        limits: {
+          ...SceneResourceBudget.provisionalLimits,
+          SceneResource.layerPixels: plan.evidencePixels > 0
+              ? plan.evidencePixels
+              : 1,
+          SceneResource.layerBytes: plan.evidencePixels > 0
+              ? plan.evidencePixels * 4
+              : 4,
+        },
+      );
       for (final entry in plan.source.images.entries) {
-        final image = await entry.value.acquire(cancellation);
-        images.add(image);
+        final request = entry.value;
+        final image = await request.acquire(cancellation);
+        evidenceImages.add(image);
         _check();
         if (image.image.width != entry.value.width ||
             image.image.height != entry.value.height) {
@@ -181,7 +255,43 @@ final class FixedPreparationOperation {
             SceneAdmissionFailure.resourceExhausted,
           );
         }
-        backgroundImages[entry.key] = image.image;
+        final opaque = await AuthoredEvidenceRaster.isOpaque(
+          image.image,
+          budget: evidenceBudget,
+          checkCancellation: _check,
+        );
+        imageOpacity[entry.key] = opaque;
+        intrinsicSizes[entry.key] = ui.Size(
+          request.width.toDouble(),
+          request.height.toDouble(),
+        );
+        final target = plan.imageTarget(entry.key);
+        if (target.width == request.width && target.height == request.height) {
+          evidenceImages.remove(image);
+          images.add(image);
+          backgroundImages[entry.key] = image.image;
+        } else {
+          if (opaque) {
+            evidenceImages.remove(image);
+            image.dispose();
+          } else {
+            evidenceRasters[entry.key] = image.image;
+          }
+          final display = await request.acquireTarget(
+            cancellation,
+            target.width,
+            target.height,
+          );
+          images.add(display);
+          _check();
+          if (display.image.width != target.width ||
+              display.image.height != target.height) {
+            throw const SceneAdmissionException(
+              SceneAdmissionFailure.resourceExhausted,
+            );
+          }
+          backgroundImages[entry.key] = display.image;
+        }
       }
       // Local suballocation ledger is prepaid by the caller's shared lease.
       // It is not another process/unit reservation; no double shared charge.
@@ -200,13 +310,30 @@ final class FixedPreparationOperation {
           decorationMetrics: decorationMetrics,
         ),
         backgroundImages: backgroundImages,
+        evidenceImages: evidenceRasters,
+        intrinsicImageSizes: intrinsicSizes,
+        preparationScale: plan.scale,
+        evidenceBudget: evidenceBudget,
+        svgPlans: {for (final plan in plan.svgPlans) plan.rootIndex: plan},
         cancellation: cancellation,
-        budget: SceneResourceBudget(
-          limits: limits,
-          sourceDepthLimit: plan.sourceDepth,
-          layerDepthLimit: plan.layerDepth,
-        ),
+        budget:
+            _preparer.sceneBudget ??
+            SceneResourceBudget(
+              limits: limits,
+              sourceDepthLimit: plan.sourceDepth,
+              referenceDepthLimit: plan.referenceDepth < 1
+                  ? 1
+                  : plan.referenceDepth,
+              layerDepthLimit: plan.layerDepth,
+            ),
       ).build();
+      // Evidence production is finished; no intrinsic-only decode may survive
+      // into reconciliation or publication alongside its display decode.
+      evidenceRasters.clear();
+      for (final image in evidenceImages) {
+        image.dispose();
+      }
+      evidenceImages.clear();
       _check();
       if (!scene.capability.isComplete ||
           scene.geometry.completeness is! CompleteGeometry) {
@@ -231,23 +358,56 @@ final class FixedPreparationOperation {
         );
       }
       _check();
+      // Last step before publication: every footprint exists and none can be
+      // created later, so the unit ledger now drops to the bytes stored.
+      _admission.reconcileEvidence(
+        RetainedEvidence.measure([
+          scene.geometry,
+          for (final svg in scene.svgScenes) svg.geometry,
+          ...scene.retainedHostGeometries,
+        ], placed: scene.geometry),
+      );
       _unsubscribe();
-      _result.complete(PreparedFixedScene._(plan, scene, images, _admission));
+      _result.complete(
+        PreparedFixedScene._(plan, scene, images, _admission, imageOpacity),
+      );
       published = true;
     } on Object catch (error, stack) {
       if (!_result.isCompleted) _result.completeError(error, stack);
     } finally {
       _unsubscribe();
       if (!published) {
-        try {
-          if (fontWork) await _preparer.drainFonts();
-        } finally {
-          scene?.dispose();
-          for (final image in images) {
-            image.dispose();
+        Object? cleanupError;
+        StackTrace? cleanupStack;
+        void release(void Function() action) {
+          try {
+            action();
+          } catch (cause, trace) {
+            cleanupError ??= cause;
+            cleanupStack ??= trace;
           }
-          plan.source.dispose();
-          _admission.dispose();
+        }
+
+        if (fontWork) {
+          try {
+            await _preparer.drainFonts();
+          } catch (cause, trace) {
+            cleanupError ??= cause;
+            cleanupStack ??= trace;
+          }
+        }
+        release(() => scene?.dispose());
+        for (final image in evidenceImages) {
+          release(image.dispose);
+        }
+        for (final image in images) {
+          release(image.dispose);
+        }
+        release(plan.source.dispose);
+        release(_admission.dispose);
+        final cause = cleanupError;
+        if (cause != null) {
+          Error.throwWithStackTrace(cause, cleanupStack!);
         }
       }
     }

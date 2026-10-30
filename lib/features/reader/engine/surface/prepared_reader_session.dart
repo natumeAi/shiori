@@ -14,6 +14,7 @@ import 'package:shiori/features/reader/engine/motion/reader_preparation_failure.
 import 'package:shiori/features/reader/engine/fixed/fixed_section_preparer.dart';
 import 'package:shiori/features/reader/engine/layout/process_font_budget.dart';
 import 'package:shiori/features/reader/engine/pagination/anchor.dart';
+import 'package:shiori/features/reader/engine/pagination/layout_identity.dart';
 import 'package:shiori/features/reader/engine/pagination/page_painter.dart';
 import 'package:shiori/features/reader/engine/pagination/prepared_section.dart';
 import 'package:shiori/features/reader/engine/pagination/preparation.dart';
@@ -43,6 +44,18 @@ final class _PreparationJob {
   late final Future<({TurnPosition position, PageSurfaceLease lease})?> result;
   int waiters = 0;
 }
+
+/// A publication lifetime spans every section. Fixed and reflow sections keep
+/// distinct font signatures and section indices, so only the shared layout
+/// inputs may be compared when a mixed session opens on either path.
+bool _samePublicationLayout(LayoutIdentity a, LayoutIdentity b) =>
+    a.contentId == b.contentId &&
+    a.generation == b.generation &&
+    a.viewportWidth == b.viewportWidth &&
+    a.viewportHeight == b.viewportHeight &&
+    a.devicePixelRatio == b.devicePixelRatio &&
+    a.settings == b.settings &&
+    a.styleVersion == b.styleVersion;
 
 /// Prepared sections are borrowed from the caller's bounded preparation owner.
 /// This session owns all page pictures and leases, including the handoff cover.
@@ -124,7 +137,7 @@ final class PreparedReaderSession
         (cancelAndDrainMotion == null ||
             disposeSourceAdapters == null ||
             activation != publication.activation ||
-            section.identity != publication.layout ||
+            !_samePublicationLayout(section.identity, publication.layout) ||
             (navigator != null &&
                 navigator.units.any(
                   (unit) => unit.id.content != publication.identity,
@@ -254,7 +267,7 @@ final class PreparedReaderSession
         (publication != null &&
             (publication.identity != unit.id.content ||
                 publication.activation != activation ||
-                publication.layout != layout ||
+                !_samePublicationLayout(publication.layout, layout) ||
                 cancelAndDrainMotion == null ||
                 disposeSourceAdapters == null))) {
       throw ArgumentError(

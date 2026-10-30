@@ -5,6 +5,9 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shiori/features/reader/data/canonical/canonical_text.dart';
 import 'package:shiori/features/reader/data/cfi/cfi.dart';
+import 'package:shiori/features/reader/data/layout/authored_dimension_resolver.dart';
+import 'package:shiori/features/reader/data/layout/authored_page_size.dart';
+import 'package:shiori/features/reader/data/layout/section_source_facts.dart';
 import 'package:shiori/features/reader/data/source/source_node.dart';
 import 'package:shiori/features/reader/data/source/source_parser.dart';
 import 'package:shiori/features/reader/data/source/source_position.dart';
@@ -115,6 +118,17 @@ void main() {
     );
     expect(unsupported['expectedCapability'], 'unsupported');
     expect(unsupported['sha256'], isNot(positive['sha256']));
+    // EPUB fixed pages declare positive CSS-pixel viewport dimensions. The
+    // inline percentage SVG is valid; device-relative page size is unsupported.
+    final source = const SourceParser().parse(unsupported['source'] as String);
+    expect(
+      resolveAuthoredDimensions(source: extractSectionSourceFacts(source)),
+      isA<UnsupportedDimensions>().having(
+        (d) => d.reason,
+        'reason',
+        'Device-relative authored viewport',
+      ),
+    );
     final dimensions = observations['dimensions-unsupported']!['dimensions'];
     expect(dimensions['rootWidth'], '50%');
     expect(dimensions['rootHeight'], '75%');

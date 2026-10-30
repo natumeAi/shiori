@@ -121,4 +121,96 @@ void main() {
     pool.close();
     f.dispose();
   });
+
+  test('discarding evidence releases only that unleased cache entry', () async {
+    final book = openFixture('images');
+    final png = book.archive.bytes('EPUB/images/generated.png')!;
+    book.archive.close();
+    final cache = ReaderImageCache();
+    final retained = (await cache.lease(
+      'other',
+      png,
+      targetWidth: 64,
+      targetHeight: 96,
+    ))!;
+    retained.release();
+    final evidence = (await cache.lease(
+      'evidence',
+      png,
+      targetWidth: 64,
+      targetHeight: 96,
+    ))!;
+    evidence.release(discard: true);
+    evidence.release(discard: true);
+    expect(evidence.image.debugDisposed, true);
+    expect(retained.image.debugDisposed, false);
+    expect(cache.totalBytes, 64 * 96 * 4);
+    expect(cache.entryCount, 1);
+    cache.clearUnleased();
+    expect(cache.totalBytes, 0);
+  });
+
+  test('rejected cache-hit credit preserves the live entry', () async {
+    final book = openFixture('images');
+    final png = book.archive.bytes('EPUB/images/generated.png')!;
+    book.archive.close();
+    final cache = ReaderImageCache();
+    final live = (await cache.lease(
+      'shared',
+      png,
+      targetWidth: 64,
+      targetHeight: 96,
+    ))!;
+    final credit = cache.reserveOutput(live.bytes)..release();
+    await expectLater(
+      cache.lease(
+        'shared',
+        png,
+        targetWidth: 64,
+        targetHeight: 96,
+        reservation: credit,
+      ),
+      throwsA(isA<ImageAdmissionException>()),
+    );
+    expect(cache.entryCount, 1);
+    expect(cache.totalBytes, live.bytes);
+    live.release(discard: true);
+    live.release(discard: true);
+    expect(live.image.debugDisposed, true);
+    expect(cache.totalBytes, 0);
+  });
+
+  test(
+    'discard waits for the final shared lease in either release order',
+    () async {
+      final book = openFixture('images');
+      final png = book.archive.bytes('EPUB/images/generated.png')!;
+      book.archive.close();
+      for (final discardFirst in [true, false]) {
+        final cache = ReaderImageCache();
+        final first = (await cache.lease(
+          'shared',
+          png,
+          targetWidth: 64,
+          targetHeight: 96,
+        ))!;
+        final last = (await cache.lease(
+          'shared',
+          png,
+          targetWidth: 64,
+          targetHeight: 96,
+        ))!;
+        expect(last.image, same(first.image));
+        first.release(discard: discardFirst);
+        first.release(discard: true);
+        expect(last.image.debugDisposed, false);
+        expect(cache.totalBytes, last.bytes);
+        last.release(discard: !discardFirst);
+        last.release();
+        expect(last.image.debugDisposed, true);
+        expect(cache.entryCount, 0);
+        expect(cache.totalBytes, 0);
+      }
+    },
+  );
 }

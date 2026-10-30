@@ -15,35 +15,44 @@ extension FixedUnitSurfacePreparation on PageSurfacePool {
     required int height,
   }) {
     late final FixedImageRequest request;
+    Future<FixedImageLease> acquire(
+      PublicationCancellation token,
+      int targetWidth,
+      int targetHeight,
+    ) async {
+      if (token.isCanceled) throw const PreparationCancelled();
+      final lease = await images.lease(
+        '${page.content.bookKey}|${page.content.sha256}|'
+        '${page.content.parserVersion}|${page.content.canonicalVersion}|$key',
+        bytes,
+        targetWidth: targetWidth,
+        targetHeight: targetHeight,
+        reservation: _imageCredits[request],
+      );
+      if (lease == null) {
+        throw FixedPreparationFailure(
+          RenderSectionCapability(
+            sectionIndex: page.sectionIndex,
+            reason: 'Required fixed raster could not decode',
+            constructs: [
+              OffendingConstruct(
+                kind: CapabilityConstructKind.render,
+                identifier: 'image-decode',
+              ),
+            ],
+          ),
+        );
+      }
+      return FixedImageLease(lease.image, () {
+        lease.release(discard: true);
+      });
+    }
+
     request = FixedImageRequest(
       width: width,
       height: height,
-      acquire: (token) async {
-        if (token.isCanceled) throw const PreparationCancelled();
-        final lease = await images.lease(
-          '${page.content.bookKey}|${page.content.sha256}|'
-          '${page.content.parserVersion}|${page.content.canonicalVersion}|$key',
-          bytes,
-          targetWidth: width,
-          targetHeight: height,
-          reservation: _imageCredits[request],
-        );
-        if (lease == null) {
-          throw FixedPreparationFailure(
-            RenderSectionCapability(
-              sectionIndex: page.sectionIndex,
-              reason: 'Required fixed raster could not decode',
-              constructs: [
-                OffendingConstruct(
-                  kind: CapabilityConstructKind.render,
-                  identifier: 'image-decode',
-                ),
-              ],
-            ),
-          );
-        }
-        return FixedImageLease(lease.image, lease.release);
-      },
+      acquire: (token) => acquire(token, width, height),
+      acquireAt: acquire,
     );
     return request;
   }
@@ -53,6 +62,7 @@ extension FixedUnitSurfacePreparation on PageSurfacePool {
     required LayoutIdentity layout,
     required FixedSourceLoader loadSource,
     required FontRegistry fonts,
+    FixedPreparationScale? preparationScale,
     PublicationCancellation? cancellation,
   }) async {
     ReaderWorkGuard.check(ReaderWork.surfacePreparation);
@@ -61,6 +71,16 @@ extension FixedUnitSurfacePreparation on PageSurfacePool {
       throw ArgumentError('Expected a matching fixed reading unit');
     }
     final epoch = _epoch;
+    final extent = _fixedUnitExtent(unit);
+    final scale =
+        preparationScale ??
+        FixedPreparationScale.fit(
+          authoredWidth: extent.width,
+          authoredHeight: extent.height,
+          viewWidth: layout.viewportWidth,
+          viewHeight: layout.viewportHeight,
+          devicePixelRatio: layout.devicePixelRatio,
+        );
     final token = cancellation ?? PublicationCancellation();
     void check() {
       if (_closed || epoch != _epoch || token.isCanceled) {
@@ -96,7 +116,7 @@ extension FixedUnitSurfacePreparation on PageSurfacePool {
             style: request.style,
           ),
         );
-        final plan = preparer.plan(source);
+        final plan = preparer.plan(source, scale: scale);
         if (!plan.capability.isComplete) {
           throw FixedPreparationFailure(plan.capability);
         }
@@ -183,6 +203,9 @@ extension FixedUnitSurfacePreparation on PageSurfacePool {
         }
       }
       check();
+      // Return unused conservative alpha credit after every physical decode has
+      // drained. Retained display entries remain charged by the image cache.
+      owner._imageReservation?.release();
       final composed = _composeFixedUnit(unit, scenes, layout);
       picture = composed.picture;
       final actual = picture.approximateBytesUsed;
@@ -230,14 +253,8 @@ extension FixedUnitSurfacePreparation on PageSurfacePool {
   LayoutIdentity layout,
 ) {
   final slots = unit.slots.whereType<RealSourcePageSlot>().toList();
-  var width = 0.0, height = 0.0;
-  for (final slot in slots) {
-    final right = slot.sourceToUnit.e + slot.authoredSize!.width;
-    final bottom = slot.sourceToUnit.f + slot.authoredSize!.height;
-    if (right > width) width = right;
-    if (bottom > height) height = bottom;
-  }
-  if (unit.slots.last is BlankSourcePageSlot) width *= 2;
+  final extent = _fixedUnitExtent(unit);
+  final width = extent.width, height = extent.height;
   final sx = layout.viewportWidth / width, sy = layout.viewportHeight / height;
   final scale = sx < sy ? sx : sy;
   final recorder = ui.PictureRecorder();
@@ -296,4 +313,17 @@ extension FixedUnitSurfacePreparation on PageSurfacePool {
     recorder.endRecording().dispose();
     rethrow;
   }
+}
+
+({double width, double height}) _fixedUnitExtent(ReadingUnit unit) {
+  final slots = unit.slots.whereType<RealSourcePageSlot>();
+  var width = 0.0, height = 0.0;
+  for (final slot in slots) {
+    final right = slot.sourceToUnit.e + slot.authoredSize!.width;
+    final bottom = slot.sourceToUnit.f + slot.authoredSize!.height;
+    if (right > width) width = right;
+    if (bottom > height) height = bottom;
+  }
+  if (unit.slots.last is BlankSourcePageSlot) width *= 2;
+  return (width: width, height: height);
 }

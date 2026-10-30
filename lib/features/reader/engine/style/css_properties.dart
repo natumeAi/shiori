@@ -152,6 +152,17 @@ const _vendorAliases = {
   '-webkit-box-decoration-break': 'box-decoration-break',
 };
 
+/// SVG feature-owned declarations. The SVG module reads these from the
+/// authored declaration; they have no XHTML layout effect and must not become
+/// `unsupportedProperty` diagnostics that reject a fixed scene.
+const _featureOwnedSvgProperties = {
+  'mask-type',
+  'clip-rule',
+  'clipPathUnits',
+  'maskUnits',
+  'maskContentUnits',
+};
+
 /// Expands [property] (a shorthand, alias or longhand) into typed longhand
 /// declarations. Returns null and reports to [sink] when the property is
 /// unknown or its value is invalid.
@@ -183,6 +194,7 @@ List<CssDeclaration>? expandDeclaration(
 }
 
 List<(String, List<CssToken>)>? _expand(String name, List<CssToken> tokens) {
+  if (_featureOwnedSvgProperties.contains(name)) return const [];
   if (_longhands.contains(name) || authoredLonghands.contains(name)) {
     return [(name, tokens)];
   }

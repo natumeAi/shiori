@@ -1,30 +1,40 @@
 part of 'svg_graphics.dart';
 
-int _markerReferenceCount(String tag,String property,Map<String,String> attrs,int node) {
-  var vertices=0,contours=1;
-  if (tag=='line') { vertices=2; }
-  else if (tag=='polyline' || tag=='polygon') {
-    vertices=_numbers(attrs['points'] ?? '',node).length~/2;
-    if (tag=='polygon' && vertices>0) vertices++;
-  } else if (tag=='path') {
-    contours=0;
-    for (final segment in pp.SvgPathStringSource(attrs['d'] ?? '').parseSegments()) {
+int _markerReferenceCount(
+  String tag,
+  String property,
+  Map<String, String> attrs,
+  int node,
+) {
+  var vertices = 0, contours = 1;
+  if (tag == 'line') {
+    vertices = 2;
+  } else if (tag == 'polyline' || tag == 'polygon') {
+    vertices = _numbers(attrs['points'] ?? '', node).length ~/ 2;
+    if (tag == 'polygon' && vertices > 0) vertices++;
+  } else if (tag == 'path') {
+    contours = 0;
+    for (final segment in pp.SvgPathStringSource(
+      attrs['d'] ?? '',
+    ).parseSegments()) {
       vertices++;
       // SvgPathSegType is not exported by package:path_parsing; compare by name.
-      final command=segment.command.name;
-      if (command=='moveToAbs' || command=='moveToRel') contours++;
+      final command = segment.command.name;
+      if (command == 'moveToAbs' || command == 'moveToRel') contours++;
     }
   }
-  if (vertices==0) return 0;
-  return property=='marker-mid'?math.max(0,vertices-2*contours):contours;
+  if (vertices == 0) return 0;
+  return property == 'marker-mid'
+      ? math.max(0, vertices - 2 * contours)
+      : contours;
 }
 
 extension _SvgMarkers on SvgGraphicsPlan {
   List<_SvgInstance> _markers(_SvgInstance shape) {
     final result = <_SvgInstance>[];
     final contours = _vertices(shape);
-    for (var contourIndex=0;contourIndex<contours.length;contourIndex++) {
-      final contour=contours[contourIndex];
+    for (var contourIndex = 0; contourIndex < contours.length; contourIndex++) {
+      final contour = contours[contourIndex];
       for (var j = 0; j < contour.length; j++) {
         final key = j == 0
             ? 'marker-start'

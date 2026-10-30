@@ -1,5 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shiori/features/reader/data/geometry/affine_transform.dart';
 import 'package:shiori/features/reader/data/geometry/cluster_geometry.dart';
+import 'package:shiori/features/reader/data/geometry/paint_geometry.dart';
+import 'package:shiori/features/reader/data/geometry/place_source_geometry.dart';
 import 'package:shiori/features/reader/data/geometry/source_fragment.dart';
 import 'package:shiori/features/reader/data/geometry/source_geometry.dart';
 
@@ -159,6 +162,78 @@ void main() {
     expect(() => geometry.fragments.clear(), throwsUnsupportedError);
     expect(fragment, isNot(contractFragment(paintOrdinal: 3)));
   });
+
+  test(
+    'mask evidence composes through geometry placement with namespaced ids',
+    () {
+      GeometryRegion region(AffineTransform transform) => GeometryRegion(
+        left: 0,
+        top: 0,
+        width: 10,
+        height: 8,
+        transform: transform,
+      );
+      final footprint = GeometryAlphaFootprint(
+        width: 2,
+        height: 1,
+        pixelSize: 1,
+        origin: GeometryPoint(0, 0),
+        alpha: [0, 96],
+      );
+      final mask = GeometryMask(
+        id: 'mask',
+        sourceNode: 3,
+        units: GeometryMaskUnits.userSpaceOnUse,
+        contentUnits: GeometryMaskUnits.userSpaceOnUse,
+        kind: GeometryMaskKind.alpha,
+        region: region(const AffineTransform.identity()),
+        coverage: footprint,
+      );
+      final paint = GeometryPaint(
+        nodeIndex: 2,
+        paintOrdinal: 1,
+        region: region(const AffineTransform.identity()),
+        kind: GeometryPaintKind.solid,
+        effectiveOpacity: 1,
+        exactCoverage: true,
+        alphaFootprint: GeometryAlphaFootprint(
+          width: 2,
+          height: 1,
+          pixelSize: 1,
+          origin: GeometryPoint(0, 0),
+          alpha: [255, 0],
+          masks: [mask],
+        ),
+      );
+      final geometry = SourceGeometry(
+        version: 1,
+        fragments: [
+          contractFragment(maskIds: ['mask']),
+        ],
+        paint: [paint],
+        completeness: const CompleteGeometry(),
+      );
+      final placed = placeSourceGeometry(
+        geometry,
+        AffineTransform(1, 0, 0, 1, 7, 9),
+        registryPrefix: 'page',
+      );
+      expect(placed.fragments.single.maskIds, ['page:mask']);
+      expect(placed.masks.single.id, 'page:mask');
+      expect(placed.masks.single.region.transform.e, 7);
+      expect(placed.masks.single.coverage.transform.e, 7);
+      expect(
+        () => SourceGeometry(
+          version: 1,
+          fragments: [
+            contractFragment(maskIds: ['mask']),
+          ],
+          completeness: const CompleteGeometry(),
+        ),
+        throwsArgumentError,
+      );
+    },
+  );
 
   test(
     'completeness is explicit; fixture maps cannot satisfy complete export',

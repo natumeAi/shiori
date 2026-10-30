@@ -13,6 +13,7 @@ import 'package:shiori/features/reader/engine/layout/font_mapping.dart';
 import 'package:shiori/features/reader/engine/layout/process_font_budget.dart';
 import 'package:shiori/features/reader/engine/layout/scene_resource_budget.dart';
 import 'package:shiori/features/reader/engine/layout/woff_decoder.dart';
+import 'package:shiori/features/reader/engine/layout/woff2_decoder.dart';
 import 'package:shiori/features/reader/engine/style/style_resolver.dart';
 import 'package:shiori/features/reader/engine/style/computed_style.dart';
 
@@ -107,6 +108,24 @@ final class FontRegistry {
 
   /// Latest attempt for each scope/CSS family/path; not registration identity.
   Iterable<FontLoadRecord> get records => _records.values;
+
+  /// Exact identity of a loaded face for consumers of the same admission.
+  ({String alias, String descriptor, int faceIndex}) admittedIdentity(
+    String scope,
+    StyleFontFace face,
+  ) {
+    final record = _records[_key(scope, face)];
+    if (record == null || !record.loaded) {
+      throw const RequiredFontException(
+        FontFormatException(FontFormatFailure.missing),
+      );
+    }
+    return (
+      alias: record.alias,
+      descriptor: 'index=0;weight=${face.weight};style=${face.style.name}',
+      faceIndex: 0,
+    );
+  }
 
   static Future<void> _registerNative(Uint8List bytes, String alias) =>
       ui.loadFontFromList(bytes, fontFamily: alias);
@@ -207,6 +226,10 @@ final class FontRegistry {
           : ByteData.sublistView(bytes).getUint32(0);
       if (tag == 0x774f4646) {
         converted = WoffDecoder(maxBytes: maxFontBytes)
+            .decode(bytes, budget: conversionBudget);
+        bytes = converted.bytes;
+      } else if (tag == 0x774f4632) {
+        converted = Woff2Decoder(maxBytes: maxFontBytes)
             .decode(bytes, budget: conversionBudget);
         bytes = converted.bytes;
       } else if (!_isSfnt(bytes)) {

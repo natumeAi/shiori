@@ -1,3 +1,5 @@
+import 'dart:collection' show UnmodifiableMapView;
+
 /// Provisional host limits. A3 must route actual allocations through this owner;
 /// these counters alone do not bound VM/native RSS or establish device safety.
 enum SceneResource {
@@ -93,17 +95,26 @@ final class SceneResourceBudget {
         );
       }
     }
-    final charge = Map<SceneResource, int>.unmodifiable(request);
-    for (final entry in charge.entries) {
+    // The held map is the lease's CURRENT charge: shrink lowers it and release
+    // returns exactly what is still held, so every unit is returned once.
+    final held = Map<SceneResource, int>.of(request);
+    for (final entry in held.entries) {
       final total = (_used[entry.key] ?? 0) + entry.value;
       _used[entry.key] = total;
       if (total > (_peaks[entry.key] ?? 0)) _peaks[entry.key] = total;
     }
-    return SceneResourceLease._(charge, () {
-      for (final entry in charge.entries) {
-        _used[entry.key] = _used[entry.key]! - entry.value;
-      }
-    });
+    return SceneResourceLease._(
+      held,
+      () {
+        for (final entry in held.entries) {
+          _used[entry.key] = _used[entry.key]! - entry.value;
+        }
+      },
+      (resource, amount) {
+        _used[resource] = _used[resource]! - amount;
+        held[resource] = held[resource]! - amount;
+      },
+    );
   }
 
   /// Reserve every real constituent together with the whole required plan.
@@ -177,10 +188,25 @@ final class SceneResourceBudget {
 }
 
 final class SceneResourceLease {
-  SceneResourceLease._(this.charge, this._release);
-  final Map<SceneResource, int> charge;
+  SceneResourceLease._(this._charge, this._release, this._shrink);
+  final Map<SceneResource, int> _charge;
+  final void Function(SceneResource resource, int amount) _shrink;
   void Function()? _release;
+
+  /// What this lease holds now: the reserved request minus any shrink.
+  Map<SceneResource, int> get charge => UnmodifiableMapView(_charge);
   bool get isReleased => _release == null;
+
+  /// Return part of one class's charge while the lease stays live. The caller
+  /// must already have destroyed or never made the allocation it covered; the
+  /// remainder is released exactly once by [release]. Never grows a charge.
+  void shrink(SceneResource resource, int amount) {
+    if (_release == null) throw StateError('Scene lease already released');
+    if (amount < 0 || amount > (_charge[resource] ?? 0)) {
+      throw ArgumentError('Shrink exceeds the held scene charge');
+    }
+    if (amount > 0) _shrink(resource, amount);
+  }
 
   /// Release after allocation destruction or canceled work has drained.
   void release() {

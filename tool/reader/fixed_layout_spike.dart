@@ -111,6 +111,7 @@ final class FixedLayoutSpike {
     }
     final report = <String, Object?>{
       'd4ComponentAlphaThresholdInclusive': d4ComponentAlphaThreshold,
+      'd10ChangedPixelMinimumDelta': d10ChangedPixelMinimumDelta,
       'schemaVersion': 2,
       'evidence': 'host-flutter-test-dart-ui-no-device-performance-claim',
       'host': Platform.operatingSystem,

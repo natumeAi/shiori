@@ -4,6 +4,8 @@ import 'package:shiori/features/reader/data/layout/reading_unit.dart';
 import 'package:shiori/features/reader/data/layout/reading_unit_navigator.dart';
 import 'package:shiori/features/reader/data/layout/source_page_slot.dart';
 import 'package:shiori/features/reader/data/source/source_position.dart';
+import 'package:shiori/features/reader/data/worker/publication_layout_facts.dart';
+import 'package:shiori/features/reader/engine/pagination/reading_unit_composer.dart';
 import 'package:shiori/features/reader/engine/pagination/reading_unit_navigator.dart';
 
 import '../../contract_test_values.dart';
@@ -285,4 +287,19 @@ void main() {
       );
     },
   );
+  test('direction admission prevents navigator construction', () {
+    expect(
+      () => ComposedReadingUnitNavigator(
+        sections: [
+          unitSection(
+            0,
+            directionIssues: {SectionDirectionIssue.rtlProgression},
+          ),
+        ],
+        viewportWidth: 900,
+        viewportHeight: 600,
+      ),
+      throwsA(isA<UnsupportedDirectionCompositionException>()),
+    );
+  });
 }

@@ -8,10 +8,16 @@ import 'package:shiori/features/reader/data/geometry/affine_transform.dart';
 import 'package:shiori/features/reader/data/geometry/cluster_geometry.dart';
 import 'package:shiori/features/reader/data/geometry/source_fragment.dart';
 import 'package:shiori/features/reader/data/geometry/source_geometry.dart';
+import 'package:shiori/features/reader/data/geometry/place_source_geometry.dart';
 import 'package:shiori/features/reader/data/geometry/paint_geometry.dart';
 import 'package:shiori/features/reader/data/layout/authored_page_size.dart';
 import 'package:shiori/features/reader/data/layout/section_source_facts.dart';
+import 'package:shiori/features/reader/data/worker/publication_layout_facts.dart';
 import 'package:shiori/features/reader/engine/fixed/fixed_svg_viewport.dart';
+import 'package:shiori/features/reader/engine/fixed/fixed_preparation_scale.dart';
+import 'package:shiori/features/reader/engine/fixed/fixed_scene_sizing.dart';
+import 'package:shiori/features/reader/engine/fixed/svg/svg_graphics.dart';
+import 'package:shiori/features/reader/engine/fixed/fixed_svg_text_fonts.dart';
 import 'package:shiori/features/reader/data/layout/source_page_id.dart';
 import 'package:shiori/features/reader/data/source/source_document.dart';
 import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
@@ -24,8 +30,7 @@ import 'package:shiori/features/reader/engine/layout/paragraph_map.dart';
 import 'package:shiori/features/reader/engine/layout/scene_resource_budget.dart';
 import 'package:shiori/features/reader/engine/style/computed_style.dart';
 import 'package:shiori/features/reader/engine/style/css_style_resolver.dart';
-import 'package:shiori/features/reader/engine/style/css_properties.dart';
-import 'package:shiori/features/reader/engine/style/css_stylesheet.dart';
+import 'package:shiori/features/reader/engine/style/style_diagnostic.dart';
 import 'package:shiori/features/reader/engine/support/section_capability.dart';
 
 part 'fixed_scene_layout.dart';
@@ -34,6 +39,21 @@ part 'fixed_scene_paint.dart';
 part 'fixed_scene_geometry.dart';
 part 'fixed_scene_coverage.dart';
 part 'fixed_scene_svg.dart';
+part 'fixed_scene_foreign_object.dart';
+
+/// CSS URLs are archive paths; element URLs retain document-relative spelling.
+/// Keep both resources addressable when those spellings happen to coincide.
+String fixedCssImageKey(SourceDocument document, String url) {
+  final collision = document.nodes.any(
+    (node) => switch (node.localName) {
+      'img' => node.attribute('src') == url,
+      'image' =>
+        node.attribute('href') == url || node.attribute('xlink:href') == url,
+      _ => false,
+    },
+  );
+  return collision ? 'css-resource:$url' : url;
+}
 
 /// Retains the paragraphs actually painted. Images remain caller-owned leases.
 final class FixedScene {
@@ -43,7 +63,9 @@ final class FixedScene {
     this.texts,
     this.geometry,
     this.capability,
+    this.svgScenes,
     this._leases,
+    this.retainedHostGeometries,
   );
   final List<SceneResourceLease> _leases;
   final ui.Picture picture;
@@ -51,19 +73,40 @@ final class FixedScene {
   final List<FixedText> texts;
   final SourceGeometry geometry;
   final SectionCapability capability;
+  final List<SvgGraphicsScene> svgScenes;
+
+  /// Original XHTML host footprints retained by foreignObject dispose owners.
+  final List<SourceGeometry> retainedHostGeometries;
   bool _disposed = false;
+  bool _ownsPicture = true;
   void dispose() {
     ReaderWorkGuard.check(ReaderWork.surfacePreparation);
     if (_disposed) return;
     _disposed = true;
-    picture.dispose();
+    Object? error;
+    StackTrace? stack;
+    void release(void Function() action) {
+      try {
+        action();
+      } catch (cause, trace) {
+        error ??= cause;
+        stack ??= trace;
+      }
+    }
+
+    if (_ownsPicture) release(picture.dispose);
+    for (final svg in svgScenes) {
+      release(svg.dispose);
+    }
     for (final text in texts) {
-      text.paragraph.dispose();
-      text._inline?.dispose();
+      release(text.paragraph.dispose);
+      release(() => text._inline?.dispose());
     }
     for (final lease in _leases) {
-      lease.release();
+      release(lease.release);
     }
+    final cause = error;
+    if (cause != null) Error.throwWithStackTrace(cause, stack!);
   }
 }
 
@@ -76,6 +119,7 @@ final class FixedBox {
   final List<FixedText> texts = [];
   final List<Object> contents = [];
   ui.Rect borderBox = ui.Rect.zero, contentBox = ui.Rect.zero;
+  double? definiteContentHeight;
   AffineTransform transform = const AffineTransform.identity();
   AffineTransform localTransform = const AffineTransform.identity();
   ui.Offset transformOrigin = ui.Offset.zero;
@@ -86,6 +130,10 @@ final class FixedBox {
   List<String> clipIds = const [];
   AffineTransform? svgContentTransform;
   int? svgFill;
+  SvgGraphicsPlan? svgPlan;
+  SvgGraphicsScene? svgScene;
+  String? imagePath;
+  List<String> svgPaintGroups = const [];
   bool get context =>
       parent == null ||
       style.authored.opacity < 1 ||
@@ -116,7 +164,12 @@ final class FixedSceneBuilder {
     required this.size,
     required this.fonts,
     this.backgroundImages = const {},
+    this.evidenceImages = const {},
+    this.intrinsicImageSizes = const {},
+    this.preparationScale = const FixedPreparationScale.authored(),
+    this.svgPlans = const {},
     this.cancellation,
+    this.evidenceBudget,
     SceneResourceBudget? budget,
   }) : budget = budget ?? SceneResourceBudget();
   final SceneResourceBudget budget;
@@ -126,7 +179,14 @@ final class FixedSceneBuilder {
   final AuthoredPageSize size;
   final ParagraphFonts fonts;
   final Map<String, ui.Image> backgroundImages;
+  final Map<String, ui.Image> evidenceImages;
+  final Map<String, ui.Size> intrinsicImageSizes;
+  final FixedPreparationScale preparationScale;
+  final Map<int, SvgGraphicsPlan> svgPlans;
   final PublicationCancellation? cancellation;
+
+  /// Subdivision of the enclosing fixed plan's live evidence credit.
+  final SceneResourceBudget? evidenceBudget;
   void _checkCancellation() {
     if (cancellation?.isCanceled ?? false) throw const PreparationCancelled();
   }
@@ -143,9 +203,13 @@ final class FixedSceneBuilder {
   final List<String> _paintGroups = [];
   final List<(int, ui.Picture)> _coveragePictures = [];
   final List<SceneResourceLease> _leases = [];
+  final List<SvgGraphicsScene> _svgScenes = [];
+  final List<SourceGeometry> _retainedHostGeometries = [];
+  SectionCapability? _svgFailure;
   final List<OffendingConstruct> _resourceFailures = [];
   final List<OffendingConstruct> _dimensionFailures = [];
   int _ordinal = 0;
+  int? _foreignRoot;
   bool _built = false;
 
   Future<FixedScene> build() async {
@@ -169,7 +233,6 @@ final class FixedSceneBuilder {
             ),
           }),
         );
-        budget.reserveLayer(size.width.ceil(), size.height.ceil()).release();
       } on SceneAdmissionException catch (error) {
         _resourceFailures.add(
           OffendingConstruct(
@@ -178,7 +241,40 @@ final class FixedSceneBuilder {
           ),
         );
       }
+      final svgPresentations = [
+        for (final plan in svgPlans.values)
+          if (styles.diagnostics.isNotEmpty &&
+              plan.host.text is FixedSvgTextFontService)
+            (plan.host.text as FixedSvgTextFontService).presentation,
+      ];
+      for (final presentation in svgPresentations) {
+        for (final problem in presentation.problems) {
+          _unsupported.add(
+            OffendingConstruct(
+              kind: CapabilityConstructKind.svg,
+              identifier: problem,
+            ),
+          );
+        }
+      }
       for (final d in styles.diagnostics) {
+        // The SVG parser retains selector/namespace ownership that the global
+        // XHTML diagnostic aggregation loses. Mixed matches stay XHTML errors.
+        // CSS positioning belongs to the XHTML replaced box. The SVG module
+        // cannot attest unsupported insets/units that the CSS parser dropped.
+        if (d.kind != StyleDiagnosticKind.unsupportedUnit &&
+            !const {
+              'position',
+              'left',
+              'top',
+              'right',
+              'bottom',
+            }.contains(d.detail) &&
+            svgPresentations.any(
+              (p) => p.handedOffDiagnostics.contains((d.kind, d.detail)),
+            )) {
+          continue;
+        }
         _unsupported.add(
           OffendingConstruct(
             kind: CapabilityConstructKind.css,
@@ -186,7 +282,7 @@ final class FixedSceneBuilder {
           ),
         );
       }
-      final rootIndex = document.bodyIndex ?? document.documentElementIndex;
+      final rootIndex = document.documentElementIndex;
       final root = _resourceFailures.isEmpty
           ? _layout(
               rootIndex,
@@ -214,6 +310,7 @@ final class FixedSceneBuilder {
           _transforms(root, const AffineTransform.identity(), 1, const [
             'authored-page',
           ]);
+          await _prepareSvgScenes();
           _paintContext(canvas, root);
         } on ArgumentError {
           _reject(
@@ -225,6 +322,7 @@ final class FixedSceneBuilder {
       }
       await _resolveCoverage();
       _checkCancellation();
+      _checkContentConservation();
       final capability = _capability();
       if (!capability.isComplete) {
         _issues.add(GeometryIssue(GeometryGapKind.paint, capability.reason));
@@ -236,25 +334,40 @@ final class FixedSceneBuilder {
         List.unmodifiable(_texts),
         geometry,
         capability,
+        List.unmodifiable(_svgScenes),
         List.unmodifiable(_leases),
+        List.unmodifiable(_retainedHostGeometries),
       );
-    } on Object {
-      recorder.endRecording().dispose();
+    } on Object catch (error, stack) {
+      void release(void Function() action) {
+        try {
+          action();
+        } catch (_) {
+          // Preserve the original preparation failure after every owner is
+          // released; cleanup errors must not abort the remaining releases.
+        }
+      }
+
+      release(() => recorder.endRecording().dispose());
       for (final text in _texts) {
-        text.paragraph.dispose();
-        text._inline?.dispose();
+        release(text.paragraph.dispose);
+        release(() => text._inline?.dispose());
       }
       for (final pair in _coveragePictures) {
-        pair.$2.dispose();
+        release(pair.$2.dispose);
+      }
+      for (final svg in _svgScenes) {
+        release(svg.dispose);
       }
       for (final lease in _leases) {
-        lease.release();
+        release(lease.release);
       }
-      rethrow;
+      Error.throwWithStackTrace(error, stack);
     }
   }
 
   SectionCapability _capability() {
+    if (_svgFailure case final failure?) return failure;
     if (_resourceFailures.isNotEmpty) {
       return ResourceSectionCapability(
         sectionIndex: page.sectionIndex,
@@ -287,6 +400,47 @@ final class FixedSceneBuilder {
       sectionIndex: page.sectionIndex,
       reason: 'Authored XHTML scene prepared',
     );
+  }
+
+  void _checkContentConservation() {
+    final boxes = {for (final box in _boxes) box.nodeIndex: box};
+    final mapped = {
+      for (final text in _texts)
+        for (final entry in text.block.map.entries) entry.nodeIndex,
+    };
+    void visit(int index) {
+      final node = document.node(index), style = styles.styleOf(index);
+      if (style == null ||
+          style.display == StyleDisplay.none ||
+          nonRenderedElementNames.contains(node.localName)) {
+        return;
+      }
+      if (node.isCharacterData) {
+        final data = node.text ?? '';
+        final preserved =
+            style.whiteSpace == StyleWhiteSpace.pre ||
+            style.whiteSpace == StyleWhiteSpace.preWrap;
+        final collapsedSpace = RegExp(r'^[ \t\n\r\f]*$').hasMatch(data);
+        if (data.isNotEmpty &&
+            (preserved || !collapsedSpace) &&
+            !mapped.contains(index)) {
+          _reject(index, 'unprepared-source-text');
+        }
+        return;
+      }
+      if (atomicElementNames.contains(node.localName)) {
+        final box = boxes[index];
+        if (box == null || node.localName == 'svg' && box.svgScene == null) {
+          _reject(index, 'unprepared-replaced-content');
+        }
+        return;
+      }
+      for (final child in node.children) {
+        visit(child);
+      }
+    }
+
+    visit(_foreignRoot ?? document.documentElementIndex);
   }
 
   void _reject(int node, String reason, {bool malformed = false}) {

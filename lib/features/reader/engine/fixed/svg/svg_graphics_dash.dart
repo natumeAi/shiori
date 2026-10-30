@@ -29,12 +29,22 @@ ui.Path _dashPath(
       ) %
       total;
   var first = 0;
-  while (offset >= intervals[first]) {
+  // A zero-length painted interval at offset 0 is a real cap, not a boundary
+  // to consume. Positive boundaries still advance to the next interval.
+  while (offset > intervals[first] ||
+      (offset == intervals[first] && intervals[first] > 0)) {
     offset -= intervals[first];
     first = (first + 1) % intervals.length;
   }
   final metrics = shape.path!.computeMetrics().toList();
   final available = budget.limits[SceneResource.vectorOperations]!;
+  final cap = shape.paint['stroke-linecap'];
+  final capWidth = _number(
+    shape.paint['stroke-width'],
+    shape.node.index,
+    fallback: 1,
+  );
+  final paintCaps = (cap == 'round' || cap == 'square') && capWidth > 0;
   var commands = 0;
   for (final metric in metrics) {
     final repeats = metric.length / total;
@@ -54,11 +64,17 @@ ui.Path _dashPath(
   );
   final output = ui.Path();
   for (final metric in metrics) {
+    if (metric.length == 0) continue;
     var index = first, remaining = intervals[index] - offset, position = 0.0;
-    while (position < metric.length) {
+    while (position < metric.length ||
+        (position == metric.length && remaining == 0)) {
       final end = math.min(metric.length, position + remaining);
-      if (index.isEven && end > position) {
-        output.addPath(metric.extractPath(position, end), ui.Offset.zero);
+      if (index.isEven) {
+        if (end > position) {
+          output.addPath(metric.extractPath(position, end), ui.Offset.zero);
+        } else if (remaining == 0 && paintCaps) {
+          _dashCap(output, metric, position, capWidth);
+        }
       }
       position = end;
       index = (index + 1) % intervals.length;
@@ -66,4 +82,26 @@ ui.Path _dashPath(
     }
   }
   return output;
+}
+
+/// A zero-length painted dash still contributes its cap shape (SVG 2 stroke
+/// shape). A sub-pixel segment along the path tangent lets the stroke paint's
+/// round/square cap emit the dot with the authored orientation.
+void _dashCap(
+  ui.Path output,
+  ui.PathMetric metric,
+  double position,
+  double strokeWidth,
+) {
+  final tangent = metric.getTangentForOffset(position);
+  if (tangent == null) return;
+  final vector = tangent.vector;
+  final length = vector.distance;
+  final direction = length == 0 ? const ui.Offset(1, 0) : vector / length;
+  final extent = strokeWidth * 1e-3;
+  final start = tangent.position - direction * (extent / 2);
+  final end = tangent.position + direction * (extent / 2);
+  output
+    ..moveTo(start.dx, start.dy)
+    ..lineTo(end.dx, end.dy);
 }

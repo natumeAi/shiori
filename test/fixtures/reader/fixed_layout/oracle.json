@@ -2358,7 +2358,7 @@
           320,
           240
         ],
-        "viewport": "width=320,height=240"
+        "viewport": "width=device-width,height=240"
       },
       "elements": [
         {
@@ -2494,7 +2494,7 @@
           "y": 10
         }
       ],
-      "sourceSHA256": "ae47d5e6c96c0c665397067ff6ed82d28603865d9c10d37e7a1b555fe7536c56",
+      "sourceSHA256": "889dfce5c97dd3b6750af93b5440629d0dd8cf54d17a3d5aae23f697cf8c65e4",
       "svgTexts": [],
       "texts": []
     },
@@ -31142,7 +31142,7 @@
       ]
     }
   ],
-  "corpusSHA256": "bca95cf36e9ef381fb5532d7d46c3ae6bb7e9ca54e638a0453267d307049e239",
+  "corpusSHA256": "746ed75288a3ab8b60b7b2eafd0c27cbec19a6ab66b86f2a5553f035ef9ba5cd",
   "dpr": 1,
   "engine": "webkit",
   "engineVersion": "27.2",

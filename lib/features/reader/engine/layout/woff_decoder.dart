@@ -6,17 +6,19 @@ import 'package:shiori/features/reader/engine/layout/font_format.dart';
 
 const _malformed = FontFormatException(FontFormatFailure.malformed);
 const _limit = FontFormatException(FontFormatFailure.limitExceeded);
-int _padded(int length) => (length + 3) & ~3;
+int sfntPaddedLength(int length) => (length + 3) & ~3;
 
 /// The converted buffer remains charged until registration physically drains.
 final class ConvertedFont {
-  ConvertedFont._(this.bytes, this._owner);
+  /// The caller must reserve the buffer from [owner] before allocation.
+  ConvertedFont.admitted(this.bytes, ReaderResourceSession owner)
+    : _owner = owner;
   final Uint8List bytes;
   final ReaderResourceSession _owner;
   void dispose() => _owner.retire();
 }
 
-int _checksum(Uint8List bytes) {
+int sfntChecksum(Uint8List bytes) {
   var sum = 0;
   for (var i = 0; i < bytes.length; i += 4) {
     var word = 0;
@@ -109,9 +111,9 @@ final class WoffDecoder {
         throw _malformed;
       }
       previousTag = tag;
-      total += _padded(size);
+      total += sfntPaddedLength(size);
       if (total > maxBytes) throw _limit;
-      ranges.add((offset, offset + _padded(compressed)));
+      ranges.add((offset, offset + sfntPaddedLength(compressed)));
       tables.add((
         tag: tag,
         offset: offset,
@@ -181,17 +183,20 @@ final class WoffDecoder {
           head = offset;
           output.setUint32(offset + 8, 0);
         }
-        if (_checksum(target) != table.sum) throw _malformed;
+        if (sfntChecksum(target) != table.sum) throw _malformed;
         final at = 12 + i * 16;
         output.setUint32(at, table.tag);
         output.setUint32(at + 4, table.sum);
         output.setUint32(at + 8, offset);
         output.setUint32(at + 12, table.size);
-        offset += _padded(table.size);
+        offset += sfntPaddedLength(table.size);
       }
       if (head == null) throw _malformed;
-      output.setUint32(head + 8, (0xb1b0afba - _checksum(bytes)) & 0xffffffff);
-      return ConvertedFont._(bytes, owner);
+      output.setUint32(
+        head + 8,
+        (0xb1b0afba - sfntChecksum(bytes)) & 0xffffffff,
+      );
+      return ConvertedFont.admitted(bytes, owner);
     } on Object {
       owner.retire();
       rethrow;

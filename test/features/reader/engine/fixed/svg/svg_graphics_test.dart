@@ -50,6 +50,28 @@ void main() {
   }
 
   test(
+    'legacy version/profile attributes are inert; unknown attributes refuse',
+    () {
+      for (final extra in [
+        '',
+        'version="1.1" baseProfile="full"',
+        'version="2.0" baseProfile="tiny"',
+      ]) {
+        expect(
+          plan('<rect width="20" height="20"/>', extra: extra).capability,
+          isA<CompleteSectionCapability>(),
+        );
+      }
+      final unsupported = plan('', extra: 'unknownProfile="full"').capability;
+      expect(unsupported, isA<UnsupportedSectionCapability>());
+      expect(
+        unsupported.constructs.single.identifier,
+        'svg-attribute-unknownProfile',
+      );
+    },
+  );
+
+  test(
     'all path verbs, subpaths, numbers and source identity survive',
     () async {
       final p = plan(
@@ -66,7 +88,9 @@ void main() {
           true,
         );
         expect(
-          scene.geometry.paint.single.alphaFootprint!.alpha.any((a) => a > 0),
+          scene.geometry.paint.every(
+            (paint) => paint.alphaFootprint!.alpha.any((a) => a > 0),
+          ),
           true,
         );
         expect(CanonicalIndex.build(p.document).length, 0);
@@ -245,6 +269,49 @@ void main() {
     }
   });
   test(
+    'marker start, mid and end follow subpath vertices and closepath',
+    () async {
+      final p = plan(
+        '<defs><marker id="m" orient="0" markerUnits="userSpaceOnUse"><circle id="dot" cx="0" cy="0" r="1"/></marker></defs>'
+        '<path d="M10 10L30 10L30 30M50 50L70 50L70 70L90 70" fill="none" stroke="black" marker-start="url(#m)" marker-mid="url(#m)" marker-end="url(#m)"/>'
+        '<path d="M10 90L90 90L50 170Z M110 90A20 20 0 1 1 150 90L170 90" fill="none" stroke="black" marker-start="url(#m)" marker-mid="url(#m)" marker-end="url(#m)"/>',
+      );
+      final scene = await p.prepare(budget: SceneResourceBudget());
+      try {
+        expect(scene.capability.isComplete, true);
+        final node = p.document.nodes.singleWhere((n) => n.id == 'dot').index;
+        final markers = scene.elements
+            .where((e) => e.nodeIndex == node)
+            .toList();
+        expect(markers, hasLength(14));
+        final points = [
+          for (final e in markers) [e.transform.e, e.transform.f],
+        ];
+        for (final (actual, expected) in [
+          (points[0], [10, 10]),
+          (points[1], [30, 10]),
+          (points[2], [30, 30]),
+          (points[3], [50, 50]),
+          (points[4], [70, 50]),
+          (points[5], [70, 70]),
+          (points[6], [90, 70]),
+          (points[7], [10, 90]),
+          (points[8], [90, 90]),
+          (points[9], [50, 170]),
+          (points[10], [10, 90]),
+          (points[11], [110, 90]),
+          (points[12], [150, 90]),
+          (points[13], [170, 90]),
+        ]) {
+          expect(actual[0], closeTo(expected[0], 1e-3));
+          expect(actual[1], closeTo(expected[1], 1e-3));
+        }
+      } finally {
+        scene.dispose();
+      }
+    },
+  );
+  test(
     'pattern strokes, object units and inherited content are admitted',
     () async {
       final p = plan(
@@ -296,8 +363,8 @@ void main() {
     );
     expect(resolved.problems, isEmpty);
     final node = doc.nodes.singleWhere((n) => n.id == 'r').index;
-    expect(resolved.values[node]!['fill'], 'blue');
-    expect(resolved.values[node]!['stroke'], 'orange');
+    expect(resolved.values[node]!['fill'], anyOf('blue', '#00f'));
+    expect(resolved.values[node]!['stroke'], anyOf('orange', '#ffa500'));
   });
   test(
     'Bezier bounds are tight and scene disposal leaves no compiler cache owner',

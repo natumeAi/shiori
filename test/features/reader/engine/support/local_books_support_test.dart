@@ -9,7 +9,8 @@ import 'package:shiori/features/reader/engine/style/css_style_resolver.dart';
 import 'package:shiori/features/reader/engine/style/reader_settings.dart';
 import 'package:shiori/features/reader/engine/support/unsupported_layout.dart';
 
-/// Checks the private real books: supported layout, and counts of ignored or
+/// Checks the private real books: no reflow blocker other than fixed layout
+/// (handled by the fixed path), and counts of ignored or
 /// approximated CSS. Skipped when `build/oracle-local/` or the local EPUB
 /// folder is absent. Output carries counts and CSS property/at-rule names
 /// only: never book text.
@@ -67,9 +68,14 @@ void main() {
           'ignoredTotal=${totals.values.fold(0, (a, b) => a + b)} '
           'ignored=${sorted.map((e) => '${e.key} x${e.value}').toList()}',
         );
+        // Fixed-layout books leave the reflow path for the S4a fixed path,
+        // which private_publication_regression_test.dart proves per section.
+        final reflowBlockers = support.reasons.where(
+          (r) => r != UnsupportedLayoutReason.fixedLayout,
+        );
         expect(
-          support.supported,
-          isTrue,
+          reflowBlockers,
+          isEmpty,
           reason: 'book $number: ${support.reasons}',
         );
       }

@@ -7,6 +7,7 @@ import 'package:shiori/features/reader/data/source/source_position.dart';
 import 'package:shiori/features/reader/data/geometry/paint_geometry.dart';
 import 'package:shiori/features/reader/data/geometry/source_fragment.dart';
 import 'package:shiori/features/reader/engine/fixed/fixed_scene.dart';
+import 'package:shiori/features/reader/engine/fixed/svg/svg_graphics.dart';
 import 'package:shiori/features/reader/engine/style/computed_style.dart';
 
 import 'fixed_layout_scene_input.dart';
@@ -51,17 +52,25 @@ Map<String, Object?> measureSceneGeometry(
     }
     final node = nodes.single;
     final boxes = scene.boxes.where((b) => b.nodeIndex == node.index);
-    if (boxes.length != 1) {
+    SvgGraphicsElement? svg;
+    for (final sceneSvg in scene.svgScenes) {
+      for (final element in sceneSvg.elements) {
+        if (element.nodeIndex == node.index) svg = element;
+      }
+    }
+    final box = boxes.length == 1 ? boxes.single : null;
+    if (box == null && svg == null) {
       missing.add('element box $i');
       continue;
     }
-    final box = boxes.single, r = box.borderBox;
+    final r = box?.borderBox ?? svg!.bounds;
+    final transform = box?.transform ?? svg!.transform;
     final points = [
       r.topLeft,
       r.topRight,
       r.bottomRight,
       r.bottomLeft,
-    ].map((p) => fixedMap(box.transform, p));
+    ].map((p) => fixedMap(transform, p));
     final left = points.map((p) => p.dx).reduce(math.min),
         right = points.map((p) => p.dx).reduce(math.max),
         top = points.map((p) => p.dy).reduce(math.min),
@@ -72,11 +81,14 @@ Map<String, Object?> measureSceneGeometry(
       right - left,
       bottom - top,
     ], (expected['box'] as List).map((n) => (n as num).toDouble()).toList());
-    final a = box.style.authored;
+    final opacity =
+        box?.style.authored.opacity ??
+        double.tryParse(svg?.paint['opacity'] ?? '') ??
+        1;
     compare(
       'opacity',
       i.toString(),
-      [a.opacity],
+      [opacity],
       [double.parse(expected['opacity'] as String)],
     );
     final rawTransform = expected['transform'] as String;
@@ -89,7 +101,7 @@ Map<String, Object?> measureSceneGeometry(
               .map((v) => double.parse(v.trim()))
               .toList()
         : null;
-    if (refMatrix != null) {
+    if (box != null && refMatrix != null) {
       final t = box.localTransform;
       for (final p in [
         ui.Offset.zero,
@@ -118,10 +130,16 @@ Map<String, Object?> measureSceneGeometry(
         box.transformOrigin.dx,
         box.transformOrigin.dy,
       ], origin);
-    } else {
+    } else if (box == null && rawTransform != 'none') {
+      missing.add('svg-css-transform $i');
+    } else if (box != null) {
       missing.add('2D transform $i');
     }
-    if (a.visibility.name != expected['visibility']) {
+    final visibility =
+        box?.style.authored.visibility.name ??
+        svg?.paint['visibility'] ??
+        'visible';
+    if (visibility != expected['visibility']) {
       missing.add('visibility $i');
     }
   }

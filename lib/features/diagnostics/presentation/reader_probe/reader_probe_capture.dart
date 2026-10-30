@@ -34,7 +34,7 @@ extension _ReaderProbeCapture on _ReaderProbeScreenState {
       'injectionCadencePolicy':
           'at most one move per actual frame; no catch-up',
       'deviceModelSource': 'user_provided',
-      'sectionCacheCapacity': 4,
+      'sectionCacheCapacity': ReflowSectionCache.capacity,
       'resourceCaps': _reader.resourceCaps,
     };
   }
@@ -58,7 +58,7 @@ extension _ReaderProbeCapture on _ReaderProbeScreenState {
         final matches = books.where((b) => b.fixtureId == fixture);
         if (matches.isEmpty) throw const ParseException();
         _measure();
-        await _reader.open(matches.first);
+        if (!await _open(matches.first)) return;
       }
       if (!mounted || token != _captureGeneration) return;
       _measure();

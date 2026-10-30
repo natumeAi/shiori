@@ -1,0 +1,17 @@
+[
+  {
+    "name": "hskip3-space",
+    "br": "02000000445020f2ddff3f",
+    "output": "41"
+  },
+  {
+    "name": "hskip3-single",
+    "br": "02000000445020f201000000",
+    "output": "41"
+  },
+  {
+    "name": "metadata-uncompressed",
+    "br": "ac016d65746110000872617703",
+    "output": "726177"
+  }
+]

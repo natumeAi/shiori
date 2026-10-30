@@ -342,6 +342,7 @@ Future<Map<String, Object?>> runHarfBuzzProbe() async {
         'unmeasured: system font admission and grid-fitting allocations',
     'outlineControl': outlineControl,
     'geometryToleranceCssPx': .5,
+    'd10ChangedPixelMinimumDelta': d10ChangedPixelMinimumDelta,
     'clusterProvenance': 'shaped',
     'resources': ledger.snapshot(),
     'engineRegistration': {

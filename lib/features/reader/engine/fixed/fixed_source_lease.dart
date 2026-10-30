@@ -66,11 +66,33 @@ final class FixedImageRequest {
     required this.width,
     required this.height,
     required this.acquire,
+    this.acquireAt,
   }) {
     if (width <= 0 || height <= 0) throw ArgumentError('Invalid image bounds');
   }
   final int width, height;
   final Future<FixedImageLease> Function(PublicationCancellation) acquire;
+  final Future<FixedImageLease> Function(
+    PublicationCancellation,
+    int width,
+    int height,
+  )?
+  acquireAt;
+
+  Future<FixedImageLease> acquireTarget(
+    PublicationCancellation cancellation,
+    int targetWidth,
+    int targetHeight,
+  ) {
+    final targeted = acquireAt;
+    if (targeted != null) {
+      return targeted(cancellation, targetWidth, targetHeight);
+    }
+    if (targetWidth != width || targetHeight != height) {
+      throw StateError('Fixed image owner does not support targeted decoding');
+    }
+    return acquire(cancellation);
+  }
 }
 
 final class FixedImageLease {

@@ -162,18 +162,8 @@ extension _SvgPatternPaint on SvgGraphicsPlan {
     if (width < 0 || height < 0) {
       throw _SvgFailure(index, 'svg-pattern-size', malformed: true);
     }
-    if (width == 0 || height == 0 || bounds.isEmpty) {
+    if (width == 0 || height == 0) {
       return;
-    }
-    var tileToUser = _svgTransform(a['patternTransform'], index);
-    if (object) {
-      tileToUser = tileToUser
-          .compose(_translate(bounds.left, bounds.top))
-          .compose(_scale(bounds.width, bounds.height));
-    }
-    final inverse = tileToUser.inverse();
-    if (inverse is! InvertedTransform) {
-      throw _SvgFailure(index, 'svg-pattern-transform');
     }
     final strokeWidth = _number(
       shape.paint['stroke-width'],
@@ -190,6 +180,22 @@ extension _SvgPatternPaint on SvgGraphicsPlan {
                 ),
           )
         : bounds;
+    // An objectBoundingBox paint server is not rendered on a zero-area box.
+    // userSpaceOnUse strokes are visible from their stroked geometry, so a
+    // horizontal/vertical line must not be suppressed by zero-height fill
+    // bounds (SVG 2 painting: stroke shape, not fill bounds).
+    if (object && (bounds.width == 0 || bounds.height == 0)) return;
+    if (paintBounds.isEmpty) return;
+    var tileToUser = _svgTransform(a['patternTransform'], index);
+    if (object) {
+      tileToUser = tileToUser
+          .compose(_translate(bounds.left, bounds.top))
+          .compose(_scale(bounds.width, bounds.height));
+    }
+    final inverse = tileToUser.inverse();
+    if (inverse is! InvertedTransform) {
+      throw _SvgFailure(index, 'svg-pattern-transform');
+    }
     final box = _bounds(inverse.transform, paintBounds);
     final left = ((box.left - x) / width).floor(),
         right = ((box.right - x) / width).ceil();
@@ -261,7 +267,7 @@ extension _SvgPatternPaint on SvgGraphicsPlan {
     }
     final contentTree = _tree(
       content,
-      const {'fill': 'black', 'stroke': 'none'},
+      {'fill': 'black', 'stroke': 'none', ..._inherited(content)},
       contentToTile,
       shape.viewport,
       [...shape.instances, shape.node.index],
@@ -294,7 +300,12 @@ extension _SvgPatternPaint on SvgGraphicsPlan {
 
     await prepareContent(contentTree);
     final tileRecorder = ui.PictureRecorder();
-    _paintTree(ui.Canvas(tileRecorder), contentTree);
+    _paintTree(
+      ui.Canvas(tileRecorder),
+      contentTree,
+      features,
+      const <Object, Object?>{},
+    );
     final tile = tileRecorder.endRecording();
     pictures.add(tile);
     canvas.saveLayer(

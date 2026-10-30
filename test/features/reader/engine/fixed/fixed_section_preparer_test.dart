@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shiori/features/reader/data/geometry/source_geometry.dart';
+import 'package:shiori/features/reader/data/geometry/cluster_geometry.dart';
 import 'package:shiori/features/reader/data/geometry/affine_transform.dart';
 import 'package:shiori/features/reader/data/resources/reader_resource_source.dart';
 import 'package:shiori/features/reader/data/source/reader_work_guard.dart';
@@ -12,6 +13,7 @@ import 'package:shiori/features/reader/engine/fixed/fixed_preparation_plan.dart'
 import 'package:shiori/features/reader/engine/fixed/fixed_scene_admission.dart';
 import 'package:shiori/features/reader/engine/fixed/fixed_section_preparer.dart';
 import 'package:shiori/features/reader/engine/fixed/fixed_source_lease.dart';
+import 'package:shiori/features/reader/engine/fixed/svg/svg_graphics.dart';
 import 'package:shiori/features/reader/engine/layout/font_registry.dart';
 import 'package:shiori/features/reader/engine/layout/font_format.dart';
 import 'package:shiori/features/reader/engine/layout/font_mapping.dart';
@@ -21,6 +23,7 @@ import 'package:shiori/features/reader/engine/layout/process_font_budget.dart';
 import 'package:shiori/features/reader/engine/layout/scene_resource_budget.dart';
 import 'package:shiori/features/reader/engine/pagination/preparation.dart';
 import 'package:shiori/features/reader/engine/support/layout_flags.dart';
+import 'package:shiori/features/reader/engine/support/section_capability.dart';
 
 import '../../contract_test_values.dart';
 import '../style/style_test_support.dart';
@@ -107,6 +110,17 @@ void main() {
     );
   }
 
+  SceneResourceBudget planBudget(FixedPreparationPlan plan) =>
+      SceneResourceBudget(
+        limits: {
+          for (final r in SceneResource.values)
+            r: (plan.resources[r] ?? 0) > 0 ? plan.resources[r]! : 1,
+        },
+        sourceDepthLimit: plan.sourceDepth,
+        referenceDepthLimit: plan.referenceDepth < 1 ? 1 : plan.referenceDepth,
+        layerDepthLimit: plan.layerDepth,
+      );
+
   setUp(() {
     releases = 0;
     reservations = 0;
@@ -153,7 +167,7 @@ void main() {
         AffineTransform(0, 0, 0, 0, 0, 0),
         registryPrefix: 'singular',
       ),
-      throwsArgumentError,
+      throwsStateError,
     );
     expect(releases, 0);
     expect(reservations, 1);
@@ -432,6 +446,284 @@ void main() {
       expect(shared.isReleased, true);
       expect(releasesOfSharedOwner, 1);
       expect(budget.used.values.every((v) => v == 0), true);
+    },
+  );
+  test(
+    'inline SVG prepares through the fixed section route with source geometry',
+    () async {
+      final preparer = FixedSectionPreparer(
+        fonts: FontRegistry(processBudget: ProcessFontBudget()),
+        drainFonts: () async {},
+      );
+      final input = source(
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect id="r" x="5" y="5" width="20" height="20" fill="red"/></svg>',
+      );
+      final plan = preparer.plan(input), budget = SceneResourceBudget();
+      expect(plan.capability.isComplete, true);
+      expect(plan.svgPlans, hasLength(1));
+      expect(plan.resources[SceneResource.vectorBytes], greaterThan(0));
+      final operation = preparer.prepare(plan, reserve(plan, budget));
+      final result = await operation.result;
+      await operation.drained;
+      try {
+        expect(result.scene.svgScenes, hasLength(1));
+        expect(result.geometry.completeness, isA<CompleteGeometry>());
+        final rect = input.document.nodes.singleWhere((n) => n.id == 'r');
+        expect(
+          result.geometry.fragments.where((f) => f.nodeIndex == rect.index),
+          hasLength(1),
+        );
+        final image = await result.scene.picture.toImage(320, 240);
+        try {
+          final bytes = (await image.toByteData(
+            format: ui.ImageByteFormat.rawStraightRgba,
+          ))!.buffer.asUint8List();
+          final offset = (10 * 320 + 10) * 4;
+          expect(bytes.sublist(offset, offset + 4), [255, 0, 0, 255]);
+        } finally {
+          image.dispose();
+        }
+      } finally {
+        result.dispose();
+        result.dispose();
+      }
+      expect(budget.used.values.every((v) => v == 0), true);
+    },
+  );
+  for (final transform in ['none', 'matrix(1.2,.2,-.3,.9,0,0)']) {
+    test('placed inline SVG uses the enclosing authored raster: $transform', () async {
+      final preparer = FixedSectionPreparer(
+        fonts: FontRegistry(processBudget: ProcessFontBudget()),
+        drainFonts: () async {},
+      );
+      final input = source(
+        css:
+            '#host{position:absolute;left:100.25px;top:12.75px;'
+            'width:80px;height:80px;transform:$transform;transform-origin:0 0}',
+        body:
+            '<div id="host"><svg xmlns="http://www.w3.org/2000/svg" '
+            'width="80" height="80"><path id="placed" d="M0 0H80V80H0Z" '
+            'fill="red"/></svg></div>',
+      );
+      final plan = preparer.plan(input), budget = SceneResourceBudget();
+      expect(plan.capability.isComplete, true);
+      final svgPlan = plan.svgPlans.single;
+      expect(svgPlan.size.width, 80);
+      expect(svgPlan.size.height, 80);
+      expect(svgPlan.evidenceSize!.width, 320);
+      expect(svgPlan.evidenceSize!.height, 240);
+      expect(
+        svgPlan.evidencePixels,
+        AuthoredEvidenceRaster.scratchPixels(320, 240),
+      );
+      expect(plan.evidencePixels, svgPlan.evidencePixels);
+      final operation = preparer.prepare(plan, reserve(plan, budget));
+      final result = await operation.result;
+      await operation.drained;
+      try {
+        final svg = result.scene.svgScenes.single;
+        expect(svg.capability.isComplete, true);
+        expect(result.geometry.completeness, isA<CompleteGeometry>());
+        final node = input.document.nodes.singleWhere((n) => n.id == 'placed');
+        final footprint = result.geometry.paint
+            .singleWhere((p) => p.nodeIndex == node.index)
+            .alphaFootprint!;
+        final image = await svg.picture!.toImage(320, 240);
+        try {
+          final rgba = (await image.toByteData(
+            format: ui.ImageByteFormat.rawRgba,
+          ))!.buffer.asUint8List();
+          var painted = 0;
+          for (var y = 0; y < 240; y++) {
+            for (var x = 0; x < 320; x++) {
+              final alpha = rgba[(y * 320 + x) * 4 + 3];
+              expect(
+                footprint.alphaAt(GeometryPoint(x + .5, y + .5)),
+                alpha,
+                reason: '$transform native alpha at $x,$y',
+              );
+              if (alpha > 0) painted++;
+            }
+          }
+          expect(painted, greaterThan(0));
+        } finally {
+          image.dispose();
+        }
+      } finally {
+        result.dispose();
+      }
+      expect(budget.used.values.every((v) => v == 0), true);
+    });
+  }
+  test(
+    'inline SVG resources are charged once in the whole-unit plan',
+    () async {
+      final preparer = FixedSectionPreparer(
+        fonts: FontRegistry(processBudget: ProcessFontBudget()),
+        drainFonts: () async {},
+      );
+      final input = source(
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect x="5" y="5" width="20" height="20" fill="red"/></svg>',
+      );
+      final plan = preparer.plan(input);
+      final sceneBudget = planBudget(plan);
+      final prepared = FixedSectionPreparer(
+        fonts: FontRegistry(processBudget: ProcessFontBudget()),
+        drainFonts: () async {},
+        sceneBudget: sceneBudget,
+      );
+      final operation = prepared.prepare(
+        plan,
+        reserve(plan, SceneResourceBudget()),
+      );
+      final result = await operation.result;
+      await operation.drained;
+      expect(
+        plan.resources[SceneResource.sourceNodes],
+        input.document.nodes.length,
+      );
+      expect(
+        sceneBudget.peaks[SceneResource.sourceNodes],
+        input.document.nodes.length,
+      );
+      result.dispose();
+      result.dispose();
+      expect(sceneBudget.used.values.every((v) => v == 0), true);
+    },
+  );
+  test('SVG image uses the admitted image lease once', () async {
+    var acquires = 0, releasesOfImage = 0;
+    final recorder = ui.PictureRecorder();
+    ui.Canvas(recorder).drawRect(
+      const ui.Rect.fromLTWH(0, 0, 2, 2),
+      ui.Paint()..color = const ui.Color(0xffff0000),
+    );
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(2, 2);
+    picture.dispose();
+    final input = source(
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><image href="/tile.svg" x="0" y="0" width="20" height="20"/></svg>',
+      images: {
+        '/tile.svg': FixedImageRequest(
+          width: 2,
+          height: 2,
+          acquire: (_) async {
+            acquires++;
+            return FixedImageLease(image, () {
+              releasesOfImage++;
+              image.dispose();
+            });
+          },
+        ),
+      },
+    );
+    final preparer = FixedSectionPreparer(
+      fonts: FontRegistry(processBudget: ProcessFontBudget()),
+      drainFonts: () async {},
+    );
+    final plan = preparer.plan(input);
+    expect(plan.decodedImageBytes, 16);
+    final operation = preparer.prepare(
+      plan,
+      reserve(plan, SceneResourceBudget()),
+    );
+    final result = await operation.result;
+    await operation.drained;
+    expect(acquires, 1);
+    expect(result.imageOpacity, {'/tile.svg': true});
+    final native = await result.scene.picture.toImage(320, 240);
+    try {
+      final bytes = (await native.toByteData(
+        format: ui.ImageByteFormat.rawStraightRgba,
+      ))!.buffer.asUint8List();
+      final offset = (10 * 320 + 10) * 4;
+      expect(bytes.sublist(offset, offset + 4), [255, 0, 0, 255]);
+    } finally {
+      native.dispose();
+      result.dispose();
+      result.dispose();
+    }
+    expect(releasesOfImage, 1);
+  });
+  test(
+    'unsupported SVG refuses before font/native work with no partial scene',
+    () async {
+      final preparer = FixedSectionPreparer(
+        fonts: FontRegistry(processBudget: ProcessFontBudget()),
+        drainFonts: () async {},
+      );
+      final input = source(
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><text x="0" y="10" writing-mode="vertical-rl">x</text></svg>',
+      );
+      final plan = preparer.plan(input);
+      expect(plan.capability, isA<UnsupportedSectionCapability>());
+      expect(plan.svgPlans, hasLength(1));
+      expect(
+        (plan.capability as UnsupportedSectionCapability).constructs.map(
+          (c) => c.identifier,
+        ),
+        contains('svg-text-vertical'),
+      );
+      final operation = preparer.prepare(
+        plan,
+        reserve(plan, SceneResourceBudget()),
+      );
+      await expectLater(
+        operation.result,
+        throwsA(isA<FixedPreparationFailure>()),
+      );
+      await operation.drained;
+      expect(resources.reads, 0);
+      expect(releases, 1);
+      expect(reservations, 0);
+    },
+  );
+  test(
+    'failed and canceled SVG preparations release the local ledger once',
+    () async {
+      final failedInput = source(
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect x="5" y="5" width="20" height="20" fill="red"/></svg>',
+      );
+      final preparer = FixedSectionPreparer(
+        fonts: FontRegistry(processBudget: ProcessFontBudget()),
+        drainFonts: () async {},
+      );
+      final plan = preparer.plan(failedInput), failedBudget = planBudget(plan);
+      final failedPreparer = FixedSectionPreparer(
+        fonts: FontRegistry(processBudget: ProcessFontBudget()),
+        drainFonts: () async {},
+        sceneBudget: failedBudget,
+      );
+      final failed = failedPreparer.prepare(
+        plan,
+        reserve(plan, SceneResourceBudget(), reconcile: false),
+      );
+      await expectLater(failed.result, throwsA(isA<SceneAdmissionException>()));
+      await failed.drained;
+      expect(failedBudget.used.values.every((v) => v == 0), true);
+      expect(releases, 1);
+      expect(reservations, 0);
+
+      final canceledInput = source(
+        body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect x="5" y="5" width="20" height="20" fill="red"/></svg>',
+      );
+      final canceledPlan = preparer.plan(canceledInput);
+      final canceledBudget = planBudget(canceledPlan);
+      final canceledPreparer = FixedSectionPreparer(
+        fonts: FontRegistry(processBudget: ProcessFontBudget()),
+        drainFonts: () async {},
+        sceneBudget: canceledBudget,
+      );
+      final canceled = canceledPreparer.prepare(
+        canceledPlan,
+        reserve(canceledPlan, SceneResourceBudget()),
+      );
+      canceled.cancel();
+      await expectLater(canceled.result, throwsA(isA<PreparationCancelled>()));
+      await canceled.drained;
+      expect(canceledBudget.used.values.every((v) => v == 0), true);
+      expect(releases, 2);
+      expect(reservations, 0);
     },
   );
 }

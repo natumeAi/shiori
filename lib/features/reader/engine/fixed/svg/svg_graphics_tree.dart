@@ -146,7 +146,8 @@ extension _SvgTree on SvgGraphicsPlan {
               'marker',
               'title',
               'desc',
-            }.contains(tag)) {
+            }.contains(tag) ||
+            features.isDefinitionTag(tag)) {
           continue;
         }
         result.children.add(
@@ -162,6 +163,9 @@ extension _SvgTree on SvgGraphicsPlan {
           ),
         );
       }
+    } else if (features.ownsTag(n.localName)) {
+      // Feature-owned rendered node. Its feature supplies the picture and any
+      // nested text/foreignObject content without shared tree edits.
     }
     return result;
   }

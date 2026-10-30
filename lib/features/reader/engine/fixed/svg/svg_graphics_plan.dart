@@ -10,17 +10,29 @@ final class SvgGraphicsPlan {
     this.size,
     this.presentation,
     this.placement,
+    this.host,
+    this.features,
+    this.evidenceSize,
+    this.evidenceOrigin,
+    this.preparationScale,
   );
   factory SvgGraphicsPlan.inspect({
     required SourceDocument document,
     required int rootIndex,
     required SourcePageId page,
     required AuthoredPageSize size,
+    AuthoredPageSize? evidenceSize,
+    GeometryPoint? evidenceOrigin,
+    FixedPreparationScale preparationScale =
+        const FixedPreparationScale.authored(),
     Map<int, Map<String, String>> resolvedPresentation = const {},
     List<String> presentationProblems = const [],
     AffineTransform placement = const AffineTransform.identity(),
+    SvgFeatureHost host = const SvgFeatureHost.unavailable(),
+    SvgFeatureRegistry? features,
   }) {
     ReaderWorkGuard.check(ReaderWork.surfacePreparation);
+    final featureRegistry = features ?? SvgFeatureRegistry.defaults;
     final plan = SvgGraphicsPlan._(
       document,
       rootIndex,
@@ -31,6 +43,11 @@ final class SvgGraphicsPlan {
           e.key: Map<String, String>.unmodifiable(e.value),
       }),
       placement,
+      host,
+      featureRegistry,
+      evidenceSize,
+      evidenceOrigin,
+      preparationScale,
     );
     try {
       if (presentationProblems.isNotEmpty) {
@@ -51,8 +68,14 @@ final class SvgGraphicsPlan {
       );
     } on _SvgFailure catch (e) {
       plan.capability = plan._failure(e);
+    } on SvgFeatureRefusal catch (e) {
+      plan.capability = plan._failure(
+        _SvgFailure(e.node, e.identifier, malformed: e.malformed),
+      );
     } on FormatException {
-      plan.capability=plan._failure(_SvgFailure(rootIndex,'svg-path-data',malformed:true));
+      plan.capability = plan._failure(
+        _SvgFailure(rootIndex, 'svg-path-data', malformed: true),
+      );
     } on SceneAdmissionException catch (e) {
       plan.capability = ResourceSectionCapability(
         sectionIndex: page.sectionIndex,
@@ -72,10 +95,55 @@ final class SvgGraphicsPlan {
   final int rootIndex;
   final SourcePageId page;
   final AuthoredPageSize size;
+
+  /// Enclosing authored raster, independent of the SVG's replaced viewport.
+  final AuthoredPageSize? evidenceSize;
+  final GeometryPoint? evidenceOrigin;
+  final FixedPreparationScale preparationScale;
+  int get displayPixels =>
+      preparationScale.pixels(size.width) *
+      preparationScale.pixels(size.height);
+
+  /// Follow instantiated references as well as children into filtered inputs.
+  late final Set<int> authoredImageNodes = _authoredImageNodes();
+  Set<int> _authoredImageNodes() {
+    final result = <int>{}, visited = <(int, bool)>{};
+    void visit(int index, bool filtered) {
+      final filter = _attributes(index)['filter'];
+      filtered = filtered || filter != null && filter.toLowerCase() != 'none';
+      if (!visited.add((index, filtered))) return;
+      if (filtered) result.add(index);
+      for (final child in document.node(index).children) {
+        visit(child, filtered);
+      }
+      for (final edge in _references.where((r) => r.source == index)) {
+        visit(edge.target, filtered);
+      }
+    }
+
+    visit(rootIndex, false);
+    return Set.unmodifiable(result);
+  }
+
+  late final Set<String> authoredImagePaths = Set.unmodifiable({
+    for (final index in authoredImageNodes)
+      if (document.node(index).localName == 'image')
+        if ((_attributes(index)['href'] ?? _attributes(index)['xlink:href'])
+            case final String path)
+          path,
+  });
   final Map<int, Map<String, String>> presentation;
   final AffineTransform placement;
+  final SvgFeatureHost host;
+  final SvgFeatureRegistry features;
   final Map<String, int> _ids = {};
   final Map<SceneResource, int> _resources = {};
+  var _featureLayerPixels = 0, _featureLayerBytes = 0;
+  var _filterRasterPixels = 0, _filterEvidencePixels = 0;
+  var _coverageMaps = 0;
+
+  /// Filter payload admitted for retained filtered output footprints.
+  var _filterRetainedBytes = 0;
   final List<({int source, int target, String attribute})> _references = [];
   List<({int source, int target, String attribute})> get references =>
       List.unmodifiable(_references);
@@ -83,32 +151,141 @@ final class SvgGraphicsPlan {
   late final SectionCapability capability;
   int sourceDepth = 0, referenceDepth = 0, layerDepth = 0;
 
-  /// Base payload/alpha/scratch reservation. Pattern tiles and dash expansion
-  /// make additional admissions in the supplied ledger before their recording.
-  Map<SceneResource, int> reservation({double hostOpacity = 1}) {
-    final width = size.width.ceil(), height = size.height.ceil();
-    final buffers = layerDepth + (hostOpacity == 1 ? 0 : 1) + 2;
+  /// Round outwards on the authored root grid, preserving fractional placement.
+  ui.Rect _evidenceBounds([AffineTransform? placement]) {
+    final enclosing = evidenceSize;
+    if (enclosing != null) {
+      final x = evidenceOrigin?.x ?? 0, y = evidenceOrigin?.y ?? 0;
+      return _checkedEvidenceBounds(
+        ui.Rect.fromLTRB(
+          x.floorToDouble(),
+          y.floorToDouble(),
+          (x + enclosing.width).ceilToDouble(),
+          (y + enclosing.height).ceilToDouble(),
+        ),
+      );
+    }
+    final attrs = _attributes(rootIndex);
+    final t = (placement ?? this.placement)
+        .compose(_svgTransform(attrs['transform'], rootIndex))
+        .compose(
+          _translate(
+            _number(attrs['x'], rootIndex, basis: size.width),
+            _number(attrs['y'], rootIndex, basis: size.height),
+          ),
+        );
+    // Preserve the authored pixel phase and the complete root-coordinate raster.
+    var left = 0.0, top = 0.0, right = size.width, bottom = size.height;
+    for (final x in [0.0, size.width]) {
+      for (final y in [0.0, size.height]) {
+        final px = t.a * x + t.c * y + t.e;
+        final py = t.b * x + t.d * y + t.f;
+        left = math.min(left, px);
+        top = math.min(top, py);
+        right = math.max(right, px);
+        bottom = math.max(bottom, py);
+      }
+    }
+    return _checkedEvidenceBounds(
+      ui.Rect.fromLTRB(
+        left.floorToDouble(),
+        top.floorToDouble(),
+        right.ceilToDouble(),
+        bottom.ceilToDouble(),
+      ),
+    );
+  }
+
+  ui.Rect _checkedEvidenceBounds(ui.Rect bounds) {
     final cap =
         SceneResourceBudget.provisionalLimits[SceneResource.layerPixels]!;
-    if (width > cap ||
-        height > cap ||
-        width > cap ~/ height ||
-        width * height > cap ~/ buffers) {
+    if (!bounds.isFinite ||
+        bounds.width <= 0 ||
+        bounds.height <= 0 ||
+        bounds.width > cap ||
+        bounds.height > cap ||
+        bounds.width > cap ~/ bounds.height.toInt()) {
       throw const SceneAdmissionException(
         SceneAdmissionFailure.resourceExhausted,
         resource: SceneResource.layerPixels,
       );
     }
-    final pixels = width * height,
-        count = resources[SceneResource.sourceNodes] ?? 0;
+    return bounds;
+  }
+
+  /// Serial whole authored raster plus one bounded tile image/readback pair.
+  int get evidencePixels => _evidencePixels(_evidenceBounds());
+
+  int _evidencePixels(ui.Rect bounds) => math.max(
+    _filterEvidencePixels,
+    _coverageMaps == 0
+        ? 0
+        : AuthoredEvidenceRaster.scratchPixels(
+            bounds.width.toInt(),
+            bounds.height.toInt(),
+          ),
+  );
+
+  /// Safe predecode upper bound of the retained alpha footprints this plan can
+  /// publish: one authored-grid map per coverage claim plus the filter outputs.
+  /// It is the part of [reservation] that exact reconciliation may shrink to
+  /// the stored footprint bytes once preparation has published.
+  int get retainedEvidenceBytes =>
+      _coverageEvidenceBytes(_evidenceBounds()) + _filterRetainedBytes;
+
+  int _coverageEvidenceBytes(ui.Rect evidence) =>
+      _coverageMaps *
+      (evidence.width.toInt() * evidence.height.toInt() +
+          GeometryAlphaFootprint.storageOverhead);
+
+  /// Base payload/alpha/scratch reservation. Pattern tiles and dash expansion
+  /// make additional admissions in the supplied ledger before their recording.
+  Map<SceneResource, int> reservation({
+    double hostOpacity = 1,
+    AffineTransform? placement,
+  }) {
+    final width = preparationScale.pixels(size.width),
+        height = preparationScale.pixels(size.height);
+    final evidence = _evidenceBounds(placement);
+    final evidencePixels = _evidencePixels(evidence);
+    final buffers = layerDepth + (hostOpacity == 1 ? 0 : 1);
+    final cap =
+        SceneResourceBudget.provisionalLimits[SceneResource.layerPixels]!;
+    if (width > cap ||
+        height > cap ||
+        width > cap ~/ height ||
+        (buffers > 0 && width * height > cap ~/ buffers)) {
+      throw const SceneAdmissionException(
+        SceneAdmissionFailure.resourceExhausted,
+        resource: SceneResource.layerPixels,
+      );
+    }
+    final pixels = width * height;
+    final layerPixels =
+            pixels * buffers +
+            evidencePixels +
+            _featureLayerPixels +
+            _filterRasterPixels,
+        layerBytes =
+            (pixels * buffers + evidencePixels + _filterRasterPixels) * 4 +
+            _featureLayerBytes;
+    if (layerPixels >
+            SceneResourceBudget.provisionalLimits[SceneResource.layerPixels]! ||
+        layerBytes >
+            SceneResourceBudget.provisionalLimits[SceneResource.layerBytes]!) {
+      throw const SceneAdmissionException(
+        SceneAdmissionFailure.resourceExhausted,
+        resource: SceneResource.layerPixels,
+      );
+    }
     return Map.unmodifiable({
       ...resources,
       SceneResource.vectorBytes:
           (resources[SceneResource.vectorBytes] ?? 0) +
-          count * pixels +
+          _coverageEvidenceBytes(evidence) +
           2 * 1024 * 1024,
-      SceneResource.layerPixels: pixels * buffers,
-      SceneResource.layerBytes: pixels * buffers * 4,
+      SceneResource.layerPixels: layerPixels,
+      SceneResource.layerBytes: layerBytes,
     });
   }
 
@@ -159,8 +336,41 @@ final class SvgGraphicsPlan {
     _resources[resource] = total;
   }
 
-  void _audit(int index, Set<int> active, int depth, int refs,
-    {Map<String,String> inherited=const {}}) {
+  void _chargeLayers({required int pixels, required int bytes}) {
+    if (pixels < 0 || bytes < 0) {
+      throw ArgumentError('Negative feature layer reservation');
+    }
+    final authoredPixels = size.width.ceil() * size.height.ceil();
+    _featureLayerPixels += (pixels * displayPixels / authoredPixels).ceil();
+    _featureLayerBytes += (bytes * displayPixels / authoredPixels).ceil();
+  }
+
+  void _addReference(int source, int target, String attribute) =>
+      _references.add((source: source, target: target, attribute: attribute));
+
+  /// Marker/pattern content builders do not run the feature lifecycle yet.
+  void _refuseFeatureExclusion(int index, Set<int> active) {
+    var marker = false, pattern = false;
+    for (final ancestor in active) {
+      final tag = document.node(ancestor).localName;
+      if (tag == 'marker') marker = true;
+      if (tag == 'pattern') pattern = true;
+    }
+    if (marker) {
+      throw SvgFeatureRefusal(index, 'svg-feature-in-marker');
+    }
+    if (pattern) {
+      throw SvgFeatureRefusal(index, 'svg-feature-in-pattern');
+    }
+  }
+
+  void _audit(
+    int index,
+    Set<int> active,
+    int depth,
+    int refs, {
+    Map<String, String> inherited = const {},
+  }) {
     if (depth > SceneResourceBudget.maxSourceDepth ||
         refs > SceneResourceBudget.maxReferenceDepth) {
       throw SceneAdmissionException(
@@ -177,11 +387,18 @@ final class SvgGraphicsPlan {
     }
     final n = document.node(index);
     if (n.isCharacterData && (n.text ?? '').trim().isEmpty) return;
+    final localName = n.localName;
     if (n.namespaceUri != 'http://www.w3.org/2000/svg' ||
-        !_svgTags.contains(n.localName)) {
-      throw _SvgFailure(index, 'svg-${n.localName ?? 'node'}');
+        (!_svgTags.contains(localName) && !features.ownsTag(localName))) {
+      throw _SvgFailure(index, 'svg-${localName ?? 'node'}');
     }
-    final attrs = {...inherited,..._attributes(index)};
+    final attrs = {...inherited, ..._attributes(index)};
+    final admitted = <SvgFeature>{};
+    for (final feature in features.ownersForNode(localName, const [])) {
+      admitted.add(feature);
+      feature.admit(SvgFeatureAdmission._(this, index, localName, attrs));
+      _refuseFeatureExclusion(index, active);
+    }
     _validateSvgValues(index, attrs);
     if ((_shapes.contains(n.localName) ||
             const {'image', 'stop'}.contains(n.localName)) &&
@@ -210,14 +427,38 @@ final class SvgGraphicsPlan {
       );
     }
     for (final a in attrs.entries) {
-      if (!_svgAttributes.contains(a.key) && !a.key.startsWith('xmlns')) {
+      if (!_svgAttributes.contains(a.key) &&
+          !a.key.startsWith('xmlns') &&
+          !features.ownsAttribute(a.key)) {
         throw _SvgFailure(index, 'svg-attribute-${a.key}');
       }
-      if (a.key == 'filter' && a.value != 'none') {
-        throw _SvgFailure(index, 'svg-filter');
+    }
+    for (final feature in features.ownersForNode(localName, attrs.keys)) {
+      if (admitted.add(feature)) {
+        final payload = _resources[SceneResource.vectorBytes] ?? 0;
+        feature.admit(SvgFeatureAdmission._(this, index, localName, attrs));
+        if (feature is SvgFilterFeature) {
+          _filterRetainedBytes +=
+              (_resources[SceneResource.vectorBytes] ?? 0) - payload;
+        }
+        _refuseFeatureExclusion(index, active);
       }
     }
     _charge(SceneResource.sourceNodes, 1);
+    // Containers, whitespace, titles and gradient stops retain no leaf alpha.
+    // Auditing follows references, so repeated instances remain charged. Mask
+    // evidence and clip-filtered copies need their own simultaneous payloads.
+    if (_shapes.contains(localName) ||
+        const {'image', 'mask', 'text', 'foreignObject'}.contains(localName)) {
+      _coverageMaps += _shapes.contains(localName)
+          ? _shapePaintRoles(attrs).length
+          : 1;
+    }
+    if (attrs['clip-path'] != null && attrs['clip-path'] != 'none') {
+      // A container clip may filter every descendant's footprint. Keep the
+      // source-node upper bound for feature effects until instance preparation.
+      _coverageMaps += 2 * document.nodes.length;
+    }
     _charge(
       SceneResource.sourceBytes,
       attrs.entries.fold(
@@ -251,19 +492,38 @@ final class SvgGraphicsPlan {
       }
       if (_svgPaint.contains(a.key) && !_shapes.contains(n.localName)) continue;
       final repetitions = a.key.startsWith('marker-')
-          ? _markerReferenceCount(n.localName!,a.key,attrs,index) : 1;
+          ? _markerReferenceCount(n.localName!, a.key, attrs, index)
+          : 1;
       for (var j = 0; j < repetitions; j++) {
         _charge(SceneResource.references, 1);
         final target = _reference(index, a.value);
         _references.add((source: index, target: target, attribute: a.key));
-        _audit(target, next, depth + 1, refs + 1,inherited:n.localName=='use'
-          ? {for (final a in attrs.entries) if (_svgPaint.contains(a.key)) a.key:a.value}
-          :const {});
+        _audit(
+          target,
+          next,
+          depth + 1,
+          refs + 1,
+          inherited: n.localName == 'use'
+              ? {
+                  for (final a in attrs.entries)
+                    if (_svgPaint.contains(a.key)) a.key: a.value,
+                }
+              : const {},
+        );
       }
     }
+    if (features.opaqueChildren(localName)) return;
     for (final child in n.children) {
-      _audit(child, next, depth + 1, refs,inherited:{for (final a in attrs.entries)
-        if (_svgPaint.contains(a.key)) a.key:a.value});
+      _audit(
+        child,
+        next,
+        depth + 1,
+        refs,
+        inherited: {
+          for (final a in attrs.entries)
+            if (_svgPaint.contains(a.key)) a.key: a.value,
+        },
+      );
     }
   }
 
@@ -331,6 +591,9 @@ const _svgPaint = {
 const _svgAttributes = {
   'xmlns',
   'xmlns:xlink',
+  // Legacy SVG version/profile metadata has no rendering effect.
+  'version',
+  'baseProfile',
   'id',
   'class',
   'data-source',
