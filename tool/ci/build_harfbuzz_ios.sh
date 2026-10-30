@@ -157,21 +157,31 @@ destination.write_text('#pragma once\n' + ''.join(
 PY
 cp "$HB_RUN/hb-prefix.h" "$HB_PROVENANCE/hb-prefix.h"
 
-# Optional companion libraries vary between build systems in this release.
-# Pass only controls actually declared by CMake, then audit the resulting cache.
-# Any unused argument we DO pass still fails configure below.
-python3 - "$HB_SOURCE/CMakeLists.txt" > "$HB_RUN/optional-cmake-flags.txt" <<'PY'
-import pathlib, re, sys
-source = pathlib.Path(sys.argv[1]).read_text()
-declared = set(re.findall(r'\boption\s*\(\s*(HB_[A-Z0-9_]+)', source, re.I))
-optional = {'HB_BUILD_UTILS', 'HB_BUILD_TESTS', 'HB_BUILD_RASTER', 'HB_BUILD_VECTOR',
-            'HB_BUILD_GPU', 'HB_BUILD_GPU_DEMO', 'HB_HAVE_CAIRO', 'HB_HAVE_INTROSPECTION'}
-for name in sorted(optional & declared):
-    print('-D' + name + '=OFF')
-PY
-cp "$HB_RUN/optional-cmake-flags.txt" "$HB_PROVENANCE/optional-cmake-flags.txt"
-optional_flags=(-DHB_BUILD_SUBSET=OFF)
-while IFS= read -r flag; do optional_flags+=("$flag"); done < "$HB_RUN/optional-cmake-flags.txt"
+# Pin the 14.6.0 cache contract, including its tri-state STRING demo switch.
+# option()-only discovery misses set(... CACHE STRING ...) controls. Use the
+# same typed definitions for configure and validation; unknown HB entries and
+# unused arguments still fail. Retain CMakeLists for CI review of OFF semantics.
+cat > "$HB_RUN/component-cmake-flags.txt" <<'FLAGS'
+-DBUILD_SHARED_LIBS:BOOL=OFF
+-DHB_BUILD_GPU:BOOL=OFF
+-DHB_BUILD_GPU_DEMO:STRING=OFF
+-DHB_BUILD_RASTER:BOOL=OFF
+-DHB_BUILD_SUBSET:BOOL=OFF
+-DHB_BUILD_UTILS:BOOL=OFF
+-DHB_BUILD_VECTOR:BOOL=OFF
+-DHB_HAVE_CAIRO:BOOL=OFF
+-DHB_HAVE_CORETEXT:BOOL=OFF
+-DHB_HAVE_FREETYPE:BOOL=OFF
+-DHB_HAVE_GLIB:BOOL=OFF
+-DHB_HAVE_GOBJECT:BOOL=OFF
+-DHB_HAVE_GRAPHITE2:BOOL=OFF
+-DHB_HAVE_ICU:BOOL=OFF
+-DHB_HAVE_INTROSPECTION:BOOL=OFF
+FLAGS
+cp "$HB_RUN/component-cmake-flags.txt" "$HB_PROVENANCE/component-cmake-flags.txt"
+cp "$HB_SOURCE/CMakeLists.txt" "$HB_PROVENANCE/CMakeLists.txt"
+component_flags=()
+while IFS= read -r flag; do component_flags+=("$flag"); done < "$HB_RUN/component-cmake-flags.txt"
 
 HB_MIN_IOS=15.0 # Matches the checkout's Runner deployment target on 2026-10-28.
 for target in device-arm64 simulator-arm64 simulator-x86_64; do
@@ -183,18 +193,15 @@ for target in device-arm64 simulator-arm64 simulator-x86_64; do
   sdk_path="$(xcrun --sdk "$sdk" --show-sdk-path)"
   destination="$HB_RUN/$target"
   cmake -S "$HB_SOURCE" -B "$destination" -G Xcode \
-    -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT="$sdk_path" \
-    -DCMAKE_OSX_ARCHITECTURES="$arch" \
-    -DCMAKE_OSX_DEPLOYMENT_TARGET="$HB_MIN_IOS" \
-    -DCMAKE_INSTALL_PREFIX="$destination/install" \
-    -DCMAKE_C_FLAGS="-include \"$HB_RUN/hb-prefix.h\"" \
-    -DCMAKE_CXX_FLAGS="-include \"$HB_RUN/hb-prefix.h\"" \
-    -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO \
-    -DCMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN=NO \
-    -DBUILD_SHARED_LIBS=OFF \
-    -DHB_HAVE_GLIB=OFF -DHB_HAVE_GOBJECT=OFF -DHB_HAVE_ICU=OFF \
-    -DHB_HAVE_FREETYPE=OFF -DHB_HAVE_CORETEXT=OFF -DHB_HAVE_GRAPHITE2=OFF \
-    "${optional_flags[@]}" \
+    -DCMAKE_SYSTEM_NAME:STRING=iOS -DCMAKE_OSX_SYSROOT:PATH="$sdk_path" \
+    -DCMAKE_OSX_ARCHITECTURES:STRING="$arch" \
+    -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING="$HB_MIN_IOS" \
+    -DCMAKE_INSTALL_PREFIX:PATH="$destination/install" \
+    -DCMAKE_C_FLAGS:STRING="-include \"$HB_RUN/hb-prefix.h\"" \
+    -DCMAKE_CXX_FLAGS:STRING="-include \"$HB_RUN/hb-prefix.h\"" \
+    -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED:STRING=NO \
+    -DCMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN:STRING=NO \
+    "${component_flags[@]}" \
     2>&1 | tee "$HB_PROVENANCE/$target-configure.log"
   # An unrecognized option needs review, never a silent optional dependency.
   if grep -q 'Manually-specified variables were not used' "$HB_PROVENANCE/$target-configure.log"; then
@@ -202,14 +209,35 @@ for target in device-arm64 simulator-arm64 simulator-x86_64; do
     exit 3
   fi
   cp "$destination/CMakeCache.txt" "$HB_PROVENANCE/$target-CMakeCache.txt"
-  python3 - "$destination/CMakeCache.txt" <<'PY'
+  python3 - "$destination/CMakeCache.txt" "$HB_RUN/component-cmake-flags.txt" <<'PY'
 import pathlib, re, sys
 cache = pathlib.Path(sys.argv[1]).read_text()
-enabled = re.findall(r'^(HB_(?:HAVE|BUILD)_[A-Z0-9_]+):BOOL=(?:ON|TRUE|1)$', cache, re.M)
-if enabled:
-    raise SystemExit('Unexpected optional HarfBuzz components/dependencies: ' + ', '.join(enabled))
 if not re.search(r'^BUILD_SHARED_LIBS:BOOL=OFF$', cache, re.M):
-    raise SystemExit('Expected a static HarfBuzz build')
+    raise SystemExit('Expected a static HarfBuzz build: BUILD_SHARED_LIBS:BOOL=OFF')
+expected = {}
+for flag in pathlib.Path(sys.argv[2]).read_text().splitlines():
+    match = re.fullmatch(r'-D([A-Z0-9_]+):(BOOL|STRING)=(OFF)', flag)
+    if not match or match[1] in expected:
+        raise SystemExit('Invalid or duplicate component cache definition: ' + flag)
+    expected[match[1]] = (match[2], match[3])
+# This is CMake's choice-list metadata, not another component switch. Keep the
+# exception exact; do not exempt arbitrary INTERNAL or *-STRINGS HB entries.
+metadata = {'HB_BUILD_GPU_DEMO-STRINGS': ('INTERNAL', 'AUTO;ON;OFF')}
+seen = set()
+for line in cache.splitlines():
+    if not (line.startswith('HB_') or line.startswith('BUILD_SHARED_LIBS:')):
+        continue
+    match = re.fullmatch(r'([^:]+):([^=]+)=(.*)', line)
+    if not match or match[1] in seen:
+        raise SystemExit('Malformed or duplicate HarfBuzz cache entry: ' + line)
+    name, kind, value = match.groups()
+    wanted = expected.get(name, metadata.get(name))
+    if wanted != (kind, value):
+        raise SystemExit('Unexpected HarfBuzz component/dependency cache entry: ' + line)
+    seen.add(name)
+missing = expected.keys() - seen
+if missing:
+    raise SystemExit('Missing HarfBuzz cache definitions: ' + ', '.join(sorted(missing)))
 PY
   cmake --build "$destination" --config Release --target harfbuzz \
     2>&1 | tee "$HB_PROVENANCE/$target-build.log"

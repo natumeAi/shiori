@@ -6529,3 +6529,46 @@ the device executable: version return, DynamicLibrary.process() in real AOT,
 the six fixtures, callback/resource lifetime, device raster and performance
 remain A5 device/simulator gates. This session claims wiring and host checks,
 not Apple CI success or broader S4a/A5 acceptance.
+
+#### CI fix 1 (2026-10-30)
+
+Owner hb-fix1, inline in the existing task with the expected empty Codex
+pointer. CI run 41034103866 configured device-arm64 on macos-15 / Xcode 26.3,
+then failed the strict static-cache check: the untyped command-line definition
+became BUILD_SHARED_LIBS:UNINITIALIZED=OFF, not the required BOOL=OFF. This
+was a cache-type mismatch, not evidence that a shared library was built.
+
+Changed only tool/ci/build_harfbuzz_ios.sh and this progress section. All 24
+supplied cache definitions now have explicit types. One retained component
+flag manifest drives both configure and exact type/value validation. The
+pinned 14.6.0 HB BOOL switches are explicitly OFF; HB_BUILD_GPU_DEMO is
+explicitly STRING=OFF. Removed option()-only discovery, which missed this
+STRING control. The artifact's help text and INTERNAL choice list identify
+AUTO/ON/OFF; AUTO is no longer accepted. Unknown HB cache entries of any type,
+wrong types/values, missing required entries and duplicates fail closed. Only
+the exact GPU_DEMO choice-list metadata is exempted as non-executable metadata.
+The strict BUILD_SHARED_LIBS:BOOL=OFF and unused-argument checks remain;
+archive/global/export/link-map checks are unchanged. The rest of both build
+scripts has no other CMake cache-type check; build_ios_unsigned.sh needed no edit.
+
+Local checks used the downloaded artifact read-only, with the production
+Python heredoc extracted unchanged. Original device cache: exit 1 with the
+explicit BUILD_SHARED_LIBS:BOOL=OFF diagnostic. Correcting only that entry:
+exit 1 for HB_BUILD_GPU_DEMO:STRING=AUTO. Synthetic cache with both corrected:
+exit 0. Regression matrix: exit 0, 237 cases including shared builds, alternate
+truthy/false spellings, wrong types, missing/duplicate entries, unknown BOOL/
+STRING/INTERNAL controls, metadata drift and malformed flags. Refusals exit 1.
+Evidence and synthetic inputs: ignored build/hb-fix1/cache-checks.log and
+adjacent files. All seven embedded Python blocks compile: exit 0. bash -n on
+both build scripts and check_ios_build_modes.sh: exit 0 each; build-mode
+selection/refusal checks: exit 0. git diff --check: exit 0.
+
+No source/tool download, git mutation, sub-agent, workflow pin, xcconfig,
+Dart or spec change. The pre-existing execution-log.md edit was preserved.
+Source CMakeLists was unavailable locally; the script now retains it in CI
+provenance. Next CI must confirm that 14.6.0 consumes STRING=OFF to disable
+the GPU demo, with no AUTO fallback or enabled companion/dependency, and
+accepts the exact typed cache contract without unused arguments for all three
+slices. It must then pass the unchanged static archive/global audits,
+XCFramework packaging and final Runner exports/live link-map attribution.
+Apple compilation and A5 runtime/device acceptance remain unproven locally.
