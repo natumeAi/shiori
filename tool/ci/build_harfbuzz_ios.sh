@@ -41,6 +41,7 @@ if [[ "${1:-}" == --verify-runner && $# == 3 ]]; then
   xcrun nm -arch arm64 -m "$executable" > "$provenance/runner-symbols.txt"
   xcrun nm -arch arm64 -gUj "$executable" > "$provenance/runner-defined-globals.txt"
   xcrun dyld_info -arch arm64 -exports "$executable" > "$provenance/runner-exports.txt"
+  xcrun c++filt < "$provenance/runner-exports.txt" > "$provenance/runner-exports-demangled.txt"
   HB_RUN="$(cat "$provenance/build-root.txt")"
   cp "$HB_RUN/Runner-Release-iphoneos-arm64.map" "$provenance/Runner-LinkMap.txt"
   shasum -a 256 "$executable" > "$provenance/runner-sha256.txt"
@@ -49,8 +50,18 @@ import pathlib, re, sys
 root, archive = pathlib.Path(sys.argv[1]), sys.argv[2]
 required = set((root / 'required-symbols.txt').read_text().splitlines())
 defined = set((root / 'runner-defined-globals.txt').read_text().splitlines())
-exports = set(re.findall(r'(?<![A-Za-z0-9_])_shiori_hb_[A-Za-z0-9_]+',
+exports = set(re.findall(r'(?<!\S)_[A-Za-z0-9_$\.]+(?=\s|$)',
                          (root / 'runner-exports.txt').read_text()))
+demangled = (root / 'runner-exports-demangled.txt').read_text()
+namespaces = (root / 'hb-cxx-namespaces.txt').read_text().splitlines()
+bad_c = re.findall(r'(?<![A-Za-z0-9_])_*hb_[A-Za-z0-9_]+', demangled)
+bad_cxx = [ns for ns in namespaces if re.search(r'\b' + re.escape(ns) + r'::', demangled)]
+# Fail closed if the demangler leaves any Mach-O C++ export encoded.
+if re.search(r'(?<![A-Za-z0-9_])_+Z\w+', demangled):
+    raise SystemExit('Runner export demangling incomplete; review tool output')
+if bad_c or bad_cxx:
+    raise SystemExit(f'Unprefixed HarfBuzz Runner exports: C/internal={sorted(set(bad_c))}, '
+                     f'C++ namespaces={bad_cxx}')
 missing, unexported = required - defined, required - exports
 objects, live, excerpt = {}, {}, []
 section = ''
@@ -75,7 +86,7 @@ if missing or unexported or wrong_owner:
     raise SystemExit(f'Runner audit failed: undefined/missing={sorted(missing)}, '
                      f'not exported={sorted(unexported)}, wrong/missing archive owner={sorted(wrong_owner)}')
 (root / 'runner-audit.txt').write_text(
-    f'PASS: {len(required)} required symbols defined, exported and owned by {archive}\n'
+    f'PASS: {len(required)} required symbols defined, exported and owned by {archive}; no raw HB exports\n'
     'Runtime version 14.6.0 and device/AOT execution remain device gates.\n')
 print((root / 'runner-audit.txt').read_text(), end='')
 PY
@@ -132,30 +143,94 @@ printf '%s  %s\n' "$HB_COPYING_SHA256" "$HB_SOURCE/COPYING" | shasum -a 256 -c -
 cp "$HB_SOURCE/COPYING" "$HB_PROVENANCE/HarfBuzz-COPYING"
 shasum -a 256 "$HB_PROVENANCE/HarfBuzz-COPYING" > "$HB_PROVENANCE/COPYING-sha256.txt"
 
-# A forced-include macro map renames every hb_* and _hb_* source identifier,
-# including private definitions, types and declarations, before compilation.
-# Every architecture receives the SAME map; no unprefixed bootstrap library.
-# The subsequent archive symbol audit is authoritative and fails closed for
-# generated/token-pasted symbols missed by this lexical discovery.
-python3 - "$HB_SOURCE" "$HB_RUN/hb-prefix.h" "$HB_PREFIX" <<'PY'
+# Only HB_EXTERN declarators in installed public C headers are renamed.
+# Pinned to 14.6.0's base project_headers with all optional components OFF;
+# each actual installation must match the generated header manifest.
+python3 - "$HB_SOURCE" "$HB_RUN" "$HB_PREFIX" "$HB_PROVENANCE/required-symbols.txt" <<'PY'
 import pathlib, re, sys
-root, destination, prefix = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), sys.argv[3]
-names = set()
-namespaces = set()
+root, output, prefix = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), sys.argv[3]
+def code(source):
+    source = re.sub(r'\\\r?\n', '', source)
+    return re.sub(r'/\*.*?\*/|//[^\n]*', '', source, flags=re.S)
+
+cmake = (root / 'CMakeLists.txt').read_text()
+blocks = re.findall(r'\bset\s*\(project_headers\s+(.*?)\)', cmake, re.S)
+if len(blocks) != 1:
+    raise SystemExit('Unexpected CMake public header declaration')
+headers = re.findall(r'\$\{PROJECT_SOURCE_DIR\}/src/(hb[A-Za-z0-9_-]*\.h)\b', blocks[0])
+remainder = re.sub(r'\$\{PROJECT_SOURCE_DIR\}/src/hb[A-Za-z0-9_-]*\.hh?\s*', '', blocks[0])
+if remainder.strip() or not headers or len(headers) != len(set(headers)):
+    raise SystemExit('Unsupported CMake public header list')
+# CMake also installs this generated feature header, which has no API.
+if 'HB_EXTERN' in code((root / 'src/hb-features.h.in').read_text()):
+    raise SystemExit('Generated feature header gained an API; review extraction')
+names, macros, namespaces, types = set(), set(), set(), set()
+declarators = {}
 for path in root.rglob('*'):
     if path.is_file() and path.suffix in {'.h', '.hh', '.hpp', '.c', '.cc', '.cpp', '.inc', '.in'}:
-        source = path.read_text(errors='strict')
-        names.update(re.findall(r'\b_?hb_[A-Za-z0-9_]+\b', source))
+        source = code(path.read_text(encoding='utf-8'))
+        macros.update(re.findall(r'^\s*#\s*define\s+([A-Za-z_][A-Za-z0-9_]*)', source, re.M))
         namespaces.update(re.findall(r'\bnamespace\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{', source))
-if 'hb_shape' not in names or 'hb_font_draw_glyph' not in names:
-    raise SystemExit('Unexpected source export surface')
-# Isolate C++ OpenType/AAT/etc. definitions as well as the public C ABI. Never
-# rename the standard library namespace. Generated names still need nm review.
-names.update(namespaces - {'std'})
-destination.write_text('#pragma once\n' + ''.join(
-    f'#define {name} {prefix}{name}\n' for name in sorted(names)))
+        types.update(re.findall(r'\b(?:struct|class|using)\s+(hb_[A-Za-z0-9_]+)', source))
+for header in headers:
+    source = code((root / 'src' / header).read_text(encoding='utf-8'))
+    source = re.sub(r'^\s*#.*$', '', source, flags=re.M)
+    declarations = re.findall(r'\bHB_EXTERN\b([^;]+);', source)
+    if len(declarations) != len(re.findall(r'\bHB_EXTERN\b', source)):
+        raise SystemExit('Unparsed HB_EXTERN declaration in ' + header)
+    for declaration in declarations:
+        # The first function declarator precedes any callback parameters.
+        function = re.search(r'\b(hb_[A-Za-z0-9_]+)\s*\(', declaration)
+        data = re.search(r'\b(hb_[A-Za-z0-9_]+)\s*(?:\[[^\]]*\]\s*)?$', declaration)
+        match = function or data
+        if not match:
+            raise SystemExit('Unsupported public declarator: ' + declaration)
+        names.add(match[1])
+        declarators[re.sub(r'\s+', ' ', declaration).strip()] = match[1]
+excluded = names & macros
+names -= macros
+required = {s.removeprefix('_' + prefix) for s in pathlib.Path(sys.argv[4]).read_text().splitlines()}
+if required - names or names & (namespaces | types):
+    raise SystemExit('Required API absent or C++ namespace/type included in map')
+def manifest(filename, entries):
+    (output / filename).write_text(''.join(s + '\n' for s in sorted(entries)), encoding='utf-8')
+manifest('hb-public-headers.txt', headers + ['hb-features.h'])
+manifest('hb-excluded-api-macros.txt', excluded)
+manifest('hb-cxx-namespaces.txt', namespaces - {'std'})
+(output / 'hb-prefix.h').write_text('#pragma once\n' + ''.join(
+    f'#define {name} {prefix}{name}\n' for name in sorted(names)), encoding='utf-8')
+# Explicit attributes only on mapped declarations. HB_EXTERN stays plain extern
+# for macro-backed APIs, whose real functions must keep the hidden default.
+# Generate copies; inspection of the pinned input source remains read-only.
+annotated = output / 'public-visibility-headers'
+annotated.mkdir(exist_ok=True)
+marked = set()
+for header in headers:
+    original = (root / 'src' / header).read_text(encoding='utf-8')
+    def visibility(match):
+        declaration = re.sub(r'\s+', ' ', code(match[1])).strip()
+        name = declarators.get(declaration)
+        if name is None:
+            raise SystemExit('Unparsed visibility declaration in ' + header)
+        if name not in names:
+            return match[0]
+        marked.add(name)
+        return 'HB_EXTERN __attribute__((visibility("default")))' + match[1] + ';'
+    # Anchored to actual declarations, not documentation/preprocessor mentions.
+    patched = re.sub(r'^HB_EXTERN\b([^;]+);', visibility, original, flags=re.M)
+    (annotated / header).write_text(patched, encoding='utf-8')
+if marked != names:
+    raise SystemExit('Not every mapped API received an explicit visibility attribute')
+print(f'Public API prefix map: {len(names)} names; {len(required)} required; '
+      f'{len(excluded)} macro aliases excluded; no namespaces/types')
 PY
-cp "$HB_RUN/hb-prefix.h" "$HB_PROVENANCE/hb-prefix.h"
+# CI builds from the verified extraction with only these declaration attributes
+# added. Keep the generated copies/hashes for review; generation only reads inputs.
+shasum -a 256 "$HB_SOURCE/src/"hb*.h > "$HB_PROVENANCE/public-headers-original-sha256.txt"
+cp "$HB_RUN/public-visibility-headers/"*.h "$HB_SOURCE/src/"
+cp -R "$HB_RUN/public-visibility-headers" "$HB_PROVENANCE/"
+shasum -a 256 "$HB_RUN/public-visibility-headers/"*.h > "$HB_PROVENANCE/public-headers-build-sha256.txt"
+cp "$HB_RUN/"{hb-prefix.h,hb-public-headers.txt,hb-excluded-api-macros.txt,hb-cxx-namespaces.txt} "$HB_PROVENANCE/"
 
 # Pin the 14.6.0 cache contract, including its tri-state STRING demo switch.
 # option()-only discovery misses set(... CACHE STRING ...) controls. Use the
@@ -197,10 +272,10 @@ for target in device-arm64 simulator-arm64 simulator-x86_64; do
     -DCMAKE_OSX_ARCHITECTURES:STRING="$arch" \
     -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING="$HB_MIN_IOS" \
     -DCMAKE_INSTALL_PREFIX:PATH="$destination/install" \
-    -DCMAKE_C_FLAGS:STRING="-include \"$HB_RUN/hb-prefix.h\"" \
-    -DCMAKE_CXX_FLAGS:STRING="-include \"$HB_RUN/hb-prefix.h\"" \
+    -DCMAKE_C_FLAGS:STRING="-fvisibility=hidden -fvisibility-inlines-hidden -include \"$HB_RUN/hb-prefix.h\"" \
+    -DCMAKE_CXX_FLAGS:STRING="-fvisibility=hidden -fvisibility-inlines-hidden -include \"$HB_RUN/hb-prefix.h\"" \
     -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED:STRING=NO \
-    -DCMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN:STRING=NO \
+    -DCMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN:STRING=YES \
     "${component_flags[@]}" \
     2>&1 | tee "$HB_PROVENANCE/$target-configure.log"
   # An unrecognized option needs review, never a silent optional dependency.
@@ -249,43 +324,49 @@ PY
   xcrun c++filt < "$HB_PROVENANCE/$target-symbols-raw.txt" > "$HB_PROVENANCE/$target-symbols.txt"
   xcrun nm -gUj "$destination/install/lib/libharfbuzz.a" > "$HB_PROVENANCE/$target-globals-raw.txt"
   xcrun c++filt < "$HB_PROVENANCE/$target-globals-raw.txt" > "$HB_PROVENANCE/$target-globals.txt"
-  python3 - "$HB_PROVENANCE/$target-symbols.txt" "$HB_PROVENANCE/$target-globals-raw.txt" \
-    "$HB_PROVENANCE/required-symbols.txt" <<'PY'
+  # nm -g includes N_PEXT definitions: -m is needed to distinguish them.
+  # Hidden/internal definitions may keep their original names. No visible
+  # definition (including compiler helpers or C++ definitions) gets an exception.
+  xcrun nm -m -gU "$destination/install/lib/libharfbuzz.a" > "$HB_PROVENANCE/$target-globals-visibility.txt"
+  python3 - "$HB_PROVENANCE/$target-globals-visibility.txt" \
+    "$HB_PROVENANCE/$target-globals-raw.txt" "$HB_PROVENANCE/required-symbols.txt" \
+    "$HB_PROVENANCE/$target-visible-globals.txt" <<'PY'
 import pathlib, re, sys
-symbols = pathlib.Path(sys.argv[1]).read_text()
-bad = re.findall(r'(?<![A-Za-z0-9_])_*hb_[A-Za-z0-9_]+', symbols)
-if bad:
-    raise SystemExit('Unprefixed HB symbols (including undefined): ' + ', '.join(sorted(set(bad))))
-defined = set(pathlib.Path(sys.argv[2]).read_text().splitlines())
-missing = set(pathlib.Path(sys.argv[3]).read_text().splitlines()) - defined
-if missing:
-    raise SystemExit('Missing prefixed definitions: ' + ', '.join(sorted(missing)))
+visible, parsed = set(), set()
+for line in pathlib.Path(sys.argv[1]).read_text().splitlines():
+    if not line.strip() or line.rstrip().endswith(':'):
+        continue
+    match = re.fullmatch(
+        r'\s*[0-9A-Fa-f]+\s+\(([^)]+)\)\s+'
+        r'((?:\[[^\]]+\]\s+)?(?:weak )?(?:private )?external'
+        r'(?: automatically hidden)?(?:\s+\[[^\]]+\])*)\s+(\S+)', line)
+    if not match or match[1] == 'undefined':
+        raise SystemExit('Unsupported nm visibility record: ' + line)
+    parsed.add(match[3])
+    if 'private external' not in match[2]:
+        visible.add(match[3])
+raw = {s for s in pathlib.Path(sys.argv[2]).read_text().splitlines()
+       if s.strip() and not s.rstrip().endswith(':')}
+if parsed != raw:
+    raise SystemExit('nm visibility/name inventories disagree; review tool output')
+pathlib.Path(sys.argv[4]).write_text(''.join(s + '\n' for s in sorted(visible)))
+bad = {s for s in visible if not re.fullmatch(r'_shiori_[A-Za-z0-9_]+', s)}
+missing = set(pathlib.Path(sys.argv[3]).read_text().splitlines()) - visible
+if bad or missing:
+    raise SystemExit(f'Archive export audit failed: non-prefixed visible definitions={sorted(bad)}, '
+                     f'missing/hidden required definitions={sorted(missing)}')
+print(f'PASS: {len(visible)} visible prefixed C definitions; all required definitions visible; '
+      f'{len(parsed - visible)} hidden definitions; undefined system/libc++ references permitted')
 PY
-  # Reject any externally defined non-prefixed name, including unexpected C++
-  # globals. Compiler-generated helpers may require a reviewed source/toolchain
-  # treatment; there is no permissive symbol allowlist. Check the defining C++
-  # scope, not a prefixed parameter/return type in an unrelated global name.
-  python3 - "$HB_PROVENANCE/$target-globals-raw.txt" <<'PY'
-import pathlib, re, sys
-symbols = pathlib.Path(sys.argv[1]).read_text().splitlines()
-def prefixed(name):
-    if name.startswith('_shiori_'):
-        return True
-    if not name.startswith('__Z'):
-        return False
-    encoded = name[3:]
-    # Itanium ABI guard/vtable/typeinfo wrappers still name their owner.
-    encoded = re.sub(r'^(GV|TV|TI|TS)', '', encoded)
-    encoded = re.sub(r'^N[rVK]*', '', encoded)
-    match = re.match(r'([1-9][0-9]*)([A-Za-z_][A-Za-z0-9_]*)', encoded)
-    if not match:
-        return False
-    owner = match[2][:int(match[1])]
-    return owner.startswith('shiori_')
-bad = [s for s in symbols if s.strip() and not s.rstrip().endswith(':') and not prefixed(s)]
-if bad:
-    raise SystemExit('Non-prefixed global definitions require review: ' + repr(bad))
+  python3 - "$destination/install/include/harfbuzz" "$HB_RUN/hb-public-headers.txt" <<'PY'
+import pathlib, sys
+installed = {p.name for p in pathlib.Path(sys.argv[1]).glob('hb*.h')}
+expected = set(pathlib.Path(sys.argv[2]).read_text().splitlines())
+if installed != expected:
+    raise SystemExit(f'Installed public C headers differ from prefix inputs: '
+                     f'missing={sorted(expected - installed)}, extra={sorted(installed - expected)}')
 PY
+
 done
 
 mkdir -p "$HB_RUN/simulator" "$HB_RUN/headers"

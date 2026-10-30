@@ -6572,3 +6572,99 @@ accepts the exact typed cache contract without unused arguments for all three
 slices. It must then pass the unchanged static archive/global audits,
 XCFramework packaging and final Runner exports/live link-map attribution.
 Apple compilation and A5 runtime/device acceptance remain unproven locally.
+
+
+#### CI fix 2 (2026-10-30)
+
+Owner hb-fix2, inline in the existing in-progress S4a task with the expected
+empty Codex pointer. Read trellis-start, trellis-before-dev and trellis-check;
+no new task, pointer change, sub-agent, download, git mutation, workflow pin,
+Dart, spec, pubspec or xcconfig change. Preserved the pre-existing
+execution-log.md edit. Main-session push/CI and A5 acceptance remain separate.
+
+CI run 41042343059 (macos-15, Xcode 26.3, iPhoneOS26.2 SDK) passed configure
+then failed device-arm64 C++ compilation with 20 errors. The force-included
+lexical map redefined internal macro/template names, including hb_min_size
+(hb-null.hh:99) and hb_enable_if (hb-meta.hh:65). Prefixing arbitrary internal
+identifiers and namespaces was the root cause; cache typing was already fixed.
+
+Implemented the revised owner decision in tool/ci/build_harfbuzz_ios.sh and
+recorded it under "Revised prefixing (2026-10-30)" in the packaging research.
+Only HB_EXTERN public C ABI declarators in the pinned CMake-installed hb*.h
+set are mapped, minus all source-defined macro names. Generator rejects
+unsupported declarations, absent required APIs and namespace/type collisions;
+each slice compares its actual installed header set with the input manifest.
+The same map is force-included for C/C++ in every slice. No internal helper,
+namespace or template renaming remains. Source/download/COPYING pins,
+component definitions and the exact CI fix 1 cache checker are unchanged.
+
+The actual source yields 541 mapped functions and 33/33 required binding
+names across 32 installed public C headers (31 source headers plus generated
+hb-features.h; the C++ .hh header is excluded). Six public declarators also
+occur as source macros and are excluded: four hb_color_get_* accessors,
+hb_glyph_info_get_glyph_flags and hb_blob_create_from_file_or_fail (a macro
+in upstream test programs). These have real C definitions, so a blanket
+HB_EXTERN default-visibility override would leak them. Instead the generator
+writes public header copies adding explicit default visibility only to mapped
+API declarations. CI copies these into its fresh verified source extraction
+before building, retaining annotated copies and original/build header hashes.
+HB_EXTERN itself stays plain extern; excluded APIs retain hidden visibility.
+The Windows inspection source is never edited or executed.
+
+All slices use -fvisibility=hidden -fvisibility-inlines-hidden for C and C++,
+with GCC_SYMBOLS_PRIVATE_EXTERN=YES. HarfBuzz.xcconfig needs no change:
+force_load, all 33 linker roots, libc++, export_dynamic and live map remain.
+Flutter's HarfBuzz is in its dynamic framework; Mach-O two-level namespaces
+separate it from our static hidden internals. No runtime/Apple proof is inferred.
+
+Revised audits, without symbol allowlists:
+(a) Parse every nm -m -gU defined external record and cross-check against
+nm -gUj. Ignore private-extern definitions for export policy; all remaining
+ordinary/weak external definitions must be _shiori_* C names. Visible HB C,
+internal/C++ or compiler-helper definitions fail; full raw/demangled inventories
+remain retained and undefined system/libc++ references are permitted.
+(b) Each of the 33 extracted _required names must be defined and non-private
+external in all three thin archives; hidden definitions cannot satisfy it.
+(c) Final stripped Release Runner must define and export all 33 exact names,
+with unique live link-map ownership in the new device archive. Missing exports,
+wrong owners and dead-stripped-only entries fail. Its demangled export table
+must have no hb_*/_hb_* or HB namespace exports (OT::, AAT::, CFF::, graph::,
+etc.); incomplete C++ demangling fails. Hidden symbols and the separate dynamic
+Flutter.framework export table are outside this export ban.
+
+Local validation (evidence under ignored build/hb-fix2/):
+- Reverified the provided tarball SHA-256 before tarfile data-filter extraction
+to build/hb-src-inspect/. Executed no code from it. Production generator,
+extracted unchanged from the shell heredoc: exit 0; 541 mappings, all 33 required,
+zero source-defined macro names, zero C++ namespace/type/template names.
+Independent pinned-header function inventory agrees; all 541 mapped declarations
+receive the explicit default attribute and all six excluded APIs remain plain.
+Removing that one attribute from each generated copy reconstructs its original
+header text. Source grep confirms both reported macro collisions are unmapped.
+- All seven embedded Python blocks compile: exit 0. Production-heredoc
+regression matrix: exit 0, 488 subprocess cases; positives exit 0, expected
+refusals exit 1. Cases include every required archive definition missing/hidden,
+ordinary/weak visible leaks, nm output/inventory drift, installed-header drift,
+each missing Runner definition/export/live owner, dead-stripped-only ownership,
+HB namespace/template exports, incomplete demangling, exact export-name matching,
+duplicate live map entries, and the retained cache type/value/dependency matrix.
+- bash -n for build_harfbuzz_ios.sh, build_ios_unsigned.sh and
+check_ios_build_modes.sh: exit 0 each. Build-mode selection/refusal suite: exit 0.
+- Direct installed dart.exe + flutter_tools.snapshot test --no-pub
+--reporter expanded -j 1 test/features/reader/engine/text: exit 0, 17 passed,
+no skipped host cases. APPDATA was scoped to build/hb-fix2/appdata in the child
+shell and restored in finally; the Windows DLL path is unchanged. Existing
+measured D4 failures remain recorded failures, not A5 fidelity acceptance.
+- Final source archive byte comparison, extraction cleanup, focused diff review
+and git diff --check: exit 0. Only the script and these two research files changed
+in this slice. The source-inspection directory created by this session was
+removed only after resolving it beneath the ignored build/ directory.
+
+No local Apple/C++ compiler is available. Next CI must compile all three slices
+with the selective declaration attributes and hidden defaults, pass the exact
+typed cache/header/visible-definition audits, create the XCFramework, then pass
+Runner export and live ownership checks after Release stripping. Tool-output
+drift, visible libc++/compiler helpers or missed generated C++ scopes must return
+for review, never gain an allowlist. Actual AOT/process lookup, exact runtime
+version, six fixtures, callbacks, device glyph coverage and memory/performance
+remain A5 gates. No successful Apple build or broader S4a acceptance is claimed.

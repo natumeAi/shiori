@@ -15,15 +15,51 @@ Pin the official HarfBuzz 14.6.0 release tarball, verify SHA-256 before unpackin
 and retain the archive identity, source notices, compiler/Xcode/SDK versions,
 configuration logs, prefix map and per-architecture symbol inventories.
 
-The script scans the pinned source's C/C++ identifiers and force-includes a
-generated macro header in **every** translation unit. `hb_*` becomes
-`shiori_hb_*`; private `_hb_*` becomes `shiori__hb_*`. Source-declared C++
-namespaces (OpenType/AAT/etc., excluding `std`) are also prefixed, to avoid
-colliding with Flutter's C++ HarfBuzz implementation. Both declarations and
-definitions see the same map. This avoids renaming undefined system functions
-such as malloc/free, which a blanket binary `--prefix-symbols` would also rename.
-Public headers are consumed through `shiori-harfbuzz.h`, which includes the
-prefix map before `hb.h`. Dart uses the prefixed C ABI directly.
+### Revised prefixing (2026-10-30)
+
+CI run 41042343059 configured successfully on macos-15 / Xcode 26.3 /
+iPhoneOS26.2, then failed device-arm64 compilation. The old lexical map
+renamed internal templates and namespaces as well as API names, colliding with
+HarfBuzz's own function-like macros: hb-null.hh:99 defines hb_min_size(T), and
+hb-meta.hh:65 defines hb_enable_if(Cond). CI fix 1's typed CMake definitions,
+exact cache validation and source/download/COPYING pins remain unchanged.
+
+The revised owner decision prefixes **only public C ABI declarators marked
+HB_EXTERN in installed hb*.h headers**, minus every identifier defined as a
+macro anywhere in the pinned C/C++ sources. The generator reads 14.6.0's base
+CMake project_headers list with all optional components OFF; it excludes the
+C++ .hh header and accounts for the generated, API-free hb-features.h. Every
+slice's actual installed public C header names must exactly match this manifest.
+Unsupported declarations or missing required APIs fail closed. The same forced
+include map applies to all translation units in all three slices; hb_x maps to
+shiori_hb_x. Internal hb_*/_hb_* helpers, C++ namespaces, types and templates
+keep their original names. No binary-wide prefix operation touches system calls.
+
+Read-only Windows extraction of the verified source produces **541 mapped
+functions across 32 installed public C headers**, including all 33 required
+binding names; no public data declarator is present in this pin. Six declared
+APIs are excluded because they also occur as source macros: the four
+hb_color_get_* accessors, hb_glyph_info_get_glyph_flags and
+hb_blob_create_from_file_or_fail (also a macro in upstream test programs).
+Both reported collision names are absent, as are all source namespace/type
+names. Exclusion alone does not hide the real function definitions of these
+six APIs: they must retain hidden visibility.
+
+Compile C and C++ with -fvisibility=hidden -fvisibility-inlines-hidden in every
+slice and set GCC_SYMBOLS_PRIVATE_EXTERN=YES. HB_EXTERN remains its upstream
+plain extern spelling. The generator creates copies of public headers adding
+__attribute__((visibility("default"))) **only to mapped API declarations**;
+the six excluded APIs receive no visibility attribute. CI copies these annotated
+headers into its fresh verified source extraction before configuration/build,
+and retains original/generated header hashes plus the annotated copies for
+review. Local inspection never modifies extracted source. The resulting public
+headers are distributed with shiori-harfbuzz.h, which includes the prefix map
+before hb.h. Dart continues to use the prefixed C ABI directly.
+
+On iOS, Flutter's HarfBuzz resides in the dynamic Flutter.framework; Mach-O
+two-level namespaces separate its bindings from our statically linked hidden
+internals. Default visibility is reserved for the prefixed public API. This
+strategy still requires actual Apple compilation/link/export evidence.
 
 Build static device arm64 and simulator arm64/x86_64 archives, using the same
 prefix map and iOS 15.0 deployment target (the current Runner target). Disable
@@ -35,16 +71,30 @@ options rejected. Unknown supplied CMake options fail instead of silently
 enabling a dependency. Combine simulator slices with lipo and package the
 device/simulator libraries and headers using `xcodebuild -create-xcframework`.
 
-Audit each thin archive's defined **and undefined**, demangled symbol names.
-Any remaining unprefixed `hb_*`/`_hb_*` fails. A second strict inventory rejects
-externally defined names lacking `shiori_`; there is no permissive allowlist.
-The defining C++ scope is checked from the Mach-O Itanium name; a prefixed
-parameter type cannot excuse an unrelated global. This deliberately catches
-unanticipated C++ globals and compiler-generated helpers. Lexical discovery
-alone is not proof of complete prefixing: generated
-or token-pasted symbols and compiler helpers may require a reviewed adjustment
-on the approved toolchain. No such archive is accepted until both audits pass.
-Preserve inventories in the XCFramework artifact provenance.
+The revised audits are strict and have no symbol allowlist:
+
+(a) Each thin archive retains raw/demangled symbol and global inventories plus
+nm -m -gU visibility records. Parse every defined external record, distinguish
+private external from ordinary/weak external, and cross-check the parsed names
+against nm -gUj so output drift cannot silently skip a symbol. Every non-private
+external definition must be a shiori_-prefixed C symbol (Mach-O _shiori_*).
+All visible C++ manglings, unprefixed C/internal names and compiler helpers fail.
+Private-extern internal definitions may keep their names; undefined system and
+libc++ references are permitted and remain in the retained full inventories.
+
+(b) Every name extracted from HarfBuzzBindings._required (33 at this revision)
+must be defined **and non-private-extern** in every thin slice. A required name
+present only as a hidden definition fails. Header manifest drift also fails.
+
+(c) After the Flutter Release build/strip, Runner must define and export all
+33 exact _shiori_hb_* names, and each live link-map definition must belong to
+the new device archive. Duplicate live definitions, missing/wrong owners and
+dead-stripped-only entries fail. The Runner export table must contain no
+unprefixed hb_*/_hb_* name or HarfBuzz C++ export, including OT::, AAT::, CFF::,
+graph:: and other namespaces discovered from the source. Demangle the complete
+export inventory; an undecoded C++ name fails closed. Unrelated Runner/plugin
+exports remain permitted. Hidden symbols and Flutter.framework's own separate
+export table are outside this Runner export-table ban.
 
 ## Xcode and Flutter integration (implemented; Apple CI evidence pending)
 
@@ -71,12 +121,14 @@ executable's defined external symbols (`nm -gUj`) and dyld export trie
 (`dyld_info -exports`). The live link-map section must attribute every required
 name to the newly built device archive, excluding dead-stripped definitions.
 Any missing definition/export or wrong/missing archive owner fails packaging.
-The raw-HB ban remains confined to the new archives, leaving Flutter's HB alone.
+The export-focused raw-HB ban applies to both the new archives and Runner;
+Flutter.framework's separate export table remains untouched.
 
 `build/ios-$BUILD_MODE/harfbuzz/` retains source identity and input hashes,
 COPYING and its verified hash, toolchain versions, generated prefix/root maps,
 per-slice CMake caches/configure/build/install logs, raw/demangled symbol and
-global inventories, all three thin archive hashes and the combined simulator
+global/visibility inventories, original/generated public header hashes and
+annotated headers, all three thin archive hashes and the combined simulator
 hash, the zipped static XCFramework, final executable inventories/hash/audit,
 and full/excerpted link maps. The existing always-upload step covers this
 directory, including available logs when a build/audit fails.
@@ -100,8 +152,8 @@ The following packaging and device acceptance requirements remain in force:
    Flutter/plugin exports with a HarfBuzz-only list. Enable a link map.
 4. Verify the final Runner executable, not only the archive: required
    `_shiori_hb_*` exports exist and point into the new linked objects. Flutter's
-   own embedded library is expected to remain untouched. Restrict the no-raw-HB
-   symbol audit to this artifact's objects, because Flutter owns separate HB.
+   own dynamic framework remains untouched. Ban raw HB and HB C++ exports from
+   Runner's export table while permitting hidden internal definitions.
 5. On iOS, default bindings call `DynamicLibrary.process()` and look up
    `shiori_` + `hb_*`. Empty prefixes are refused on iOS. The runtime version
    must be exactly 14.6.0; missing symbols fail eagerly with
@@ -211,8 +263,9 @@ buffer/outline work. Do not describe a canceled waiter as native teardown.
 - Main/native owner approved the official source pin, CI download and build/
   linkage on 2026-10-30. Wiring is implemented; actual macOS toolchain/
   architecture support, strict prefix-map/global audits, final executable
-  exports and link-map attribution still require the first CI run. Compiler
-  helpers or unexpected C++ definitions must fail and return for review;
+  exports and link-map attribution still require the next CI run after the
+  configure and compilation failures. Visible compiler helpers or unexpected
+  visible C++ definitions must fail and return for review;
   there is no symbol allowlist. Device/AOT version/fixture checks remain A5.
 - Host unhinted D4 remains failed for nested, path-spacing and
   path-spacingAndGlyphs under D7, despite all B geometry passing. No GDI fitting,

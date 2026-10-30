@@ -1852,3 +1852,19 @@ source. Astra re-check, then commit/push for CI follow.
 - Diagnosis (main session, from the run artifact): the configure passes untyped `-DBUILD_SHARED_LIBS=OFF`, so the cache records `BUILD_SHARED_LIBS:UNINITIALIZED=OFF` and the strict `BOOL=OFF` check fails although the build is static; `HB_BUILD_GPU_DEMO:STRING=AUTO` is outside the BOOL-only component check. Dispatched `hb-fix1` (gpt-6.1-sol high): typed definitions, strict checks kept, non-BOOL component switches covered.
 - `hb-fix1`: all 24 CMake definitions typed, `HB_BUILD_GPU_DEMO:STRING=OFF` explicit; cache check requires exact types/values and fails closed on unknown, missing or duplicate HB entries; local: old cache fails, static-only fix fails on GPU_DEMO=AUTO, synthetic corrected cache passes; 237-case matrix and syntax checks exit 0. Astra `recheck-hbfix1` dispatched.
 - Astra `recheck-hbfix1`: no findings; 24 typed definitions, 14 HB switch types match the artifact, STRING=OFF is a listed choice for GPU_DEMO, the sole HB INTERNAL entry accepted while unknown ones fail; 234 invalid cases rejected. Ready to push.
+- Committed `64fd66c` fix(ci) and pushed (3cc86b5..64fd66c); CI run 41042343059 started.
+- CI run 41042343059: configure passed (typed definitions accepted);
+  compile of `device-arm64` failed (20 errors): the force-included map
+  `#define`s every lexical `hb_*` identifier and C++ namespace, colliding with
+  HarfBuzz's own macros/templates (`hb_min_size`, `hb_enable_if`). No local
+  C++ toolchain exists on this machine, so iteration is CI-only.
+- Main-session decision ("Revised prefixing (2026-10-30)", to be recorded in
+  `research/harfbuzz-ios-packaging.md`): prefix only the public `HB_EXTERN`
+  C API (minus source-defined macros), compile with hidden visibility so
+  internal C++ symbols are not exported (Flutter's HarfBuzz is in the dynamic
+  Flutter.framework, isolated by two-level namespaces), and audit strictly on
+  visible symbols: thin archives export only `shiori_` names, all 33 required
+  present, final Runner exports no unprefixed HarfBuzz symbol. Dispatched
+  `hb-fix2` (gpt-6.1-sol high).
+- `hb-fix2`: HB_EXTERN-only map (541 APIs, all 33 required; source macros and C++ names excluded), hidden visibility in all slices with generated annotations exposing only mapped APIs (six excluded APIs stay hidden), audits (a)-(c) implemented; generator, 488 audit cases, syntax and build-mode checks pass; 17 host tests pass; packaging doc updated. Astra `recheck-hbfix2` dispatched.
+- Astra `recheck-hbfix2`: no blocking defects; 541 APIs incl. all 33; the six exclusions are header/test macros (none required); visibility flags cover all three slices; audits strict; ready to push.
