@@ -95,8 +95,12 @@ must not end the reader's independent lifetime.
 | Encoded preloads | Preserve shared 128 MiB reservation/accounting; never reset budget per spread or book. |
 | Pictures / decoded images | Preserve initial 16 / 48 MiB retained budgets; reserve before allocating and record transient decode peaks/oversize behavior separately. |
 | Source graphs / paragraphs / vectors / layers | A0 proposes finite byte/count/operation/depth and layer-area caps using host fixtures; A3 enforces them, A5 validates them on device. Retained-surface counts are insufficient; A3 cannot finish with unbounded classes. |
-| Fonts | Deduplicate by bytes/face; reserve aggregate process bytes/count before registration. Registrations persist after disposal. A0 defines provisional finite limits and a typed process-font-exhausted outcome; A3 enforces, A5 measures. Preserve accepted state and explain that closing the book/retry cannot unload engine fonts; user-initiated app restart may be needed. No silent font substitution or automatic restart. Direct WOFF/WOFF2 registration is not usable (A0: futures complete, shaping falls back), so convert to SFNT in Dart before admission: WOFF 1.0 via zlib per table, WOFF2 via Brotli plus glyf/loca reconstruction. Bound conversion bytes/time, charge converted bytes, and prove shaping use rather than future completion. A HarfBuzz face (D1) shares the same admitted bytes and face identity. |
+| Fonts | Deduplicate by bytes/face; reserve aggregate process bytes/count before registration. Registrations persist after disposal. A0 defines provisional finite limits and a typed process-font-exhausted outcome; A3 enforces, A5 measures. Preserve accepted state and explain that closing the book/retry cannot unload engine fonts; user-initiated app restart may be needed. No silent font substitution or automatic restart. Direct WOFF/WOFF2 registration is not usable (A0: futures complete, shaping falls back), so convert to SFNT in Dart before admission: WOFF 1.0 via zlib per table, WOFF2 via Brotli plus glyf/loca reconstruction. Bound conversion bytes/time, charge converted bytes, and prove shaping use rather than future completion. A HarfBuzz face (D1) shares the same admitted bytes and face identity. Owner decision (2026-10-29): WOFF2 uses a pure-Dart decoder (RFC 7932 Brotli plus W3C WOFF2 table reconstruction), no native library; the only vendored input is the pinned Brotli static dictionary in `third_party/brotli/` (MIT, SHA-256 `20e42eb1...35c70`). |
 | Zoom resources | Prepare bounded higher-resolution content outside motion; old and new allocations both count until swapped. S4c consumes the policy. |
+| Display-resolution preparation (2026-10-29) | Measured on the private mixed sample: authored-size coverage grids (up to 102.8 MB vector bytes for a 1448x2048 image page against 16 MiB) and authored-size SVG layers (9.1 M px against 8.39 M) refuse simple full-page image wrappers. (1) Coverage evidence stays at the published one-CSS-pixel resolution but is stored losslessly: a paint whose coverage is a (transformed) rectangle with uniform alpha is recorded as an analytic uniform region; only non-uniform coverage keeps a grid, sized to the paint's own bounds. No downsampling of proof. (2) Image decode targets and offscreen layer allocations/reservations use the preparation scale = fit of the authored page or spread into the view x DPR, never above intrinsic size. Zoom above fit is a separate, bounded higher-resolution generation (S4c sets the bound). Corpus comparisons run at authored size (scale 1), so their verdicts are unaffected. Caps are unchanged. |
+| Bounded evidence rasterization (2026-10-30) | A3-scale found that one-CSS-pixel evidence still needs an authored-size raster plus RGBA readback (private page 1: 9,106,344 px for those two buffers against the 8,388,608 cap), which display scaling cannot legitimately shrink. (1) Revised the same day after A3-scale measured that tiled or strip rasterization changes native rotated-edge AA by 1 (whole 106, strip 105): coverage evidence that needs native rasterization is rasterized ONCE as a whole authored-size image (exact native AA, one CSS pixel per sample; charged as one authored layer, typed refusal if that alone exceeds the cap), then read back through exact integer-aligned, unfiltered tile copies (bounded tile readback buffers) streamed into the lossless footprint (uniform detection and trimming across tiles). No other authored-size buffer coexists with it; the transient tile copy and its readback are charged and released before the next tile. (2) Opaque raster images: evidence alpha depends only on the destination geometry, so the display-decoded image drawn tile by tile gives exact evidence. Images with an alpha channel need authored-resolution alpha: a separate charged decode at min(intrinsic, authored) size, released after evidence; if that exceeds a cap the page refuses with a typed reason (no approximation). (3) Reservations equal real allocations: scaled display layers + one authored evidence raster + one tile copy and readback + retained evidence bytes. Caps unchanged. |
+| Filter display scale (2026-10-30) | A3-scale-b measured that SVG filter DAG caches feed both display and authored evidence; scaling them changes proof pixels (synthetic scale 1 vs 0.25: 4,268 alpha samples differ). Decision for S4a: filter DAG caches and their display stay at authored scale (charged as today); every other display decode/layer uses the preparation scale. Known limitation: on a small authored page shown at DPR 3 a filtered region is rendered at 1x authored resolution and may look softer than surrounding content. Revisit with the S4c zoom generation (charged authored evidence caches plus scaled display caches). |
+| Alpha-image evidence decode (2026-10-30) | Supersedes "a separate charged decode at min(intrinsic, authored) size" in "Bounded evidence rasterization" item (2). Final review A found the implementation decodes at intrinsic size. Decision: keep the intrinsic decode, because only a full decode proves per-pixel opacity and keeps exact alpha (a 1x1 hole hidden by the display decode must still reach evidence). Conditions: it is charged before allocation (including codec scratch), used only to prove opacity and produce authored evidence, and released as soon as evidence is produced, never retained for the scene lifetime alongside the display decode; opaque images release it immediately and the display decode serves display and evidence. If it exceeds a cap the page refuses typed. |
 
 Policy pressure cancels optional prewarm first, never destroys current proof
 or drops authored content. If an accepted fixture exceeds a cap, retain the
@@ -151,7 +155,28 @@ or grapheme is painted exactly once with an exact source mapping, together
 with the definition-B geometry channels at 0.5 px. Interior, edge-band,
 support-bound and sample rules still apply to text pixels. Non-text paint
 keeps the component rule at the D7 threshold. Text raster parity is judged
-again on the device in A5. Every measured
+again on the device in A5.
+
+Owner decision D9 (2026-10-29) relaxes only the sample sub-rule for gradients.
+Flutter dithers every gradient and its UI API has no dithering control, so
+native gradient pixels differ from WebKit's exact rounding by +/-1 in single
+channels (svg-graphics-boundary: 665 of 1369 pixels of one gradient rect). A
+sample is gradient-painted when the native topmost paint covering the pixel
+centre is a gradient paint server and the reference's computed fill or stroke
+of the same source element is a gradient `url(...)`; such samples pass at a
+maximum channel delta of 1. Classification comes from source and paint
+records, never from pixel values. Solid samples stay exact, and the interior,
+edge-band, support-bound and component sub-rules are unchanged for gradient
+pixels. Each sample records its classification and delta. Gradient raster
+parity is judged again on the device in A5.
+
+Owner decision D10 (2026-10-29) defines a changed pixel for every D4 sub-rule
+except samples: its maximum straight-RGBA channel delta is at least 2. Since
+A0 the harness had silently used "greater than 2". Measured over all scene,
+A0 and SVG renders, the only sub-threshold differences are exactly 1:
+stacking-boundary's `opacity:.7` square (alpha 178 native vs 179 WebKit,
+100 pixels) and gradient dithering; no case has a delta-2 pixel. The reports
+keep the count of delta-1 pixels per case as a diagnostic. Every measured
 variant needs its own reference PNG; a missing reference is unverified, not
 passed.
 

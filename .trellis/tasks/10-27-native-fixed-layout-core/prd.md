@@ -84,6 +84,18 @@ The owner made these decisions after the A0 review on 2026-10-27. Evidence is in
   sub-rule. Glyph presence is gated by cluster conservation (each cluster
   painted exactly once, exact source mapping) plus 0.5 px geometry. Non-text
   keeps D7. Text raster parity is judged again on the device in A5.
+- D9 (2026-10-29): a D4 sample point on gradient-painted pixels may differ by
+  at most 1/255 per channel, because Flutter always dithers gradients and
+  exposes no control. A sample counts as gradient-painted only when the
+  native topmost paint and the reference's computed paint of the same source
+  element both use a gradient paint server. Solid samples and every other D4
+  sub-rule stay exact. Gradient raster parity is judged again on the device
+  in A5.
+- D10 (2026-10-29): for D4's interior, edge-band, support and component
+  counting, a pixel is changed when its maximum channel delta is at least 2;
+  an exact 1/255 difference (8-bit rounding, e.g. opacity 0.7 giving alpha
+  178 vs 179, or gradient dithering) is not a change. This tightens the
+  undocumented delta-2 threshold used since A0. Sample points follow D9.
 
 The 0.5 authored CSS px tolerance and the 120 Hz target are unchanged. No other
 product decision is open.

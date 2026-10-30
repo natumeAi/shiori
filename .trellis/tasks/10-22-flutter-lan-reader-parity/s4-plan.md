@@ -43,6 +43,13 @@ Post-A0 decisions (D1-D4 on 2026-10-27, D5-D6 on 2026-10-28):
 - D8 (2026-10-28): for text, the component check is replaced by "each glyph
   cluster painted exactly once" plus 0.5 px positions. Text edge pixels are
   compared again on the iPhone in A5.
+- D9 (2026-10-29): a sample point on a gradient may differ by at most 1/255
+  per channel, because Flutter always dithers gradients. Both renders must
+  paint that point from a gradient of the same source element; solid samples
+  stay exact. Gradients are compared again on the iPhone in A5.
+- D10 (2026-10-29): a pixel counts as changed only when some channel differs
+  by 2 or more; an exact 1/255 rounding difference does not. This replaces
+  the undocumented "more than 2" threshold used since A0.
 
 The 0.5 authored CSS px tolerance, the 120 Hz target and every required row
 are unchanged.
