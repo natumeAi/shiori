@@ -1816,3 +1816,34 @@ evidence can show.
   order's literal wording required; semantically neutral). Astra: host
   verification now PASS. Local S4a work is complete pending owner approval to
   commit and the A5 device phase.
+
+## Commit and CI: 2026-10-30
+
+Owner: "提交并推送CI编译". Committed on `s4a/checkpoint-2026-10-28`:
+`2384b52` feat(reader) (code, tests, tools, fixtures, vendored dictionary),
+`7f8c4a8` docs(spec), `d8e8b0e` docs(task). Created and pushed
+`ios-build/s4a-fixed-layout` at `d8e8b0e` (the branch pattern that triggers
+`.github/workflows/ios-unsigned.yml`); CI run 41029374942 (probe mode)
+started. The CI build does not wire HarfBuzz (its iOS script is an unwired
+draft), so no third-party source is downloaded; the HarfBuzz iOS build still
+needs separate owner approval. master is unchanged.
+- CI run 41029374942 (unsigned iPhone, probe mode, macos-15 / Xcode 26.3,
+  Flutter 3.47.7): success on every step (build, validate and package
+  unsigned device app; artifact uploaded). This is the first hosted macOS
+  compile of the A0 Swift/C changes.
+
+## HarfBuzz iOS build: 2026-10-30
+
+Owner: "Approve HarfBuzz". Main session pinned the official source after an
+approved download into an isolated scratch directory (hashed only, nothing
+executed): `harfbuzz-14.6.0.tar.xz` from the GitHub 14.6.0 release, 20,295,260
+bytes, SHA-256 `d07a007327277708a2a73ae437887cdbaf282937f6d03ca5467723e9099af586`
+(equals GitHub's asset digest); root `COPYING` SHA-256
+`ba8f810f2455c2f08e2d56bb49b72f37fcf68f1f4fade38977cfd7372050ad64` (equals the
+notice recorded in `research/harfbuzz-ios-packaging.md`). Dispatched `hb-ios`
+(gpt-6.1-sol high) to pin it, wire the prefixed static build into the unsigned
+iOS CI, link Runner (scoped force_load plus `-u` roots for every required
+`shiori_hb_*`), and audit the final executable; the CI runner downloads the
+source. Astra re-check, then commit/push for CI follow.
+- `hb-ios` (gpt-6.1-sol high, 169k tokens): pinned SHA in `build_harfbuzz_ios.sh`; CI builds prefixed static HarfBuzz 14.6.0 (device arm64, simulator arm64/x86_64, iOS 15.0, dependencies disabled, preinstalled CMake with preflight, no cache); single xcconfig link owner (`ios/Flutter/HarfBuzz.xcconfig` included by Debug/Release) with scoped force_load, 33 `-u` roots generated from `HarfBuzzBindings._required`, additive export; strict archive audits and final Runner verification; inventories/logs/maps/hashes/COPYING/XCFramework uploaded. Local: bash -n, extraction, synthetic audit, YAML checks exit 0; host text tests 17 pass. Astra `recheck-hb` dispatched.
+- Astra `recheck-hb`: no blocking defects; hash/size verified before extraction, pins and `persist-credentials: false` intact, audits fail closed, single SDK-scoped link owner with 33 generated roots; ready to push. CI must prove compilation, audits, XCFramework and final Release exports; Debug/simulator app linkage and runtime lookup remain separate gates.

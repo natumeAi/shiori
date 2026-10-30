@@ -1,11 +1,13 @@
 # HarfBuzz iOS packaging plan — A2-text segment 7a
 
-2026-10-28. Draft only. The Windows host module is implemented and tested;
-no source was downloaded and no Apple build, integration or CI run occurred.
-The source SHA-256 in `tool/ci/build_harfbuzz_ios.sh` is deliberately
-`TODO_AT_OWNER_APPROVAL_PIN_OFFICIAL_SOURCE_SHA256`. The script exits before
-network access until that literal is replaced by the main session after owner
-approval. The Windows ZIP/DLL hashes are not substitutes for a source hash.
+2026-10-28 plan; CI wiring implemented on 2026-10-30 after the owner's
+"Approve HarfBuzz" approval. The main session verified the official 14.6.0
+source asset independently: 20,295,260 bytes, SHA-256
+`d07a007327277708a2a73ae437887cdbaf282937f6d03ca5467723e9099af586`.
+`tool/ci/build_harfbuzz_ios.sh` now pins that identity and verifies it before
+unpacking in CI. No source was downloaded on this Windows wiring session;
+no Apple compilation, CI result or device launch is claimed here. The Windows
+ZIP/DLL hashes are not substitutes for this source hash.
 
 ## Prefixing and static artifact
 
@@ -13,7 +15,7 @@ Pin the official HarfBuzz 14.6.0 release tarball, verify SHA-256 before unpackin
 and retain the archive identity, source notices, compiler/Xcode/SDK versions,
 configuration logs, prefix map and per-architecture symbol inventories.
 
-The draft scans the pinned source's C/C++ identifiers and force-includes a
+The script scans the pinned source's C/C++ identifiers and force-includes a
 generated macro header in **every** translation unit. `hb_*` becomes
 `shiori_hb_*`; private `_hb_*` becomes `shiori__hb_*`. Source-declared C++
 namespaces (OpenType/AAT/etc., excluding `std`) are also prefixed, to avoid
@@ -27,29 +29,68 @@ Build static device arm64 and simulator arm64/x86_64 archives, using the same
 prefix map and iOS 15.0 deployment target (the current Runner target). Disable
 GLib/GObject, ICU, FreeType, CoreText and Graphite2; this module uses OT font
 functions and HB outline drawing, with no platform-font substitution. Disable
-the subset library. Unknown CMake options fail the draft instead of silently
+the subset library. Declared optional utilities/tests/raster/vector/GPU/Cairo/
+introspection controls are also disabled, with enabled HB_BUILD_/HB_HAVE_ cache
+options rejected. Unknown supplied CMake options fail instead of silently
 enabling a dependency. Combine simulator slices with lipo and package the
 device/simulator libraries and headers using `xcodebuild -create-xcframework`.
 
 Audit each thin archive's defined **and undefined**, demangled symbol names.
 Any remaining unprefixed `hb_*`/`_hb_*` fails. A second strict inventory rejects
 externally defined names lacking `shiori_`; there is no permissive allowlist.
-This deliberately catches unanticipated C++ globals and compiler-generated
-helpers. Lexical discovery alone is not proof of complete prefixing: generated
+The defining C++ scope is checked from the Mach-O Itanium name; a prefixed
+parameter type cannot excuse an unrelated global. This deliberately catches
+unanticipated C++ globals and compiler-generated helpers. Lexical discovery
+alone is not proof of complete prefixing: generated
 or token-pasted symbols and compiler helpers may require a reviewed adjustment
 on the approved toolchain. No such archive is accepted until both audits pass.
 Preserve inventories in the XCFramework artifact provenance.
 
-## Xcode, Podfile and Flutter integration (main/native owner, later)
+## Xcode and Flutter integration (implemented; Apple CI evidence pending)
 
-1. After the approved build, add the static XCFramework as **Do Not Embed**;
-   add its headers only if native code consumes them. Do not ship the Windows
-   DLLs or add GLib/libintl to iOS. Do not link an unprefixed libharfbuzz.
-2. If CocoaPods manages the artifact, create a local podspec with
-   `vendored_frameworks = 'ShioriHarfBuzz.xcframework'`, static linkage and the
-   matching deployment target; add that local pod to Runner's Podfile.
-   Keep generated Pods files outside hand edits. Direct Xcode linkage is an
-   alternative; select exactly one owner of the library link.
+`build_ios_unsigned.sh` invokes the source build before `flutter build ios`.
+The workflow uses the runner's preinstalled CMake and checks its availability;
+no package manager, additional fetched toolchain or cross-run cache is used.
+The actual CMake path/version, Xcode, clang and device/simulator SDK versions
+are recorded. A missing prerequisite fails explicitly.
+
+Runner has no Podfile and links Flutter directly. Debug and Release include
+`ios/Flutter/HarfBuzz.xcconfig` as the sole HarfBuzz link owner. It selects
+the device arm64 or combined simulator archive by SDK with a scoped
+`-force_load`, inherits existing linker flags, links system libc++, and enables
+`-export_dynamic` additively so main-executable globals remain visible to
+process lookup. It does not install a restrictive export list. The source-build
+script generates a build-only xcconfig containing the fresh archive directory
+and `-Wl,-u,_shiori_hb_*` roots extracted from `HarfBuzzBindings._required`
+(33 entries on 2026-10-30); the archives and every required definition are
+audited before that configuration is published. No generated Flutter/Pods file
+or project.pbxproj is edited. All libraries remain static, Do Not Embed.
+
+After Flutter's Release build/strip, `--verify-runner` checks the actual app
+executable's defined external symbols (`nm -gUj`) and dyld export trie
+(`dyld_info -exports`). The live link-map section must attribute every required
+name to the newly built device archive, excluding dead-stripped definitions.
+Any missing definition/export or wrong/missing archive owner fails packaging.
+The raw-HB ban remains confined to the new archives, leaving Flutter's HB alone.
+
+`build/ios-$BUILD_MODE/harfbuzz/` retains source identity and input hashes,
+COPYING and its verified hash, toolchain versions, generated prefix/root maps,
+per-slice CMake caches/configure/build/install logs, raw/demangled symbol and
+global inventories, all three thin archive hashes and the combined simulator
+hash, the zipped static XCFramework, final executable inventories/hash/audit,
+and full/excerpted link maps. The existing always-upload step covers this
+directory, including available logs when a build/audit fails.
+
+The following packaging and device acceptance requirements remain in force:
+
+1. Retain the static XCFramework for distribution/review; Runner directly
+   links its audited device/simulator archive inputs via xcconfig, **Do Not
+   Embed**. Add headers only if native code consumes them. Do not ship the
+   Windows DLLs or add GLib/libintl to iOS. Do not link unprefixed libharfbuzz.
+2. Direct xcconfig linkage is selected because Runner has no Podfile.
+   Keep exactly one owner of the library link; do not additionally register
+   the XCFramework or create a CocoaPods link owner. Any future ownership
+   migration must remove the old owner and leave generated files untouched.
 3. Retain the functions used by `HarfBuzzBindings` in Release/AOT. Use a scoped
    `-force_load` of the selected static archive, plus linker roots/exports for
    every prefixed entry in `HarfBuzzBindings._required`, e.g.
@@ -79,8 +120,10 @@ Carry the **complete unmodified** 14.6.0 source COPYING and applicable per-file
 notices, including notices for compiled generated data. Review subdirectory
 COPYING/LICENSE files against the actual compile inventory. The existing
 downloaded notice is local evidence only (SHA-256
-`ba8f810f2455c2f08e2d56bb49b72f37fcf68f1f4fade38977cfd7372050ad64`);
-compare the approved source's notice before release.
+`ba8f810f2455c2f08e2d56bb49b72f37fcf68f1f4fade38977cfd7372050ad64`),
+also verified against the approved source by the main session. CI now checks
+that hash after unpacking and retains the complete notice. Product registration
+and applicable per-file notice review remain S4c release work.
 
 S4c should bundle the reviewed text as a product asset and add a
 `LicenseRegistry.addLicense` generator yielding a `LicenseEntryWithLineBreaks`
@@ -165,9 +208,12 @@ buffer/outline work. Do not describe a canceled waiter as native teardown.
   prepaid scene subledger or account these direct charges once in its plan;
   both original and placed paths overlap during preparation. Old/new fonts stay
   charged until actual destruction. No new process budget or unload is added.
-- Main/native owner approval: official source URL/hash, download execution,
-  toolchain/architecture support, final prefix-map/symbol audit and later
-  Xcode/Podfile/export integration. None is approved or executed by this draft.
+- Main/native owner approved the official source pin, CI download and build/
+  linkage on 2026-10-30. Wiring is implemented; actual macOS toolchain/
+  architecture support, strict prefix-map/global audits, final executable
+  exports and link-map attribution still require the first CI run. Compiler
+  helpers or unexpected C++ definitions must fail and return for review;
+  there is no symbol allowlist. Device/AOT version/fixture checks remain A5.
 - Host unhinted D4 remains failed for nested, path-spacing and
   path-spacingAndGlyphs under D7, despite all B geometry passing. No GDI fitting,
   contour edit, new D3 exemption or case-specific painting switch is adopted.

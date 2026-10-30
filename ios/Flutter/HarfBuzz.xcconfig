@@ -1,0 +1,8 @@
+// Run tool/ci/build_harfbuzz_ios.sh before building Runner.
+#include "../../build/third_party/harfbuzz-ios-14.6.0/HarfBuzz.generated.xcconfig"
+
+// One link owner, static and Do Not Embed. Keep Flutter/plugin settings.
+OTHER_LDFLAGS[sdk=iphoneos*] = $(inherited) -force_load "$(SHIORI_HB_BUILD_DIR)/device-arm64/install/lib/libharfbuzz.a" $(SHIORI_HB_REQUIRED_LDFLAGS) -lc++ -Wl,-export_dynamic
+OTHER_LDFLAGS[sdk=iphonesimulator*] = $(inherited) -force_load "$(SHIORI_HB_BUILD_DIR)/simulator/libharfbuzz.a" $(SHIORI_HB_REQUIRED_LDFLAGS) -lc++ -Wl,-export_dynamic
+LD_GENERATE_MAP_FILE = YES
+LD_MAP_FILE_PATH = $(SHIORI_HB_BUILD_DIR)/Runner-$(CONFIGURATION)-$(PLATFORM_NAME)-$(CURRENT_ARCH).map

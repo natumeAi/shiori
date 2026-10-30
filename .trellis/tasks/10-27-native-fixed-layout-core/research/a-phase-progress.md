@@ -6430,3 +6430,102 @@ this appended section. No engine/fixed, SVG, source loader, tool, cap, threshold
 D-rule, canonical/source/CFI vector, fixture, dependency or generator changes.
 No network/download, broad tests/formatting or private content output.
 Requests: none. This slice is complete; no broader S4a/A5 acceptance claimed.
+
+## hb-ios
+
+### HarfBuzz iOS wiring (2026-10-30)
+
+Worked inline in the existing in-progress S4a task with the expected empty
+Codex task pointer. Loaded trellis-start, trellis-before-dev and trellis-check;
+no task/pointer change, sub-agent, source/tool download on Windows, commit,
+push, branch or tag. The pre-existing execution-log.md change was preserved.
+The main session owns the push and first hosted build.
+
+Owner approval: "Approve HarfBuzz" on 2026-10-30 authorizes the CI source
+download, build and linkage. Pinned official 14.6.0 release source to
+20,295,260 bytes and SHA-256
+`d07a007327277708a2a73ae437887cdbaf282937f6d03ca5467723e9099af586`;
+CI verifies both before extraction. It checks the source COPYING against
+`ba8f810f2455c2f08e2d56bb49b72f37fcf68f1f4fade38977cfd7372050ad64`
+and retains the complete notice; product licence registration and per-file
+notice review remain S4c work.
+
+Changed tool/ci/build_harfbuzz_ios.sh, tool/ci/build_ios_unsigned.sh,
+.github/workflows/ios-unsigned.yml, ios/Flutter/{Debug,Release}.xcconfig and
+the new ios/Flutter/HarfBuzz.xcconfig, plus this log and the packaging plan.
+No Dart/bindings, project.pbxproj, pubspec, product UI, engine, fixture, test
+or .trellis/spec files were changed.
+
+The build script now runs before flutter build ios in both existing modes.
+It uses the runner's preinstalled CMake, with an explicit prerequisite check
+and actual path/version in provenance; it downloads no additional toolchain
+and uses no cross-run cache. Each invocation uses a fresh mktemp source/build
+directory. Builds static device arm64 and simulator arm64/x86_64 at iOS 15.0,
+force-including the same generated hb_/_hb_/C++ namespace prefix map in every
+C/C++ translation unit. Keeps the disabled dependency/subset controls,
+disables declared optional companion components, rejects enabled optional
+HB cache controls and unused CMake arguments, audits each thin archive's
+defined/undefined symbols and defining global scopes without an allowlist,
+then creates the combined simulator archive and static XCFramework.
+
+The single link owner is HarfBuzz.xcconfig included by Debug/Release (also
+Profile through the existing Release base). SDK-conditional OTHER_LDFLAGS
+inherits existing values, force-loads only the selected audited archive,
+adds all required linker roots and system libc++, and uses export_dynamic
+to preserve main-executable process exports without replacing an export list.
+Generates a separate build-only HarfBuzz.generated.xcconfig; no generated
+Flutter or Pods files are hand-edited. Static libraries are not embedded,
+and Flutter's own HarfBuzz is untouched.
+
+HarfBuzzBindings._required in hb_bindings.dart is the sole symbol-list source.
+The fail-closed extractor currently returns 33 _shiori_hb_* names; the exact
+list was printed with Git Bash/Python and retained at
+build/hb-ios/required-symbols.txt. Archive checks, -Wl,-u roots and final
+executable checks consume that list; verification regenerates and compares it
+to catch source drift during a build. The existing iOS process lookup and
+exact runtime 14.6.0 check needed no Dart changes.
+
+After the Flutter Release build/strip, --verify-runner audits the actual app
+executable with nm and dyld_info. Every required name must be defined and
+exported, and its live link-map entry must belong to the fresh device archive.
+Missing, unexported, dead-stripped-only or wrong-owner names fail packaging.
+The existing always-upload path includes build/ios-$BUILD_MODE/harfbuzz/:
+verified source/input/COPYING hashes, toolchain versions, prefix/root configs,
+per-slice configure/build/install logs and CMake caches, raw/demangled symbol
+and global inventories, three thin and one fat archive hashes, zipped
+XCFramework, Runner inventories/hash/audit and full/excerpted link maps.
+
+Windows validation:
+- bash -n on both changed scripts: exit 0. Existing
+  check_ios_build_modes.sh syntax and execution: exit 0 (default/probe/app
+  plans, package names and all invalid-input refusals unchanged).
+- Git Bash --print-required-symbols using installed Python: exit 0, 33 names.
+  Eight embedded Python blocks compile; synthetic production-heredoc checks
+  cover valid prefix/link-map/export cases and refusal of duplicate/nonliteral
+  Dart entries, raw undefined HB, missing archive/final definitions, unprefixed
+  C/C++ owners even with prefixed argument types, missing exports, wrong/missing
+  live map attribution and enabled optional dependencies: exit 0.
+  Generated roots match the 33 names exactly, including paths with spaces.
+  Evidence: build/hb-ios/local-audit-checks.log.
+- Workflow YAML parsed with the already installed Dart yaml package after
+  Python reported PyYAML unavailable; no package installed. Action SHA pins,
+  existing runner/timeout and upload behavior checked: exit 0
+  (build/hb-ios/workflow-check.log). xcconfig include path, SDK selection,
+  inherited flags and single link owner checked: exit 0.
+- Direct installed dart.exe + flutter_tools.snapshot test --no-pub
+  --reporter expanded -j 1 test/features/reader/engine/text: exit 0, 17 passed,
+  no skipped host cases (build/hb-ios/text-tests.log). APPDATA was scoped to
+  ignored build/hb-ios/appdata in the child shell and restored in finally.
+  Existing measured D4 failures remain failures; this is not an A5 fidelity pass.
+- No product Dart changed, so scoped product dart analyze is not applicable.
+  git diff --check: exit 0.
+
+Only the first macOS CI run can establish actual preinstalled CMake/Xcode/SDK
+availability, all three compiled slices, CMake option compatibility, strict
+archive audits, XCFramework packaging and final Release export/map evidence.
+Unknown compiler helpers, C++ globals or tool-output drift must fail for review;
+no permissive symbol exception or fallback is added. Unsigned CI cannot launch
+the device executable: version return, DynamicLibrary.process() in real AOT,
+the six fixtures, callback/resource lifetime, device raster and performance
+remain A5 device/simulator gates. This session claims wiring and host checks,
+not Apple CI success or broader S4a/A5 acceptance.

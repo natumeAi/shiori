@@ -51,6 +51,15 @@ jobs:
           flutter-version: '3.47.7'
           architecture: arm64
           cache: false
+      - name: Check preinstalled HarfBuzz build tools
+        run: |
+          set -euo pipefail
+          command -v cmake
+          cmake --version
+          python3 --version
+          xcrun --find clang
+          xcrun --find nm
+          xcrun --find dyld_info
       - name: Build, validate and package unsigned device app
         run: bash tool/ci/build_ios_unsigned.sh
       - name: Upload package, provenance and iOS project changes

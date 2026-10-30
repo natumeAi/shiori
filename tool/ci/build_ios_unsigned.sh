@@ -110,6 +110,8 @@ jq -n --arg buildId "$BUILD_ID" --arg buildNumber "$BUILD_NUMBER" \
 flutter pub get --enforce-lockfile
 git diff --exit-code -- pubspec.lock
 dart run tool/ci/check_reader_fixtures.dart
+# Fresh source build, archive audits and generated linker roots precede Xcode.
+bash tool/ci/build_harfbuzz_ios.sh "$OUTPUT_DIR/harfbuzz"
 flutter build ios --release --no-codesign --no-pub \
   --target "$ENTRY_POINT" \
   --build-number "$BUILD_NUMBER" \
@@ -167,6 +169,8 @@ jq --rawfile frameworks "$OUTPUT_DIR/frameworks.txt" \
   "$OUTPUT_DIR/provenance.json" > "$OUTPUT_DIR/provenance-frameworks.json"
 mv "$OUTPUT_DIR/provenance-frameworks.json" "$OUTPUT_DIR/provenance.json"
 validate_bundle "$APP"
+bash tool/ci/build_harfbuzz_ios.sh --verify-runner \
+  "$APP/$(plist_value CFBundleExecutable "$APP")" "$OUTPUT_DIR/harfbuzz"
 plutil -p "$APP/Info.plist" > "$OUTPUT_DIR/bundle-info.txt"
 DEFAULT_METAL="$(metal_value "$APP")"
 if [[ "$BUILD_MODE" == app && "$DEFAULT_METAL" != null ]]; then
