@@ -286,9 +286,25 @@ R11; this marker alone does not establish correctness. Scripted R01-R10 use
 frame-driven real gesture injection. R09 records controller/session lifecycle
 simulation; it still needs actual OS background/foreground device evidence.
 
-Reader event/cost/resource rings default to 16384 each. The reader screen
-configures the nested engine recorder to 65536 samples and a ten-minute maximum,
-retaining the S1 bounded drain. Do not apply the S1 synthetic 15-second/4096
+Reader capture sizing is the versioned per-repeat envelope in
+`data/reader_capture_budget.dart` (`ReaderCaptureBudget.version == 1`): 10
+minutes at 120 Hz plus the 1.2 s drain (72144 frames), up to 4096 turns,
+8 events/frame + 24 control events/turn = 675456 required events. Reader events
+use `ReaderEventBuffer` with 786432 preallocated packed numeric rows (ten int64,
+one float64, two uint8 columns; 90 bytes/row) plus digest reference slots.
+Motion appends write numbers only: no event `Map`, JSON, I/O, reduction or
+scheduled task. Snapshots are lazy and immutable; a stop seals them, reset
+gives the next repeat fresh storage, and a mid-capture inspection copies live
+rows without sealing. Cost/resource rings stay 16384 each. The reader screen
+configures the nested engine recorder to 131072 samples and a ten-minute
+maximum, retaining the S1 bounded drain. Each repeat stops, drains, exports and
+resets independently (`repeatPolicy: stop_export_reset`); repeats never share
+one capture. The recorder declares the envelope as
+`engine.metadata.readerCaptureBudget` (`version`, `storage:
+packed_numeric_rows`, capacities, `maximumCaptureMs`, the envelope integers,
+`nativeCapacity`, `repeatPolicy`). The preallocation is about 74 MiB before
+strings/headers; its device RSS cost is unmeasured until A5 and must not be
+read as an iPhone memory pass. Do not apply the S1 synthetic 15-second/4096
 defaults to reader runs. `overflow` keys are `events`, `layoutCosts`, `resources`,
 `frames`, `motion`, `native`. `omissions` keys are `native`, `trailingTimingBatch`,
 `manualMinimumMet`, `physicalPresentation`, `touchToPhoton`; trailing completeness
@@ -380,7 +396,9 @@ Reported display refresh-rate metadata is not measured effective cadence.
 `clock`, `physicalPresentation`, `touchToPhoton`; the reader recorder adds `mode`.
 Missing `unmatchedCallbacks` decodes as zero. `overflow` includes evictions plus
 contention loss; `contentionDrops` is a subset, not another amount to add.
-Unmatched callbacks are separate. Native rings have capacity 16384; callback
+Unmatched callbacks are separate. Native rings have capacity 262144 when the
+inventory declares `captureBudgetVersion: 1` (16384 for legacy reports without
+it; `presentation_payload.dart` rejects any other pairing); callback
 paths try-lock and count contention instead of blocking. `dispose` stops capture
 and invalidates the auxiliary display link, retaining the bounded native buffer/
 shared callback for permanent hooks and late callbacks. Do not promise swizzle
@@ -388,7 +406,8 @@ removal or buffer deallocation on dispose.
 
 `presentation_payload.dart` validates/whitelists inventory keys: `layerClass`,
 `FLTUseFlutterMetalLayer` (nullable bool), `maximumFramesPerSecond`, `lowPowerMode`,
-`thermalState`, `iosVersion`, `ringCapacity`. Raw sample shapes are:
+`thermalState`, `iosVersion`, `ringCapacity`, optional integer
+`captureBudgetVersion` (only 1 is accepted). Raw sample shapes are:
 
 - `layer_commit`: `kind`, `timestamp` (A1/A2 only).
 - `display_link`: `kind`, `timestamp`, `targetTimestamp` (A2 only).
@@ -436,6 +455,82 @@ mismatch with `--strict`, otherwise `0`. Failed measurement rows do not change
 exit status when aggregates match. Always read gate rows, omissions and loss
 counters in addition to the process result.
 
+#### Fixed and mixed publication lifecycle (S4a A4)
+
+`ReaderProbeController.openPublication({book, activation, isCurrent,
+acquireLease, queue, worker, fonts, section, page, restoreCfi, nextSettings,
+captureIdentity}) -> Future<bool>`
+(`presentation/reader_probe/reader_probe_controller.dart`) opens a prepared S3
+publication that contains fixed sections; mixed books keep reflow sections on the
+reflow path. It returns `false` for a reflow-only publication (the screen then
+uses `open` on the prepared generation), a closed controller or a stale request.
+`releasePublication()` is called by the screen before S3 preparation because both
+use the shared `PrepareBookQueue`.
+
+- **Capture identity.** Publish the verified publication digest, optional matching
+  fixture identity, session, turn and accepted position in one synchronous
+  publication. A failed/stale candidate cannot relabel the displayed position.
+  Both manual and scripted capture use that identity. Scripted startup goes
+  through the screen's S3-aware `_open`, including release before preparation;
+  it cannot call the raw reflow `open` on top of a fixed/mixed session. Raw
+  reflow `open` also publishes its identity only with the successful session and
+  retires any preceding fixed/mixed owner before replacement.
+  A failed or stale scripted open starts no capture using the retired identity.
+- **Navigation and recomposition.** `jump(section, page: ..., cold: ...)` selects
+  units containing the requested real source (including a spread's active
+  side); a negative page selects that source's last unit. Fixed scenario
+  `pageCount` is one unit per source; reflow keeps its actual page count. Neither
+  counts nor long-paragraph scanning read `.section` on fixed surfaces.
+  Settings replacement and measured viewport/DPR changes build a fresh frozen
+  composition/session and restore through source CFI, independently of the old
+  page number. Metric notifications measure after layout; settings actions
+  remeasure before replacement. Retirement retains the replacement factory,
+  accepted source position and latest requested settings: measured changes
+  continue scheduling replacement while `session == null`. Consecutive requests
+  supersede the pending candidate and restore the same source using the latest
+  viewport/DPR/settings. A latest request that cancels without publishing raises
+  a typed `ParseException` for the screen's localized failure state; explicit
+  release/open/disposal clears pending replacement intent. The route's original
+  PreparedBook may already
+  be released: acquire and validate a temporary route lease before retirement,
+  open the replacement's independent lifetime, and release that temporary
+  owner in finally. Never retain the released route object as authority.
+- **Mixed resources.** Composition and ordinary reflow share the four-section
+  `ReflowSectionCache`; the mixed path passes its pool ledger and section-pin
+  owner. Retained paragraphs/source storage stay charged with zero pictures,
+  and TOC/source lookup reloads an evicted section asynchronously.
+
+- **Frozen request.** Each call takes a generation token and captures width,
+  height, DPR and the immutable `ReaderSettings` once. Every fixed layout
+  closure, composition, theme and turn width uses that snapshot, and published
+  source loaders keep it. The `settings`, `width`, `height` and `dpr` setters,
+  `reflow`, `releasePublication` and disposal bump the generation, revoking any
+  in-flight request. The token and `isCurrent(activation)` are validated before
+  retirement, after every awaited step and immediately before publication.
+- **Retirement barrier.** A publication holds the shared queue slot until its
+  worker detaches, so the old display is retired and drained **before** the
+  replacement requests `acquireLease`: clear the displayed session/turn and
+  notify listeners (the widget detaches), wait for a scheduled frame, close the
+  old turn and session and await `session.closed`, `turn.closeAndDrain()`, then
+  close its fixed sources and the previous reflow owner. Concurrent requests
+  chain on one retirement future. The accepted `TurnPosition` is retained until
+  a replacement fully publishes; a failed replacement publishes no position and
+  the retired display stays cleared. A latest reflow request that publishes no
+  session surfaces a typed failure. Retiring a candidate does not suppress later
+  metric/settings replacement requests; overlapping
+  screen actions keep the busy indicator until all actions drain.
+- **Shutdown ownership.** The candidate session's motion-shutdown hook captures
+  its own local turn controller, never the mutable public `turn`; the session's
+  source-adapter hook owns the composition/source close, so composition is
+  disposed once.
+- **Stale or failed candidates.** One `finally` path releases an unpublished
+  candidate exactly once: close the candidate session and await it (or dispose
+  the composition if no session exists), close the sources, then close and drain
+  the pool. A stale request returns `false` silently, including when the
+  failure came from the superseded request; a current failure rethrows
+  (`FixedPreparationFailure` and `UnsupportedLayoutException` map to the
+  localized unsupported message in the screen).
+
 ### 8.4 Validation & Error Matrix
 
 | Condition | Behavior |
@@ -448,8 +543,11 @@ counters in addition to the process result.
 | Missing correctness capability/fields/caps or insufficient samples | Gate unavailable with reason; never fill from counters/aggregate guesses |
 | Safe stale rejection | Count separately; no correctness failure just for rejection |
 | Duplicate/uncommitted/stale acceptance, proof failure, observed resource breach | Failed gate, including on partial evidence |
+| Fixed/mixed capture after publication or route release | Published digest/position match; fresh temporary/independent leases retire exactly once |
 | Native stream absent or wrong layer/flag | Unavailable with reason; no stronger evidence label |
 | Late post-frame/native completion after restart/dispose | Owner/generation/epoch guards suppress publication into another capture |
+| Fixed/mixed replacement while an old publication is displayed | Old display retired and drained before the replacement acquires the queue slot; accepted position kept until it publishes |
+| Input (size, DPR, settings) changes or controller closes during an open | Request token revoked; candidate released once; `openPublication` returns `false` without a publication |
 
 ### 8.5 Good/Base/Bad Cases
 
@@ -472,8 +570,32 @@ plus negative correctness/resource/overflow/missing-data fixtures under
 [Testing](./testing.md). Widget tests cover post-frame submission identity,
 scenario cancellation and typed stop failure, lifecycle cleanup and ordinary
 product isolation (`test/app/product_presentation_isolation_test.dart`).
+Publication lifecycle tests
+(`test/features/diagnostics/presentation/reader_probe_fixed_route_test.dart`,
+`reader_probe_publication_test.dart`) use the real shared `PrepareBookQueue`,
+`ReaderPublicationLifetime` and real final-class instances (no doubles that
+implement final classes): two real opens on one queue, worker failure preserving
+the accepted position, a real S3 preparation after release, a mounted
+`PreparedReader` during replacement, lease-gated size/DPR/settings/disposal
+races, a candidate revoked during turn setup, shutdown of only its own turn, and
+exactly-once release callbacks with an idle queue at the end.
+`reader_probe_final_c_test.dart` adds released-route jumps, fixed-safe counts,
+settings/viewport replacement, source restoration after page-count shrink and
+reflow -> fixed -> reflow owner retirement. The real screen tests in
+`reader_probe_capture_publication_test.dart` cover fixed and mixed manual and
+scripted captures, matching exported identity/current position, S3 route use,
+metric-driven recomposition and an idle queue after teardown.
+`reader_probe_replacement_coalescing_test.dart` pauses replacement preload while
+two/three measured viewport changes and interleaved settings supersede it; it
+asserts a displayed latest-layout session at the restored source, typed latest
+cancellation/retry, and zero final scene charges with an idle queue.
 
 ### 8.7 Wrong vs Correct
+
+Wrong: assign a new digest before a fixed session accepts its new position, or
+reuse a released PreparedBook to rebuild. Correct: publish capture identity with
+the prepared session and renew temporary/independent file owners through the
+existing retirement barrier before recomposition.
 
 Wrong: join on `inputId` alone, use `proofPassed` as a commit, or report "120 Hz
 physical presentation verified" from engine/layer/B intervals.

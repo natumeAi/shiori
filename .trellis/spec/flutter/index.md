@@ -51,6 +51,9 @@ Before writing code in this layer:
 - [ ] If the change adds a screen, check [Routing](./routing.md)
 - [ ] For reader core changes, read [Reader Engine](./reader-engine.md); for
   probe/export/native evidence, also read [Diagnostics](./diagnostics.md)
+- [ ] For fixed-layout, SVG, geometry-alpha or font-format changes, read
+  [Reader Fixed Layout](./reader-fixed-layout.md) and
+  [Reader Font Conversion](./reader-font-conversion.md)
 
 ---
 
@@ -88,7 +91,9 @@ code generation, formatting, analysis or tests. See the Definition of Done in
 | [Quality Guidelines](./quality-guidelines.md) | Resolved dependency/licence tables, pins, fixture/privacy guard, product asset carry-forward and build quality gates | Filled |
 | [Diagnostics](./diagnostics.md) | S1 and reader-feasibility schemas, correctness/resources, presentation channel/evidence levels and independent analyzer | Filled (native/device results pending) |
 | [Reader Admission Diagnostics](./reader-admission-diagnostics.md) | Recognized input, actual submission/demand timelines and versioned native loss evidence | Implemented A0 capture; device acceptance pending |
-| [Reader Resource Admission](./reader-resource-admission.md) | Standalone scene and process-font reservation/lifetime policies | A0 policy tested; A3 product integration pending |
+| [Reader Resource Admission](./reader-resource-admission.md) | Standalone scene and process-font reservation/lifetime policies | A0 policy tested; fixed preparation integrated (A3); reflow integration and device peaks pending |
+| [Reader Font Conversion](./reader-font-conversion.md) | Pure-Dart WOFF/WOFF2 to SFNT conversion, Brotli decoder, vendored dictionary, admission order and fixed SVG text routing | Implemented (A3); device decode time/RSS pending |
+| [Reader Fixed Layout](./reader-fixed-layout.md) | SVG presentation cascade and text sheets, replaced-element sizing, authored evidence raster, paint roles, filtered/clipped/masked evidence, display-scale preparation, `GeometryAlphaFootprint` and D9 gates | Implemented on host (A2/A3); shared-ledger reconciliation and device raster parity (A5) pending |
 
 ---
 

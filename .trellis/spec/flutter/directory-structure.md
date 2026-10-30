@@ -59,10 +59,12 @@ lib/
         source/                  # parsing, inert projection, source positions/work guard
         cfi/                     # Foliate-compatible grammar, export and resolution
         canonical/               # normalization v1, generated Unicode ranges, FNV-1a64
+        geometry/                # pure Dart source/paint geometry, alpha footprints, placement
       engine/
         style/                   # CSS subset, cascade, reader overrides (pure Dart)
-        layout/                  # blocks, paragraphs, fonts, images and SVG
+        layout/                  # blocks, paragraphs, fonts (WOFF/WOFF2 -> SFNT, Brotli), images and SVG
         pagination/              # preparation, page plans/maps, conservation and anchors
+        fixed/                   # fixed-layout scenes, SVG presentation/features, SVG text fonts, viewport sizing
         support/                 # unsupported-layout detection
         motion/                  # numeric gesture/turn controller, clocks and sink seams
         surface/                 # retained pictures/leases and PreparedReader widget
@@ -88,11 +90,14 @@ test/                            # mirrors lib/ (see testing.md)
     oracle/                      # authoritative synthetic WebKit vectors + Unicode table
     source_edge/                 # two synthetic edge EPUBs, vectors and hashed manifest
     exports/                     # deterministic synthetic analyzer exports
+    fonts/                       # offline Brotli/WOFF2 vectors, generators and provenance README
 assets/reader_fixtures/           # bundled synthetic EPUBs + hashed manifest only
+third_party/brotli/              # byte-exact vendored Brotli dictionary + licence (binary in .gitattributes)
 tool/
   oracle/                        # Node/Playwright oracle, synthetic sources, reference copies
   reader/                        # Unicode generation, native CFI interop and source_edge builder
   diag/                          # independent pure Dart reader export analyzer
+  fonts/                         # Brotli dictionary generator (--check) for the vendored input
   ci/                            # fixture/privacy guard and unsigned iOS packaging
 ios/Runner/AppDelegate.swift      # diagnostic presentation channel/native sampling
 .trellis/tasks/<task>/evidence/   # reviewable command records; no private book payloads

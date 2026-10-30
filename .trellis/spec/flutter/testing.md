@@ -235,6 +235,27 @@ This checks native exports against both engines, separately from `flutter test`.
 `resolve` writes `build/oracle-local/resolve-results.json`; the compare tool reads
 that output. Require identical native/browser section/node/offset results.
 
+## Font and Fixed-Layout Vectors
+
+`test/fixtures/reader/fonts/` holds committed Brotli/WOFF2 vectors for the
+pure-Dart decoder; tests use only the Dart SDK and committed bytes, never a
+compressor or native Brotli library. Maintenance commands (repository root):
+
+```bash
+dart run tool/fonts/brotli_dictionary.dart --check   # vendored dictionary + generated Dart file
+flutter test test/features/reader/engine/layout       # Brotli, WOFF, WOFF2, admission, HarfBuzz parity
+```
+
+Regenerating vectors needs Python 3 and a Brotli CLI (`generate_brotli_vectors.py`,
+`generate_dictionary_vectors.py`, `generate_woff2.py`; see the directory
+`README.md`) and must reproduce byte-identical files. Fixed-layout assertions
+sample alpha through `GeometryAlphaFootprint.alphaAt`, never absolute strides,
+and compare native readback against independent controls; the harness reports
+run with `flutter test test/tool/reader`. Contracts:
+[Reader Font Conversion](./reader-font-conversion.md),
+[Reader Fixed Layout](./reader-fixed-layout.md). Host passes (Windows HarfBuzz,
+Ahem) are not device raster, font or timing evidence.
+
 ## Local-Only Reader Tests and Switches
 
 | Switch / input | Behavior |

@@ -66,11 +66,28 @@ use inferred timestamp offsets or script intentions to excuse them. The existing
 
 ### Native loss
 
-The ring stays bounded at 16,384 samples. `overflow` includes evictions and
-contention; `contentionDrops` is a subset. `unmatchedCallbacks` remains separate.
-The analyzer's native-loss gate fails on observed overflow/unmatched callbacks;
-zero can pass only with an available stream and `lossAccountingVersion == 1`.
-Old captures without the capability remain unavailable for this stronger claim.
+The ring stays bounded: 262,144 samples when the inventory declares
+`captureBudgetVersion: 1`, 16,384 for legacy reports. `overflow` includes
+evictions and contention; `contentionDrops` is a subset. `unmatchedCallbacks`
+remains separate. The analyzer's native-loss gate fails on observed
+overflow/unmatched callbacks; zero can pass only with an available stream and
+`lossAccountingVersion == 1`. Old captures without the capability remain
+unavailable for this stronger claim. The native buffer change is Swift that
+still needs the hosted-macOS compile before A5.
+
+### Long-capture capacity
+
+`tool/diag/reader_capture_analysis.dart` `captureBudgetGate` is an independent
+gate row ("long capture capacity / loss"). It rejects an unknown native
+`captureBudgetVersion`, a `readerCaptureBudget` whose version, `storage` or
+`repeatPolicy` differ from v1, any envelope integer that differs from the
+contract, and any stream longer than its declared capacity. Any overflow in
+`events`, `layoutCosts`, `resources`, `frames`, `motion`, `native`, native
+overflow or unmatched callbacks fails it. Event `sequence` must be contiguous
+from 1. A legacy capture without the declaration is `unavailable` (or `fail`
+with observed loss) and cannot pass. A passing row proves only zero loss within
+the sizing envelope; it is not proof of trailing delivery, physical display,
+scenario completion or device memory safety.
 
 `Runner-Bridging-Header.h` provides the Clang atomic counter operations used by
 Swift. A ticket carries capture epoch and active state; a late failed try-lock
@@ -109,7 +126,11 @@ recorder, controller/motion and `reader_submission_test.dart` coverage. Assert
 admission timing, queue/cold exclusion, holds, missing/late/open demand,
 generation/epoch changes, final/reset submission, modern completeness and native
 loss capability. Exercise a long capture under the real event-ring limit and
-keep independent exported-aggregate parity. Device evidence remains separate.
+keep independent exported-aggregate parity. `reader_capture_volume_test.dart`
+keeps three 100-turn repeats and the full R06 envelope at zero loss, and the
+original 16384-capacity pressure test still reports its loss. Source guards keep
+maps/storage/async work out of numeric append and blocking/export work out of
+native callbacks. Device evidence remains separate.
 
 ## 7. Wrong vs Correct
 

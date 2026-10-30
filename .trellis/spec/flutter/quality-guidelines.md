@@ -85,6 +85,14 @@ repository licence; do not label them MIT by association with Foliate.
 Fixture Roboto attribution/licence is retained under
 `tool/oracle/fixtures/styles/` (Apache-2.0). See `tool/oracle/README.md`.
 
+Vendored runtime data (not a package): `third_party/brotli/dictionary.bin`, the
+byte-exact RFC 7932 Brotli static dictionary (MIT, google/brotli `v1.1.0`, pinned
+SHA-256 and `LICENSE` beside it, `.gitattributes` marks `third_party/**` binary).
+It feeds the pure-Dart WOFF2 decoder through a generated Dart file; see
+[Reader Font Conversion](./reader-font-conversion.md). The MIT notice is not yet
+in the app licence registry (S4c handoff). Add no other vendored runtime input
+without provenance, SHA-256 and a licence row here.
+
 Add packages with `flutter pub add <pkg>` / `flutter pub add dev:<pkg>`.
 Anything outside this table needs a reason in the task's `prd.md` and a
 row added here.

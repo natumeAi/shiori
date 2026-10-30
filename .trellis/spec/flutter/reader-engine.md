@@ -45,6 +45,7 @@ extend layout or connect product UI. Paths below are relative to
 | Anchors | `PageAnchors.exportVisible(int) -> VisibleAnchor?`, `prove(String, {expectedIdentity}) -> AnchorProof`, `locate(SourcePosition)`; `AnchorKeeper.accept`, `acceptPage`, `reflow` (`engine/pagination/anchor.dart`) |
 | Turns | `ReaderTurnController.turnPage(TurnDirection) -> Future<TurnResult>`, `pointerDown/Move/Up/Cancel`, `tick`, `cancel`, `settingsChanged`, `layoutChanged`, `suspend`, `resume`, `close` |
 | Surfaces | `PageSurfacePool.prepare(section, pageIndex, theme) -> Future<PageSurfaceLease?>`; `PreparedReaderSession` implements `TurnSession`; `PreparedReader` owns local repaint/ticker integration |
+| Retained reflow sections | `ReflowSectionCache(prepare, budget).load(int)`, `borrow(int) -> Future<ReflowSectionLease?>`, `drain()`, `dispose()` (`engine/surface/`); `PublicationFixedComposition.prepare(..., pool)` shares its pool ledger/pins; navigation's `ReflowUnitLocator` returns `FutureOr<int?>` |
 
 ## 3. Contracts
 
@@ -430,8 +431,11 @@ never source prose.
 fixed layout, RTL page progression, root/body direction, RTL publication language
 without explicit direction, and rendered vertical writing (including vendor
 aliases). `detectBookLayout` checks every section; `requireSupported()` throws
-`UnsupportedLayoutException` with reasons. The S2 probe refuses a mixed book
-before reading; product import uses the separate facts contract above. Isolated
+`UnsupportedLayoutException` with reasons. The S2 probe's `ReaderProbeController.open`
+(reflow path, `_open` -> `requireSupported()`) still refuses a fixed or mixed EPUB
+before preparation; `ReaderProbeController.openPublication` opens fixed and mixed
+publications from the prepared S3 facts (see [Diagnostics](./diagnostics.md)), and
+product import uses the separate facts contract above. Isolated
 RTL runs inside an LTR section are informational, not a refusal.
 Detection must not replace an accepted anchor or succeed with an empty reader.
 
@@ -520,6 +524,35 @@ release-mode scheduler or an isolation guarantee for unguarded future APIs.
 
 ### Carry-forward and code/design boundaries
 
+Mixed composition stores immutable section/layout/page-count metadata separately
+from prepared reflow sections. `ReflowSectionCache.capacity == 4` is the shared
+owner used by composition and the probe's `ReaderPreparationRepository`. Loads
+coalesce by section and serialize misses; an unpinned LRU section is destroyed
+before preparing the incoming fourth-slot replacement. Pool section pins cover
+surface/preparation borrowers, including fixed/mixed frames without unsafe
+`.section` reads. Four pinned sections refuse another load with typed scene
+admission failure. Evicted TOC/source targets asynchronously reload through the
+same owner; the navigator never closes over an all-book PreparedSection map.
+Every request synchronously reserves an explicit delivery pin, including cache
+hits and each coalesced borrower; eviction skips these pins as well as pool pins.
+`borrow` transfers a `ReflowSectionLease` whose idempotent `release()` belongs in
+the borrower's finally block after use or surface-pin installation. Compatibility
+`load` forwards through synchronous completion, then releases its lease after
+the awaiting borrower's synchronous continuation installs its pool pin. Borrow
+explicitly when use crosses another await. Failure, null and closed deliveries
+release their request pins. Misses remain serialized with an ordinary-task yield;
+that yield alone is not delivery protection. Neither pins nor coalescing add
+retained entries or duplicate admission charges.
+
+Before entering the retained cache, each prepared section reserves source-node,
+source-byte, paragraph and text-code-unit charges on the pool's shared
+`SceneResourceBudget`. Cache admission failure destroys the unretained result;
+eviction/disposal destroys storage before releasing its charge. Unit/source-slot
+and picture/image charges remain with the surface owner, so a cached section
+stays charged with zero live pictures. This is retained-section accounting;
+reflow's transient preparation allocation is not a new native peak/RSS proof.
+Shutdown drains pending loads and borrowing surfaces before closing the book.
+
 - S3 Phase A: archive reads now use the bounded raw-directory index, native
   emitted-byte limits, exact length/CRC-32 checks and file-backed open described
   above. D3's worker import keeps archive/source/style/canonical work off root
@@ -529,10 +562,13 @@ release-mode scheduler or an isolation guarantee for unguarded future APIs.
   above. Full product/session wiring and device integration remain S4 work.
   Host archive measurements do not establish total worker RSS or iPhone limits;
   downloaded-publication integration and device validation remain required.
-- S4: production `FontRegistry` still caps each font at 32 MiB without a shared
-  cross-book count. A0 added standalone scene/process-font policy owners in
-  [Reader Resource Admission](./reader-resource-admission.md); A3 must integrate
-  them before claiming product enforcement. Font mappings and fallback
+- S4: production `FontRegistry` caps each font at 32 MiB and admits every face
+  (SFNT, or WOFF/WOFF2 converted in Dart; see
+  [Font Conversion](./reader-font-conversion.md)) through the process-shared
+  `ProcessFontBudget`. The standalone scene policy owners are in
+  [Reader Resource Admission](./reader-resource-admission.md); fixed-layout SVG,
+  sizing and coverage contracts are in
+  [Fixed Layout](./reader-fixed-layout.md). Font mappings and fallback
   availability require device evidence, not host Ahem results.
 - S4: known HTML-mode gaps are head-level template isolation, noscript closing
   an open paragraph, and attribute URL rewriting in script-enabled noscript raw
@@ -544,11 +580,13 @@ release-mode scheduler or an isolation guarantee for unguarded future APIs.
 - Design §4 proposed two 32-bit limbs/BigInt and a browser Unicode version;
   implementation uses four 16-bit limbs and an explicitly null Unicode version.
 - Design §5.1's broader identity and incremental preparation are limited as
-  described above. `PreparedReaderSession.optionalWorkAllowed` is currently a
-  no-op; optional-work policy belongs to its caller. The probe section owner is
-  bounded to four cached sections. Coalesce racing warm/prepare calls in S4:
-  warm calls coalesce per direction, but concurrent prepare can hold a second
-  lease; the common owner cap still applies.
+  described above. `PreparedReaderSession.optionalWorkAllowed(false)` suppresses
+  new optional warm work; an optional epoch rejects a late warm result even
+  after work is allowed again. Demand preparation remains available. Racing
+  warm/direct prepare calls for the same origin, direction, target and session
+  epoch share physical preparation; each consumer gets its own reference to the
+  same surface. Stale/canceled consumers release their references, and physical
+  work stays owned until drained. The common 3+1 unit/constituent caps apply.
 
 ## 4. Validation & Error Matrix
 
@@ -569,6 +607,7 @@ release-mode scheduler or an isolation guarantee for unguarded future APIs.
 | FIFO full / controller blocked | `TurnResultKind.queueFull` / `blocked`; no speculative acceptance |
 | Preview/proof mismatch | Failed turn and recovery; if restore fails, failed controller; no fabricated destination |
 | Surface owner/byte budget exhausted or pool closed | `prepare` returns null and releases partial work; no over-cap publication |
+| Mixed cache exceeds four sections / every eviction candidate pinned | Evict an unpinned section before preparation / typed admission failure; retained sections stay charged |
 | Forbidden work in callback | Debug assertion before work/mutation; schedule via the ordinary control zone |
 
 ## 5. Good/Base/Bad Cases
@@ -586,6 +625,14 @@ release-mode scheduler or an isolation guarantee for unguarded future APIs.
   overwrite an anchor after failed proof, or decode from a ticker.
 
 ## 6. Tests Required
+
+`publication_mixed_cache_test.dart` covers more reflow sections than capacity,
+zero-surface retained paragraph charges, eviction and asynchronous TOC reload,
+four pinned owners refusing a fifth and release/retry. `reflow_section_cache_delivery_test.dart`
+also covers a queued miss followed by cached hits, independent coalesced leases,
+idempotent release, null/error/closure cleanup and zero final ledger counters.
+Mixed SVG and private
+regressions check ledger cleanup after composition disposal.
 
 See [Testing](./testing.md) for regeneration and private-input switches. Maintain
 oracle equality for package/projection/CFI/canonical; native-to-browser CFI loops;
@@ -611,6 +658,10 @@ Its VM-only source is test data because Flutter's SDK has no `dart:mirrors`;
 the Flutter test runs it with the package config using the standalone `dart`.
 
 ## 7. Wrong vs Correct
+
+Wrong: keep every prepared reflow section in a composition map while declaring
+four cached sections. Correct: retain only composition metadata and borrow all
+PreparedSections through the shared bounded, charged cache and pool pins.
 
 ```dart
 // Wrong: replace a failed restore with an unrelated accepted position.
